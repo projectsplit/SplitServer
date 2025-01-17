@@ -1,0 +1,24 @@
+name: bump-version
+
+on:
+  push:
+    branches: [ "master" ]
+
+jobs:
+  version-bump:
+    name: Bump Version
+    runs-on: ubuntu-latest
+    env:
+      VERSION_SCRIPT: ./.github/workflows/scripts/bump-version-dotnet.sh
+      CSPROJ_LOCATION: ./src/SplitBackApi/SplitBackApi.csproj
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.ADMIN_TOKEN }}
+    - name: Print current branch
+      run: echo ${{ env.BRANCH_NAME }}
+    - name: Bump version in .csproj
+      run: |
+        chmod +x ${{ env.VERSION_SCRIPT }}
+        ${{ env.VERSION_SCRIPT }} ${{ env.CSPROJ_LOCATION }}
