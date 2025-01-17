@@ -1,0 +1,56 @@
+﻿using MongoDB.Driver;
+using SplitServer.Models;
+using SplitServer.Repositories.Mappers;
+
+namespace SplitServer.Repositories.Implementations;
+
+public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transfer>, ITransfersRepository
+{
+    public TransfersMongoDbRepository(IMongoConnection mongoConnection) :
+        base(
+            mongoConnection,
+            "Transfers",
+            new PassThroughMapper<Transfer>())
+    {
+    }
+
+    public async Task<List<Transfer>> GetByGroupId(
+        string groupId,
+        int pageSize,
+        DateTime? maxOccured,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var paginationFilter = maxOccured is not null && maxCreated is not null
+            ? FilterBuilder.Or(
+                FilterBuilder.Lt(x => x.Occured, maxOccured),
+                FilterBuilder.And(
+                    FilterBuilder.Eq(x => x.Occured, maxOccured),
+                    FilterBuilder.Lt(x => x.Created, maxCreated)))
+            : FilterBuilder.Empty;
+
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.Eq(x => x.IsDeleted, false),
+            paginationFilter);
+
+        var sort = SortBuilder.Descending(x => x.Occured).Descending(x => x.Created);
+
+        return await Collection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<Transfer>> GetAllByGroupId(string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.Eq(x => x.IsDeleted, false));
+
+        return await Collection
+            .Find(filter)
+            .ToListAsync(ct);
+    }
+}
