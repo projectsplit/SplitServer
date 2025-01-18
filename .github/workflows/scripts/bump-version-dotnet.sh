@@ -2,8 +2,6 @@ sudo apt-get update
 sudo apt-get install xmlstarlet -y
 
 CSPROJ_FILE=$1
-GIT_USERNAME=$2
-GIT_EMAIL=$3
 
 CURRENT_MONTH=$(date +'%y%m')
 
