@@ -18,7 +18,6 @@ builder.Services.AddSingleton<IInvitationsRepository, InvitationsMongoDbReposito
 builder.Services.AddSingleton<IGroupsRepository, GroupsMongoDbRepository>();
 builder.Services.AddSingleton<IExpensesRepository, ExpensesMongoDbRepository>();
 builder.Services.AddSingleton<ITransfersRepository, TransfersMongoDbRepository>();
-
 builder.Services.AddHttpClient();
 builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
