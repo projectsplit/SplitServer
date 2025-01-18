@@ -26,8 +26,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.ref_name }} .
-          docker push ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+          docker build -t ghcr.io/projectsplit/splitserver:${{ github.ref_name }} .
+          docker push ghcr.io/projectsplit/splitserver:${{ github.ref_name }}
 
       - name: SSH into server and deploy
         uses: appleboy/ssh-action@v1.2.0
