@@ -19,7 +19,7 @@ xmlstarlet edit --inplace --omit-decl --update $VERSION_XML_PATH -v "$NEW_VERSIO
 git status
 git diff
 
-COMMIT_MESSAGE=Version bump from "$LAST_VERSION" to "$NEW_VERSION"
+COMMIT_MESSAGE=$(Version bump from "$LAST_VERSION" to "$NEW_VERSION")
 
 git config user.name github-actions
 git config user.email github-actions@github.com
