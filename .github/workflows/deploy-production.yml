@@ -41,5 +41,5 @@ jobs:
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/projectsplit/splitserver:$TAG
             cd /home/user/split-server-test
-            docker-compose down
-            docker-compose up -d
+            docker compose down
+            docker compose up -d
