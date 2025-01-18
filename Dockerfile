@@ -1,17 +1,16 @@
 # Use the official .NET 8 SDK image as the base image for building the app
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 
-# Set the working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy the project file and restore dependencies
-COPY *.csproj ./
-RUN dotnet restore
-
-# Copy the rest of the application code
+# Copy the entire source code into the container
 COPY . ./
 
-# Publish the application to the /out directory
+# Restore dependencies
+RUN dotnet restore
+
+# Build and publish the app
 RUN dotnet publish -c Release -o /out
 
 # Use the official .NET 8 runtime image for the final image
