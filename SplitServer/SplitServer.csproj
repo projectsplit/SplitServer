@@ -1,17 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-
-    <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <PackageReference Include="CSharpFunctionalExtensions" Version="3.2.0" />
-        <PackageReference Include="MediatR" Version="12.4.1" />
-        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
-        <PackageReference Include="MongoDB.Driver" Version="3.0.0" />
-        <PackageReference Include="NMoneys" Version="7.3.0" />
-    </ItemGroup>
-
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CSharpFunctionalExtensions" Version="3.2.0"/>
+    <PackageReference Include="MediatR" Version="12.4.1"/>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11"/>
+    <PackageReference Include="MongoDB.Driver" Version="3.0.0"/>
+    <PackageReference Include="NMoneys" Version="7.3.0"/>
+  </ItemGroup>
 </Project>
