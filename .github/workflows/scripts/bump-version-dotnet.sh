@@ -2,6 +2,8 @@ sudo apt-get update
 sudo apt-get install xmlstarlet -y
 
 CSPROJ_FILE=$1
+GIT_USERNAME=$2
+GIT_EMAIL=$3
 
 CURRENT_MONTH=$(date +'%y%m')
 
@@ -21,8 +23,8 @@ git diff
 
 COMMIT_MESSAGE="Version bump from $LAST_VERSION to $NEW_VERSION"
 
-#git config user.name github-actions
-#git config user.email github-actions@github.com
+git config user.name "${GITHUB_ACTOR}"
+git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 git add .
 git commit -m "$COMMIT_MESSAGE [skip ci]"
 git tag -a "$NEW_VERSION" -m "Version $NEW_VERSION"
