@@ -2,11 +2,8 @@ sudo apt-get update
 sudo apt-get install xmlstarlet -y
 
 CSPROJ_FILE=$1
-
 CURRENT_MONTH=$(date +'%y%m')
-
 VERSION_XML_PATH="Project/PropertyGroup/Version"
-
 LAST_VERSION=$(xmlstarlet select --text --template --value-of $VERSION_XML_PATH "$CSPROJ_FILE")
 LAST_VERSION_MONTH=$(echo "$LAST_VERSION" | cut -d "." -f 1)
 LAST_VERSION_NUMBER=$(echo "$LAST_VERSION" | cut -d "." -f 2)
