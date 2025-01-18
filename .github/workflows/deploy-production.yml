@@ -37,7 +37,9 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
-            docker pull ghcr.io/projectsplit/splitserver:${{ github.ref_name }}
-            cd /path/to/your/docker-compose-directory
+            TAG=${{ github.ref_name }}
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker pull ghcr.io/projectsplit/splitserver:$TAG
+            cd /home/user/split-server-test
             docker-compose down
             docker-compose up -d
