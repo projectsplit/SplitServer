@@ -37,7 +37,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
-            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            docker pull ghcr.io/projectsplit/splitserver:${{ github.ref_name }}
             cd /path/to/your/docker-compose-directory
             docker-compose down
             docker-compose up -d
