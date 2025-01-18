@@ -46,7 +46,6 @@ builder.Services.AddCors(
     });
 
 var app = builder.Build();
-var test = 4;
 
 app.UseCors();
 app.UseMiddleware<ExceptionHandlerMiddleware>();
