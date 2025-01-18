@@ -10,10 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VERSION_SCRIPT: ./.github/workflows/scripts/bump-version-dotnet.sh
-      CSPROJ_LOCATION: ./src/SplitBackApi/SplitBackApi.csproj
+      CSPROJ_LOCATION: ./SplitServer/SplitServer.csproj
       BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
     steps:
-    - uses: actions/checkout@v3
+    - name: Check out repository
+      uses: actions/checkout@v4
       with:
         token: ${{ secrets.ADMIN_TOKEN }}
     - name: Print current branch
