@@ -26,8 +26,8 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/projectsplit/splitserver:v${{ github.ref_name }} .
-          docker push ghcr.io/projectsplit/splitserver:v${{ github.ref_name }}
+          docker build -t ghcr.io/projectsplit/splitserver:${{ github.ref_name }} .
+          docker push ghcr.io/projectsplit/splitserver:${{ github.ref_name }}
 
       - name: SSH into server and deploy
         uses: appleboy/ssh-action@v1.2.0
@@ -38,6 +38,7 @@ jobs:
           port: ${{ secrets.SERVER_SSH_PORT }}
           script: |
             TAG=${{ github.ref_name }}
+            echo $TAG
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/projectsplit/splitserver:$TAG
             cd /home/user/split-server-test
