@@ -23,3 +23,15 @@ jobs:
       run: |
         chmod +x ${{ env.VERSION_SCRIPT }}
         ${{ env.VERSION_SCRIPT }} ${{ env.CSPROJ_LOCATION }}
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      run: |
+        docker build -t ghcr.io/projectsplit/splitserver:${{ github.ref_name }} .
+        docker push ghcr.io/projectsplit/splitserver:${{ github.ref_name }}
