@@ -42,5 +42,12 @@ jobs:
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ghcr.io/projectsplit/splitserver:$TAG
             cd /home/user/split-server-test
-            docker compose down
-            docker compose up -d
+            docker stop splitserver || true
+            docker rm splitserver || true
+            docker run -d \
+              --name splitserver \
+              -p 5097:5097 \
+              -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
+              -e ASPNETCORE_ENVIRONMENT=Production \
+              --restart always \
+              ghcr.io/projectsplit/splitserver:$TAG
