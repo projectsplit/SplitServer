@@ -27,7 +27,7 @@ jobs:
             TAG=${{ github.ref_name }}
             echo $TAG
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd /home/user/split-production
+            cd /home/user/split-production/api
             docker stop splitserver || true
             docker rm splitserver || true
             docker pull ghcr.io/projectsplit/splitserver:$TAG
