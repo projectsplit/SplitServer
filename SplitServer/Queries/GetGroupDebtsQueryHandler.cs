@@ -61,46 +61,50 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
 
     private static List<Debt> GetDebts(string currency, List<Expense> expenses, List<Transfer> transfers)
     {
-        var memberDebts = new Dictionary<string, decimal>();
-        var memberCredits = new Dictionary<string, decimal>();
+        var balances = new Dictionary<string, decimal>();
 
         foreach (var expense in expenses.Where(e => e.Currency == currency).ToList())
         {
             foreach (var share in expense.Shares)
             {
-                memberDebts[share.MemberId] = memberDebts.GetValueOrDefault(share.MemberId) + share.Amount;
+                balances[share.MemberId] = balances.GetValueOrDefault(share.MemberId) + share.Amount;
             }
 
             foreach (var payment in expense.Payments)
             {
-                memberCredits[payment.MemberId] = memberCredits.GetValueOrDefault(payment.MemberId) + payment.Amount;
+                balances[payment.MemberId] = balances.GetValueOrDefault(payment.MemberId) - payment.Amount;
             }
         }
 
         foreach (var transfer in transfers.Where(t => t.Currency == currency).ToList())
         {
-            memberDebts[transfer.ReceiverId] = memberDebts.GetValueOrDefault(transfer.ReceiverId) + transfer.Amount;
-            memberCredits[transfer.SenderId] = memberCredits.GetValueOrDefault(transfer.SenderId) + transfer.Amount;
+            balances[transfer.ReceiverId] = balances.GetValueOrDefault(transfer.ReceiverId) + transfer.Amount;
+            balances[transfer.SenderId] = balances.GetValueOrDefault(transfer.SenderId) - transfer.Amount;
         }
+
+        balances = balances.Where(x => x.Value != 0).ToDictionary(x => x.Key, x => x.Value);
 
         var debts = new List<Debt>();
 
-        while (memberCredits.Sum(x => x.Value) > 0)
+        while (balances.Any(x => x.Value != 0))
         {
-            var maxDebtor = memberDebts.MaxBy(x => x.Value);
-            var maxCreditor = memberCredits.MaxBy(x => x.Value);
+            var maxDebtor = balances.MinBy(x => x.Value);
+            var maxCreditor = balances.MaxBy(x => x.Value);
+
+            var amount = Math.Min(-maxDebtor.Value, maxCreditor.Value);
 
             var debt = new Debt
             {
                 Debtor = maxDebtor.Key,
                 Creditor = maxCreditor.Key,
-                Amount = Math.Min(maxDebtor.Value, maxCreditor.Value),
+                Amount = amount,
                 Currency = currency
             };
 
             debts.Add(debt);
-            memberDebts[debt.Debtor] -= debt.Amount;
-            memberCredits[debt.Creditor] -= debt.Amount;
+
+            balances[maxDebtor.Key] += amount;
+            balances[maxCreditor.Key] -= amount;
         }
 
         return debts;

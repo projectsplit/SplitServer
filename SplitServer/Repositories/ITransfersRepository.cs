@@ -10,4 +10,6 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
     Task<List<Transfer>> GetAllByGroupId(string groupId, CancellationToken ct);
     
     Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
+    
+    Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 }

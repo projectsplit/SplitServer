@@ -64,4 +64,20 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers"); 
     }
+
+    public async Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
+    {
+        var receiverFilter = FilterBuilder.In(x => x.ReceiverId, memberIds);
+        var senderFilter = FilterBuilder.In(x => x.SenderId, memberIds);
+        
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.IsDeleted, false),
+            FilterBuilder.Or(receiverFilter, senderFilter));
+        
+        var documents = await Collection
+            .Find(filter)
+            .ToListAsync(ct);
+        
+        return documents.Select(Mapper.ToEntity).ToList();
+    }
 }
