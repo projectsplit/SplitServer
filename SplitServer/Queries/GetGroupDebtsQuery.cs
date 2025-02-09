@@ -6,14 +6,6 @@ namespace SplitServer.Queries;
 
 public class GetGroupDebtsQuery : IRequest<Result<GetGroupDebtsResponse>>
 {
-    public string UserId { get; }
-    public string GroupId { get; }
-
-    public GetGroupDebtsQuery(
-        string userId,
-        string groupId)
-    {
-        UserId = userId;
-        GroupId = groupId;
-    }
+    public required string UserId { get; init; }
+    public required string GroupId { get; init; }
 }

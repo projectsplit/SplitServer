@@ -3,7 +3,6 @@ using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Extensions;
 using SplitServer.Queries;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -25,7 +24,12 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new CreateGroupCommand(httpContext.GetUserId(), request.Name, request.Currency);
+        var command = new CreateGroupCommand
+        {
+            UserId = httpContext.GetUserId(),
+            Name = request.Name,
+            Currency = request.Currency
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -38,7 +42,11 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new DeleteGroupCommand(httpContext.GetUserId(), request.GroupId);
+        var command = new DeleteGroupCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = request.GroupId
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -51,7 +59,13 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new UpdateGroupCommand(httpContext.GetUserId(), request.GroupId, request.Name, request.Currency);
+        var command = new UpdateGroupCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = request.GroupId,
+            Name = request.Name,
+            Currency = request.Currency
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -64,7 +78,11 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupQuery(httpContext.GetUserId(), groupId);
+        var command = new GetGroupQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -78,7 +96,12 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupsQuery(httpContext.GetUserId(), pageSize, next);
+        var command = new GetGroupsQuery
+        {
+            UserId = httpContext.GetUserId(),
+            PageSize = pageSize,
+            Next = next
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -92,7 +115,12 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new AddGuestCommand(httpContext.GetUserId(), groupId, request.GuestName);
+        var command = new AddGuestCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            GuestName = request.GuestName
+        };
 
         var result = await mediator.Send(command, ct);
 

@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using SplitServer.Extensions;
 using SplitServer.Queries;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -17,7 +16,10 @@ public static class UserEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = new GetAuthenticatedUserQuery(httpContext.GetUserId());
+        var query = new GetAuthenticatedUserQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
 
         var result = await mediator.Send(query, ct);
 

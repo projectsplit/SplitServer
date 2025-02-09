@@ -6,10 +6,5 @@ namespace SplitServer.Commands;
 
 public class RefreshCommand : IRequest<Result<AuthTokensResult>>
 {
-    public string RefreshToken { get; }
-
-    public RefreshCommand(string refreshToken)
-    {
-        RefreshToken = refreshToken;
-    }
+    public required string RefreshToken { get; init; }
 }
