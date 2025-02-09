@@ -58,7 +58,7 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
     }
 }
 
-internal class NextGroupPageDetails
+file class NextGroupPageDetails
 {
     public required DateTime Created { get; init; }
 }

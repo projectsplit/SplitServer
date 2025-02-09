@@ -91,4 +91,20 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses"); 
     }
+
+    public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
+    {
+        var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
+        var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
+        
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.IsDeleted, false),
+            FilterBuilder.Or(sharesFilter, paymentsFilter));
+        
+        var documents = await Collection
+            .Find(filter)
+            .ToListAsync(ct);
+        
+        return documents.Select(Mapper.ToEntity).ToList();
+    }
 }

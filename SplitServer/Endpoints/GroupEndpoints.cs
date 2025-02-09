@@ -16,6 +16,7 @@ public static class GroupEndpoints
         app.MapGet("/{groupId}", GetGroupHandler);
         app.MapPost("/{groupId}/add-guest", AddGuestHandler);
         app.MapGet("/", GetGroupsHandler);
+        app.MapGet("/details", GetGroupsWithDetailsHandler);
     }
 
     private static async Task<IResult> CreateGroupHandler(
@@ -125,5 +126,24 @@ public static class GroupEndpoints
         var result = await mediator.Send(command, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> GetGroupsWithDetailsHandler(
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new GetGroupsWithDetailsQuery
+        {
+            UserId = httpContext.GetUserId(),
+            PageSize = pageSize,
+            Next = next
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }

@@ -13,4 +13,6 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<List<LabelCount>> GetAllLabels(string groupId, CancellationToken ct);
     
     Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
+    
+    Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 }
