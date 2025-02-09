@@ -3,7 +3,7 @@ using SplitServer.Models;
 
 namespace SplitServer.Repositories.Implementations.Models;
 
-public record MongoDbLocation
+public class MongoDbLocation
 {
     public required GeoJsonPoint<GeoJson2DCoordinates> Geo { get; init; }
     
