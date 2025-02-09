@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Models;
 
-public class Share
+public record Share
 {
     public required string MemberId { get; init; }
     public required decimal Amount { get; init; }
