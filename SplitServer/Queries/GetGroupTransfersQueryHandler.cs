@@ -5,6 +5,7 @@ using MediatR;
 using SplitServer.Dto;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
@@ -13,7 +14,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly ITransfersRepository _transfersRepository;
-    
+
     public GetGroupTransfersQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
@@ -39,7 +40,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
         {
             return Result.Failure<GetGroupTransfersResponse>($"Group with id {query.GroupId} was not found");
         }
-        
+
         var group = groupMaybe.Value;
 
         if (group.Members.All(x => x.UserId != query.UserId))
@@ -47,7 +48,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
             return Result.Failure<GetGroupTransfersResponse>("User must be a group member");
         }
 
-        var nextDetails = ParseNext(query.Next);
+        var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
 
         var transfers = await _transfersRepository.GetByGroupId(
             query.GroupId,
@@ -59,46 +60,25 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
         return new GetGroupTransfersResponse
         {
             Transfers = transfers,
-            Next = CreateNext(transfers, query.PageSize)
+            Next = GetNext(query, transfers)
         };
     }
 
-    private static string? CreateNext(List<Transfer> transfers, int pageSize)
+    private static string? GetNext(GetGroupTransfersQuery query, List<Transfer> transfers)
     {
-        if (transfers.Count < pageSize)
-        {
-            return default;
-        }
-        
-        var lastTransferInPage = transfers.Last();
-
-        var newNextDetails = new NextTransferPageDetails
-        {
-            Created = lastTransferInPage.Created,
-            Occured = lastTransferInPage.Occured
-        };
-        
-        var jsonString = JsonSerializer.Serialize(newNextDetails);
-
-        return Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
-    }
-
-    private static NextTransferPageDetails? ParseNext(string? next)
-    {
-        if (string.IsNullOrEmpty(next))
-        {
-            return default;
-        }
-
-        var jsonString = Encoding.UTF8.GetString(Convert.FromBase64String(next));
-        
-        return JsonSerializer.Deserialize<NextTransferPageDetails>(jsonString);
+        return Next.Create(
+            transfers,
+            query.PageSize,
+            x => new NextTransferPageDetails
+            {
+                Created = x.Last().Created,
+                Occured = x.Last().Occured
+            });
     }
 }
 
 internal class NextTransferPageDetails
 {
     public required DateTime Created { get; init; }
-    
     public required DateTime Occured { get; init; }
 }

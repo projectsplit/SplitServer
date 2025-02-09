@@ -1,4 +1,5 @@
-﻿using SplitServer.Models;
+﻿using CSharpFunctionalExtensions;
+using SplitServer.Models;
 using SplitServer.Repositories.Implementations.Models;
 
 namespace SplitServer.Repositories;
@@ -10,4 +11,6 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<List<Expense>> GetAllByGroupId(string groupId, CancellationToken ct);
 
     Task<List<LabelCount>> GetAllLabels(string groupId, CancellationToken ct);
+    
+    Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
 }

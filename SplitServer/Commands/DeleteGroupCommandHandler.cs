@@ -8,13 +8,22 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
+    private readonly IExpensesRepository _expensesRepository;
+    private readonly ITransfersRepository _transfersRepository;
+    private readonly IInvitationsRepository _invitationsRepository;
 
     public DeleteGroupCommandHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository)
+        IGroupsRepository groupsRepository,
+        IExpensesRepository expensesRepository,
+        ITransfersRepository transfersRepository,
+        IInvitationsRepository invitationsRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
+        _expensesRepository = expensesRepository;
+        _transfersRepository = transfersRepository;
+        _invitationsRepository = invitationsRepository;
     }
 
     public async Task<Result> Handle(DeleteGroupCommand command, CancellationToken ct)
@@ -48,6 +57,8 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
         {
             return deleteResult.ConvertFailure<Result>();
         }
+        
+        var deleteInvitationsResult = await _expensesRepository.SoftDelete(group.Id, ct);
         
         return Result.Success();
     }

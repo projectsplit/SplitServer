@@ -23,11 +23,11 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
 
     public async Task<Result> Handle(CreateInvitationCommand command, CancellationToken ct)
     {
-        var userMaybe = await _usersRepository.GetById(command.FromId, ct);
+        var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
         if (userMaybe.HasNoValue)
         {
-            return Result.Failure($"User with id {command.FromId} was not found");
+            return Result.Failure($"User with id {command.UserId} was not found");
         }
 
         var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
@@ -39,7 +39,7 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
 
         var group = groupMaybe.Value;
 
-        if (group.Members.All(x => x.UserId != command.FromId))
+        if (group.Members.All(x => x.UserId != command.UserId))
         {
             return Result.Failure("You are not a member of this group");
         }
@@ -48,12 +48,37 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
         {
             return Result.Failure("User is already a group member");
         }
-        
-        var existingInvitationMaybe = await _invitationsRepository.Get(command.FromId, command.ToId, command.GroupId, ct);
 
-        if (existingInvitationMaybe.HasValue)
+        if (command.GuestId is not null)
         {
-            return Result.Failure("Invitation already exists");
+            if (group.Guests.All(x => x.Id != command.GuestId))
+            {
+                return Result.Failure("Guest is not a group member");
+            }
+
+            var existingInvitationByGuestIdMaybe = await _invitationsRepository.GetByGuestId(command.GuestId, command.GroupId, ct);
+
+            if (existingInvitationByGuestIdMaybe.HasValue)
+            {
+                var deleteInvitationByGuestIdResult = await _invitationsRepository.Delete(existingInvitationByGuestIdMaybe.Value.Id, ct);
+
+                if (deleteInvitationByGuestIdResult.IsFailure)
+                {
+                    return deleteInvitationByGuestIdResult;
+                }
+            }
+        }
+
+        var existingInvitationByToIdMaybe = await _invitationsRepository.GetByToId(command.ToId, command.GroupId, ct);
+
+        if (existingInvitationByToIdMaybe.HasValue)
+        {
+            var deleteInvitationByToIdResult = await _invitationsRepository.Delete(existingInvitationByToIdMaybe.Value.Id, ct);
+
+            if (deleteInvitationByToIdResult.IsFailure)
+            {
+                return deleteInvitationByToIdResult;
+            }
         }
 
         var now = DateTime.UtcNow;
@@ -63,17 +88,18 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
             Id = Guid.NewGuid().ToString(),
             Created = now,
             Updated = now,
-            FromId = command.FromId,
+            FromId = command.UserId,
             ToId = command.ToId,
             GroupId = command.GroupId,
-            IsDeleted = false
+            GuestId = command.GuestId,
+            IsDeleted = false,
         };
-        
-        var writeInvitationResult = await _invitationsRepository.Insert(newInvitation, ct);
 
-        if (writeInvitationResult.IsFailure)
+        var writeResult = await _invitationsRepository.Insert(newInvitation, ct);
+
+        if (writeResult.IsFailure)
         {
-            return Result.Failure(writeInvitationResult.Error);
+            return Result.Failure(writeResult.Error);
         }
 
         return Result.Success();
