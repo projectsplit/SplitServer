@@ -1,27 +1,26 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Models;
 using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
 
-public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCommand, Result>
+public class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly IGroupsRepository _groupsRepository;
 
-    public AcceptInvitationCommandHandler(
+    public RevokeInvitationCommandHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        IGroupsRepository groupsRepository)
     {
         _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _invitationsRepository = invitationsRepository;
+        _groupsRepository = groupsRepository;
     }
 
-    public async Task<Result> Handle(AcceptInvitationCommand command, CancellationToken ct)
+    public async Task<Result> Handle(RevokeInvitationCommand command, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
@@ -38,24 +37,19 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
         }
 
         var invitation = invitationMaybe.Value;
-
-        if (invitation.ToId != command.UserId)
-        {
-            return Result.Failure("You cannot accept this invitation");
-        }
-
+        
         var groupMaybe = await _groupsRepository.GetById(invitation.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure($"Group with id {invitation.GroupId} was not found");
         }
-
+        
         var group = groupMaybe.Value;
 
-        if (group.Members.Any(x => x.UserId == command.UserId))
+        if (group.Members.All(x => x.UserId != command.UserId))
         {
-            return Result.Failure("User is already a group member");
+            return Result.Failure("You must be a group member to revoke invitations");
         }
 
         var deleteInvitationResult = await _invitationsRepository.Delete(command.InvitationId, ct);
@@ -63,30 +57,6 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
         if (deleteInvitationResult.IsFailure)
         {
             return deleteInvitationResult.ConvertFailure<Result>();
-        }
-
-        var now = DateTime.UtcNow;
-        var memberId = invitation.GuestId ?? Guid.NewGuid().ToString();
-
-        var newMember = new Member
-        {
-            Id = memberId,
-            UserId = command.UserId,
-            Joined = now
-        };
-
-        var updatedGroup = group with
-        {
-            Guests = group.Guests.Where(x => x.Id != memberId).ToList(),
-            Members = group.Members.Concat([newMember]).ToList(),
-            Updated = now
-        };
-
-        var updateGroupResult = await _groupsRepository.Update(updatedGroup, ct);
-
-        if (updateGroupResult.IsFailure)
-        {
-            return updateGroupResult.ConvertFailure<Result>();
         }
 
         return Result.Success();

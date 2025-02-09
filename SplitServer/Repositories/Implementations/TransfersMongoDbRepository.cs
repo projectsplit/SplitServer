@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using CSharpFunctionalExtensions;
+using MongoDB.Driver;
 using SplitServer.Models;
 using SplitServer.Repositories.Mappers;
 
@@ -52,5 +53,15 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         return await Collection
             .Find(filter)
             .ToListAsync(ct);
+    }
+
+    public async Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var update = UpdateBuilder.Set(x => x.IsDeleted, true);
+        
+        var result = await Collection.UpdateManyAsync(filter, update, null, ct);
+        
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers"); 
     }
 }

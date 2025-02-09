@@ -2,7 +2,6 @@
 using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Extensions;
-using SplitServer.Services;
 
 namespace SplitServer.Endpoints;
 
@@ -12,7 +11,7 @@ public static class InvitationEndpoints
     {
         app.MapPost("/create", CreateInvitationHandler);
         app.MapPost("/accept", AcceptInvitationHandler);
-        // app.MapPost("/decline", RefreshHandler);
+        app.MapPost("/decline", DeclineInvitationHandler);
         // app.MapPost("/revoke", RefreshHandler);
     }
 
@@ -20,14 +19,14 @@ public static class InvitationEndpoints
         CreateInvitationRequest request,
         IMediator mediator,
         HttpContext httpContext,
-        AuthService authService,
         CancellationToken ct)
     {
         var command = new CreateInvitationCommand
         {
-            FromId = httpContext.GetUserId(),
+            UserId = httpContext.GetUserId(),
             ToId = request.ToId,
-            GroupId = request.GroupId
+            GroupId = request.GroupId,
+            GuestId = request.GuestId,
         };
 
         var result = await mediator.Send(command, ct);
@@ -39,10 +38,43 @@ public static class InvitationEndpoints
         AcceptInvitationRequest request,
         IMediator mediator,
         HttpContext httpContext,
-        AuthService authService,
         CancellationToken ct)
     {
         var command = new AcceptInvitationCommand
+        {
+            UserId = httpContext.GetUserId(),
+            InvitationId = request.InvitationId
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> DeclineInvitationHandler(
+        DeclineInvitationRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new DeclineInvitationCommand
+        {
+            UserId = httpContext.GetUserId(),
+            InvitationId = request.InvitationId
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> RevokeInvitationHandler(
+        RevokeInvitationRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new RevokeInvitationCommand
         {
             UserId = httpContext.GetUserId(),
             InvitationId = request.InvitationId
