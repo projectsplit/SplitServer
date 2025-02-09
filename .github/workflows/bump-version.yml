@@ -8,6 +8,8 @@ permissions:
   contents: write
   packages: write
 
+run-name: Bump Version
+
 jobs:
   version-bump:
     name: Bump Version
