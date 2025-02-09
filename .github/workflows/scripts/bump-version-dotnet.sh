@@ -18,8 +18,8 @@ git diff
 
 COMMIT_MESSAGE="Version bump from $LAST_VERSION to $NEW_VERSION"
 
-git config user.name "${GITHUB_ACTOR}"
-git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+git config --local user.email "github-actions@github.com"
+git config --local user.name "GitHub Actions"
 git add .
 git commit -m "$COMMIT_MESSAGE [skip ci]"
 git tag -a "$NEW_VERSION" -m "Version $NEW_VERSION"
