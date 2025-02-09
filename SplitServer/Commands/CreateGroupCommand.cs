@@ -6,19 +6,7 @@ namespace SplitServer.Commands;
 
 public class CreateGroupCommand : IRequest<Result<CreateGroupResponse>>
 {
-    public string UserId { get; }
-    
-    public string Name { get; }
-    
-    public string Currency { get; } 
-
-    public CreateGroupCommand(
-        string userId,
-        string name,
-        string currency)
-    {
-        UserId = userId;
-        Name = name;
-        Currency = currency;
-    }
+    public required string UserId { get; init; }
+    public required string Name { get; init; }
+    public required string Currency { get; init; }
 }

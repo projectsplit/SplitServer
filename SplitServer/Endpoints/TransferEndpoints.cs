@@ -23,15 +23,17 @@ public static class TransferEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new CreateTransferCommand(
-            httpContext.GetUserId(),
-            request.GroupId,
-            request.Amount,
-            request.Currency,
-            request.Description,
-            request.Occured,
-            request.SenderId,
-            request.ReceiverId);
+        var command = new CreateTransferCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = request.GroupId,
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occured = request.Occured,
+            SenderId = request.SenderId,
+            ReceiverId = request.ReceiverId
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -44,10 +46,14 @@ public static class TransferEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new DeleteTransferCommand(httpContext.GetUserId(), request.TransferId);
-    
+        var command = new DeleteTransferCommand
+        {
+            UserId = httpContext.GetUserId(),
+            TransferId = request.TransferId
+        };
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
@@ -59,10 +65,16 @@ public static class TransferEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupTransfersQuery(httpContext.GetUserId(), groupId, pageSize, next);
-    
+        var command = new GetGroupTransfersQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            PageSize = pageSize,
+            Next = next
+        };
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 

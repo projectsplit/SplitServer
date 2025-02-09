@@ -3,7 +3,6 @@ using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Extensions;
 using SplitServer.Services;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -24,7 +23,12 @@ public static class InvitationEndpoints
         AuthService authService,
         CancellationToken ct)
     {
-        var command = new CreateInvitationCommand(httpContext.GetUserId(), request.ToId, request.GroupId);
+        var command = new CreateInvitationCommand
+        {
+            FromId = httpContext.GetUserId(),
+            ToId = request.ToId,
+            GroupId = request.GroupId
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -38,7 +42,11 @@ public static class InvitationEndpoints
         AuthService authService,
         CancellationToken ct)
     {
-        var command = new AcceptInvitationCommand(httpContext.GetUserId(), request.InvitationId);
+        var command = new AcceptInvitationCommand
+        {
+            UserId = httpContext.GetUserId(),
+            InvitationId = request.InvitationId
+        };
 
         var result = await mediator.Send(command, ct);
 

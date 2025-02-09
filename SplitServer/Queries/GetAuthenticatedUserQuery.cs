@@ -6,11 +6,5 @@ namespace SplitServer.Queries;
 
 public class GetAuthenticatedUserQuery : IRequest<Result<GetAuthenticatedUserResponse>>
 {
-    public string UserId { get; }
-
-    public GetAuthenticatedUserQuery(
-        string userId)
-    {
-        UserId = userId;
-    }
+    public required string UserId { get; init; }
 }

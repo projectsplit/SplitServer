@@ -1,7 +1,6 @@
 ﻿using MediatR;
 using SplitServer.Extensions;
 using SplitServer.Queries;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -18,10 +17,14 @@ public static class DebtEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupDebtsQuery(httpContext.GetUserId(), groupId);
-    
+        var command = new GetGroupDebtsQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId
+        };
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }

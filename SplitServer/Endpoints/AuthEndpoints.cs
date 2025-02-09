@@ -2,7 +2,6 @@
 using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Services;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -24,8 +23,11 @@ public static class AuthEndpoints
         AuthService authService,
         CancellationToken ct)
     {
-        var command = new ProcessGoogleAccessTokenCommand(request.GoogleAccessToken);
-        
+        var command = new ProcessGoogleAccessTokenCommand
+        {
+            GoogleAccessToken = request.GoogleAccessToken
+        };
+
         var result = await mediator.Send(command, ct);
 
         if (result.IsFailure)
@@ -80,7 +82,11 @@ public static class AuthEndpoints
         AuthService authService,
         CancellationToken ct)
     {
-        var command = new SignInWithPasswordCommand(request.Username, request.Password);
+        var command = new SignInWithPasswordCommand
+        {
+            Username = request.Username,
+            Password = request.Password
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -88,7 +94,7 @@ public static class AuthEndpoints
         {
             return Results.BadRequest(result.Error);
         }
-        
+
         authService.DeleteRefreshTokenCookie(httpContext);
         authService.AppendRefreshTokenCookie(httpContext, result.Value.RefreshToken);
 
@@ -112,10 +118,13 @@ public static class AuthEndpoints
         {
             return Results.Unauthorized();
         }
-        
+
         Console.WriteLine(refreshTokenResult.Value);
 
-        var command = new RefreshCommand(refreshTokenResult.Value);
+        var command = new RefreshCommand
+        {
+            RefreshToken = refreshTokenResult.Value
+        };
 
         var result = await mediator.Send(command, ct);
 
@@ -149,7 +158,10 @@ public static class AuthEndpoints
             return Results.Ok();
         }
 
-        var command = new LogOutCommand(refreshTokenResult.Value);
+        var command = new LogOutCommand
+        {
+            RefreshToken = refreshTokenResult.Value
+        };
 
         var result = await mediator.Send(command, ct);
 

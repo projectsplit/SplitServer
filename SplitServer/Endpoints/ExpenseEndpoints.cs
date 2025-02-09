@@ -3,7 +3,6 @@ using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Extensions;
 using SplitServer.Queries;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -49,7 +48,11 @@ public static class ExpenseEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new DeleteExpenseCommand(httpContext.GetUserId(), request.ExpenseId);
+        var command = new DeleteExpenseCommand
+        {
+            UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId
+        };
     
         var result = await mediator.Send(command, ct);
     
@@ -64,7 +67,13 @@ public static class ExpenseEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupExpensesQuery(httpContext.GetUserId(), groupId, pageSize, next);
+        var command = new GetGroupExpensesQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            PageSize = pageSize,
+            Next = next
+        };
     
         var result = await mediator.Send(command, ct);
     

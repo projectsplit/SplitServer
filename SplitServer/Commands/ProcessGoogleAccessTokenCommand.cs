@@ -6,10 +6,5 @@ namespace SplitServer.Commands;
 
 public class ProcessGoogleAccessTokenCommand : IRequest<Result<AuthTokensResult>>
 {
-    public string GoogleAccessToken { get; }
-
-    public ProcessGoogleAccessTokenCommand(string googleAccessToken)
-    {
-        GoogleAccessToken = googleAccessToken;
-    }
+    public required string GoogleAccessToken { get; init; }
 }
