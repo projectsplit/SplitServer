@@ -35,7 +35,7 @@ jobs:
               --name splitserver \
               -p 5097:5097 \
               -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
-              -e ASPNETCORE_URLS="http://localhost:5097" \
+              -e ASPNETCORE_URLS="http://0.0.0.0:5097" \
               -e ASPNETCORE_ENVIRONMENT=Production \
               --restart always \
               ghcr.io/projectsplit/splitserver:$TAG
