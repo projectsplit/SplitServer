@@ -23,7 +23,7 @@ WORKDIR /app
 COPY --from=build /out .
 
 # Expose the port your app is running on (usually 80 for APIs)
-EXPOSE 5097 5097
+EXPOSE 5097
 
 # Set the entry point for the container
 ENTRYPOINT ["dotnet", "SplitServer.dll"]
