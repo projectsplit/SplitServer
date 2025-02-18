@@ -2,6 +2,7 @@
 using SplitServer.Commands;
 using SplitServer.Dto;
 using SplitServer.Extensions;
+using SplitServer.Queries;
 
 namespace SplitServer.Endpoints;
 
@@ -9,22 +10,23 @@ public static class InvitationEndpoints
 {
     public static void MapInvitationEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/create", CreateInvitationHandler);
+        app.MapGet("/", GetUserInvitations);
+        app.MapPost("/send", SendInvitationHandler);
         app.MapPost("/accept", AcceptInvitationHandler);
         app.MapPost("/decline", DeclineInvitationHandler);
-        // app.MapPost("/revoke", RefreshHandler);
+        app.MapPost("/revoke", RevokeInvitationHandler);
     }
 
-    private static async Task<IResult> CreateInvitationHandler(
-        CreateInvitationRequest request,
+    private static async Task<IResult> SendInvitationHandler(
+        SendInvitationRequest request,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new CreateInvitationCommand
+        var command = new SendInvitationCommand
         {
             UserId = httpContext.GetUserId(),
-            ToId = request.ToId,
+            ReceiverId = request.ReceiverId,
             GroupId = request.GroupId,
             GuestId = request.GuestId,
         };
@@ -83,5 +85,24 @@ public static class InvitationEndpoints
         var result = await mediator.Send(command, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> GetUserInvitations(
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new GetUserInvitationsQuery
+        {
+            UserId = httpContext.GetUserId(),
+            PageSize = pageSize,
+            Next = next,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }

@@ -5,13 +5,13 @@ using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
 
-public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCommand, Result>
+public class SendInvitationCommandHandler : IRequestHandler<SendInvitationCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IInvitationsRepository _invitationsRepository;
 
-    public CreateInvitationCommandHandler(
+    public SendInvitationCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IInvitationsRepository invitationsRepository)
@@ -21,7 +21,7 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
         _invitationsRepository = invitationsRepository;
     }
 
-    public async Task<Result> Handle(CreateInvitationCommand command, CancellationToken ct)
+    public async Task<Result> Handle(SendInvitationCommand command, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
@@ -44,7 +44,7 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
             return Result.Failure("You are not a member of this group");
         }
 
-        if (group.Members.Any(x => x.UserId == command.ToId))
+        if (group.Members.Any(x => x.UserId == command.ReceiverId))
         {
             return Result.Failure("User is already a group member");
         }
@@ -69,15 +69,15 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
             }
         }
 
-        var existingInvitationByToIdMaybe = await _invitationsRepository.GetByToId(command.ToId, command.GroupId, ct);
+        var existingInvitationByReceiverIdMaybe = await _invitationsRepository.GetByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
 
-        if (existingInvitationByToIdMaybe.HasValue)
+        if (existingInvitationByReceiverIdMaybe.HasValue)
         {
-            var deleteInvitationByToIdResult = await _invitationsRepository.Delete(existingInvitationByToIdMaybe.Value.Id, ct);
+            var deleteInvitationByReceiverIdResult = await _invitationsRepository.Delete(existingInvitationByReceiverIdMaybe.Value.Id, ct);
 
-            if (deleteInvitationByToIdResult.IsFailure)
+            if (deleteInvitationByReceiverIdResult.IsFailure)
             {
-                return deleteInvitationByToIdResult;
+                return deleteInvitationByReceiverIdResult;
             }
         }
 
@@ -88,8 +88,8 @@ public class CreateInvitationCommandHandler : IRequestHandler<CreateInvitationCo
             Id = Guid.NewGuid().ToString(),
             Created = now,
             Updated = now,
-            FromId = command.UserId,
-            ToId = command.ToId,
+            SenderId = command.UserId,
+            ReceiverId = command.ReceiverId,
             GroupId = command.GroupId,
             GuestId = command.GuestId,
             IsDeleted = false,

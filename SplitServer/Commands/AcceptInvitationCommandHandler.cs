@@ -39,7 +39,7 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
 
         var invitation = invitationMaybe.Value;
 
-        if (invitation.ToId != command.UserId)
+        if (invitation.ReceiverId != command.UserId)
         {
             return Result.Failure("You cannot accept this invitation");
         }

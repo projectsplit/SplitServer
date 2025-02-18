@@ -35,7 +35,7 @@ public class DeclineInvitationCommandHandler : IRequestHandler<DeclineInvitation
 
         var invitation = invitationMaybe.Value;
 
-        if (invitation.ToId != command.UserId)
+        if (invitation.ReceiverId != command.UserId)
         {
             return Result.Failure("You cannot decline this invitation");
         }

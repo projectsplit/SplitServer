@@ -1,8 +1,8 @@
 ﻿namespace SplitServer.Dto;
 
-public class CreateInvitationRequest
+public class SendInvitationRequest
 {
-    public required string ToId { get; set; }
+    public required string ReceiverId { get; set; }
     public required string GroupId { get; init; }
     public required string? GuestId { get; init; }
 }

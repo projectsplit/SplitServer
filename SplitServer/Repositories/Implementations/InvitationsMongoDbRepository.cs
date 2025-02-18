@@ -15,20 +15,33 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
     {
     }
 
-    public async Task<Maybe<Invitation>> Get(string fromId, string toId, string groupId, CancellationToken ct)
+    public async Task<Maybe<Invitation>> Get(string senderId, string receiverId, string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.FromId, fromId),
-            FilterBuilder.Eq(x => x.ToId, toId),
+            FilterBuilder.Eq(x => x.SenderId, senderId),
+            FilterBuilder.Eq(x => x.ReceiverId, receiverId),
             FilterBuilder.Eq(x => x.GroupId, groupId));
 
         return await Collection.Find(filter).SingleOrDefaultAsync(ct);
     }
 
-    public async Task<Maybe<Invitation>> GetByToId(string toId, string groupId, CancellationToken ct)
+    public async Task<List<Invitation>> GetByReceiverId(string receiverId, int pageSize, DateTime maxCreatedDate, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.ToId, toId),
+            FilterBuilder.Eq(x => x.ReceiverId, receiverId),
+            FilterBuilder.Lt(x => x.Created, maxCreatedDate));
+
+        return await Collection
+            .Find(filter)
+            .Limit(pageSize)
+            .SortByDescending(x => x.Created)
+            .ToListAsync(ct);
+    }
+
+    public async Task<Maybe<Invitation>> GetByGroupIdAndReceiverId(string receiverId, string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.ReceiverId, receiverId),
             FilterBuilder.Eq(x => x.GroupId, groupId));
 
         return await Collection.Find(filter).SingleOrDefaultAsync(ct);
