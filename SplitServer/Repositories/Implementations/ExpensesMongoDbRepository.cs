@@ -86,25 +86,46 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
     {
         var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
         var update = UpdateBuilder.Set(x => x.IsDeleted, true);
-        
+
         var result = await Collection.UpdateManyAsync(filter, update, null, ct);
-        
-        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses"); 
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
     }
 
     public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
         var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
         var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
-        
+
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.IsDeleted, false),
             FilterBuilder.Or(sharesFilter, paymentsFilter));
-        
+
         var documents = await Collection
             .Find(filter)
             .ToListAsync(ct);
-        
+
+        return documents.Select(Mapper.ToEntity).ToList();
+    }
+
+    public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct)
+    {
+        var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
+        var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
+        var occuredFilter = FilterBuilder.And(
+            FilterBuilder.Gte(x => x.Occured, startDate),
+            FilterBuilder.Lte(x => x.Occured, endDate));
+
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.IsDeleted, false),
+            FilterBuilder.Or(sharesFilter, paymentsFilter),
+            occuredFilter);
+
+        var documents = await Collection
+            .Find(filter)
+            .SortBy(x => x.Occured)
+            .ToListAsync(ct);
+
         return documents.Select(Mapper.ToEntity).ToList();
     }
 }
