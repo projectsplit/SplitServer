@@ -1,7 +1,7 @@
 ﻿namespace SplitServer.Dto;
 
 public class GetGroupResponseMember
-{    
+{
     public required string Id { get; init; }
     public required string UserId { get; init; }
     public required string Name { get; init; }

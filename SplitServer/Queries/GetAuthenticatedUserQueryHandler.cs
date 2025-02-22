@@ -23,7 +23,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         {
             return Result.Failure<GetAuthenticatedUserResponse>($"User with id {query.UserId} was not found");
         }
-        
+
         var user = userMaybe.Value;
 
         return new GetAuthenticatedUserResponse

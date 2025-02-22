@@ -37,14 +37,14 @@ public class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCo
         }
 
         var invitation = invitationMaybe.Value;
-        
+
         var groupMaybe = await _groupsRepository.GetById(invitation.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure($"Group with id {invitation.GroupId} was not found");
         }
-        
+
         var group = groupMaybe.Value;
 
         if (group.Members.All(x => x.UserId != command.UserId))

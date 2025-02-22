@@ -44,17 +44,17 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
 
         var groups = await _groupsRepository.GetByUserId(query.UserId, query.PageSize, nextDetails?.Created, ct);
         var userMemberIds = groups.Select(g => g.Members.First(m => m.UserId == query.UserId)).Select(m => m.Id).ToList();
-        
+
         var expenses = await _expensesRepository.GetAllByMemberIds(userMemberIds, ct);
         var transfers = await _transfersRepository.GetAllByMemberIds(userMemberIds, ct);
 
         var groupDetails = new Dictionary<string, Dictionary<string, decimal>>();
-        
+
         foreach (var group in groups)
         {
             var memberId = group.Members.First(m => m.UserId == query.UserId).Id;
             groupDetails[group.Id] = new Dictionary<string, decimal>();
-            
+
             foreach (var transfer in transfers.Where(x => x.GroupId == group.Id))
             {
                 if (transfer.SenderId == memberId)
@@ -67,7 +67,7 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
                     groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) - transfer.Amount;
                 }
             }
-            
+
             foreach (var expense in expenses.Where(x => x.GroupId == group.Id))
             {
                 var payment = expense.Payments.FirstOrDefault(x => x.MemberId == memberId);
@@ -75,7 +75,7 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
                 {
                     groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) + payment.Amount;
                 }
-                
+
                 var share = expense.Shares.FirstOrDefault(x => x.MemberId == memberId);
                 if (share is not null)
                 {

@@ -63,7 +63,7 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
             PreviousRefreshTokens = [],
             IsDeleted = session.IsDeleted
         };
-        
+
         var updateResult = await _sessionsRepository.Update(updatedSession, ct);
 
         if (updateResult.IsFailure)

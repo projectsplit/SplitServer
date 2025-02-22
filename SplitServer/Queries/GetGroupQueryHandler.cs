@@ -40,9 +40,9 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
         {
             return Result.Failure<GetGroupResponse>("User must be a group member");
         }
-        
+
         var memberUserIds = group.Members.Select(x => x.UserId).ToList();
-        
+
         var users = await _usersRepository.GetByIds(memberUserIds, ct);
 
         var usersById = users.ToDictionary(x => x.Id);

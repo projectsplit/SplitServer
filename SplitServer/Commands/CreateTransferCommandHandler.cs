@@ -41,7 +41,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         {
             return Result.Failure<CreateTransferResponse>($"Group with id {command.GroupId} was not found");
         }
-        
+
         var amountValidationResult = _validationService.ValidateAmount(command.Amount, command.Currency);
 
         if (amountValidationResult.IsFailure)

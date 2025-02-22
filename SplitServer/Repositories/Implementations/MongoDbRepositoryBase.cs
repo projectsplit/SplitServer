@@ -54,7 +54,7 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
         var documents = await Collection
             .Find(filter)
             .ToListAsync(cancellationToken: ct);
-        
+
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
