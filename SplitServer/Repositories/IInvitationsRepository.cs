@@ -8,10 +8,10 @@ public interface IInvitationsRepository : IRepositoryBase<Invitation>
     Task<Maybe<Invitation>> Get(string senderId, string receiverId, string groupId, CancellationToken ct);
 
     Task<List<Invitation>> GetByReceiverId(string receiverId, int pageSize, DateTime maxCreatedDate, CancellationToken ct);
-    
+
     Task<Maybe<Invitation>> GetByGroupIdAndReceiverId(string receiverId, string groupId, CancellationToken ct);
-    
+
     Task<Maybe<Invitation>> GetByGuestId(string guestId, string groupId, CancellationToken ct);
-    
+
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 }

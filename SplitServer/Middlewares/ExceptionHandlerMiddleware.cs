@@ -16,7 +16,7 @@ public class ExceptionHandlerMiddleware : IMiddleware
         {
             context.Response.StatusCode = ex.StatusCode;
             context.Response.ContentType = MediaTypeNames.Application.Json;
-            
+
             if (ex.InnerException is JsonException innerException)
             {
                 await context.Response.WriteAsJsonAsync(innerException.Message);

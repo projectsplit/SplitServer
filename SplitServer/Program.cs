@@ -14,10 +14,11 @@ builder.Configure<MongoDbSettings>();
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
 builder.Services.AddSingleton<ISessionsRepository, SessionsMongoDbRepository>();
-builder.Services.AddSingleton<IInvitationsRepository, InvitationsMongoDbRepository>();
 builder.Services.AddSingleton<IGroupsRepository, GroupsMongoDbRepository>();
 builder.Services.AddSingleton<IExpensesRepository, ExpensesMongoDbRepository>();
 builder.Services.AddSingleton<ITransfersRepository, TransfersMongoDbRepository>();
+builder.Services.AddSingleton<IInvitationsRepository, InvitationsMongoDbRepository>();
+builder.Services.AddSingleton<IJoinTokensRepository, JoinTokensMongoDbRepository>();
 
 builder.Services.AddHttpClient();
 builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
@@ -25,6 +26,7 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.G
 builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
+builder.Configure<JoinSettings>();
 
 var authSettings = builder.Configure<AuthSettings>();
 builder.Services.AddSingleton<AuthService>();
@@ -59,5 +61,6 @@ app.MapGroup("/expenses").RequireAuthorization().MapExpenseEndpoints();
 app.MapGroup("/transfers").RequireAuthorization().MapTransferEndpoints();
 app.MapGroup("/debts").RequireAuthorization().MapDebtEndpoints();
 app.MapGroup("/invitations").RequireAuthorization().MapInvitationEndpoints();
+app.MapGroup("/join").RequireAuthorization().MapJoinEndpoints();
 app.MapGet("/", (HttpContext context) => new { UserId = context.GetUserId() }).RequireAuthorization();
 app.Run();

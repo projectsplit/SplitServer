@@ -26,14 +26,14 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
         {
             return Result.Failure<Result>($"User with id {command.UserId} was not found");
         }
-        
+
         var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure<Result>($"Group with id {command.GroupId} was not found");
         }
-        
+
         var group = groupMaybe.Value;
 
         if (group.Members.All(x => x.UserId != command.UserId))
@@ -45,7 +45,7 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
         {
             return Result.Failure<Result>($"Guest with name {command.GuestName} already exists");
         }
-        
+
         var now = DateTime.UtcNow;
 
         var newGuest = new Guest
@@ -60,14 +60,14 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
             Guests = group.Guests.Concat([newGuest]).ToList(),
             Updated = now
         };
-        
+
         var updateResult = await _groupsRepository.Update(updatedGroup, ct);
 
         if (updateResult.IsFailure)
         {
             return updateResult.ConvertFailure<Result>();
         }
-        
+
         return Result.Success();
     }
 }

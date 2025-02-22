@@ -4,10 +4,10 @@ using SplitServer.Dto;
 
 namespace SplitServer.Queries;
 
-public class GetLabelsQuery : IRequest<Result<GetLabelsResponse>>
+public class GetGroupJoinTokensQuery : IRequest<Result<GetGroupJoinTokensResponse>>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }
-    public required int Limit { get; init; }
-    public required string? Query { get; init; }
+    public required int PageSize { get; init; }
+    public required string? Next { get; init; }
 }

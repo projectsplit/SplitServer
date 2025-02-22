@@ -46,7 +46,7 @@ public class ProcessGoogleAccessTokenCommandHandler : IRequestHandler<ProcessGoo
         }
 
         var googleId = googleUserInfoResult.Value.Id;
-        
+
         using var _ = _lockService.AcquireLock(googleId);
 
         var now = DateTime.UtcNow;
@@ -57,7 +57,7 @@ public class ProcessGoogleAccessTokenCommandHandler : IRequestHandler<ProcessGoo
         {
             return userResult.ConvertFailure<AuthTokensResult>();
         }
-        
+
         var userId = userResult.Value.Id;
         var sessionId = Guid.NewGuid().ToString();
         var refreshToken = Guid.NewGuid().ToString();

@@ -16,7 +16,7 @@ public class ValidationService
         {
             return Result.Failure("Currency code must be all upper case");
         }
-        
+
         if (amount <= 0)
         {
             return Result.Failure("Amount must be greater than 0");

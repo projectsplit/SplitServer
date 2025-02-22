@@ -30,7 +30,7 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
     public async Task<Result<AuthTokensResult>> Handle(SignUpWithPasswordCommand command, CancellationToken ct)
     {
         using var _ = _lockService.AcquireLock(command.Username);
-        
+
         var userMaybe = await _usersRepository.GetByEmail(command.Username, ct);
 
         if (userMaybe.HasValue)
@@ -39,11 +39,11 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
         }
 
         var userId = Guid.NewGuid().ToString();
-        
+
         var hasher = new PasswordHasher<string>();
 
         var hashedPassword = hasher.HashPassword(userId, command.Password);
-        
+
         var now = DateTime.UtcNow;
 
         var newUser = new User

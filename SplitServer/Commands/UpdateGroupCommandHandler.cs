@@ -25,16 +25,16 @@ public class UpdateGroupCommandHandler : IRequestHandler<UpdateGroupCommand, Res
         {
             return Result.Failure($"User with id {command.UserId} was not found");
         }
-        
+
         var user = userMaybe.Value;
-        
+
         var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure($"Group with id {command.GroupId} was not found");
         }
-        
+
         var group = groupMaybe.Value;
 
         if (group.OwnerId != user.Id)
@@ -48,14 +48,14 @@ public class UpdateGroupCommandHandler : IRequestHandler<UpdateGroupCommand, Res
             Currency = command.Currency,
             Updated = DateTime.UtcNow
         };
-        
+
         var updateResult = await _groupsRepository.Update(updatedGroup, ct);
 
         if (updateResult.IsFailure)
         {
             return updateResult.ConvertFailure<Result>();
         }
-        
+
         return Result.Success();
     }
 }

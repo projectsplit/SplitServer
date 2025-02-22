@@ -46,7 +46,7 @@ public class GetLabelsQueryHandler : IRequestHandler<GetLabelsQuery, Result<GetL
         }
 
         var allLabels = await _expensesRepository.GetAllLabels(query.GroupId, ct);
-        
+
         return new GetLabelsResponse
         {
             Labels = AutoCompleteSearch(allLabels, query.Query)

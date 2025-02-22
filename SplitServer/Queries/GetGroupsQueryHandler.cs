@@ -26,7 +26,7 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
         {
             return Result.Failure<GetGroupsResponse>("Page size must be greater than 0");
         }
-        
+
         var userMaybe = await _usersRepository.GetById(query.UserId, ct);
 
         if (userMaybe.HasNoValue)

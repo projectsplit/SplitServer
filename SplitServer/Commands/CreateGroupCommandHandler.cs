@@ -27,7 +27,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
         {
             return Result.Failure<CreateGroupResponse>($"User with id {command.UserId} was not found");
         }
-        
+
         var now = DateTime.UtcNow;
         var groupId = Guid.NewGuid().ToString();
 
@@ -37,7 +37,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             UserId = command.UserId,
             Joined = now
         };
-        
+
         var newGroup = new Group
         {
             Id = groupId,
@@ -51,7 +51,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             Labels = [],
             IsDeleted = false
         };
-        
+
         var writeResult = await _groupsRepository.Insert(newGroup, ct);
 
         if (writeResult.IsFailure)

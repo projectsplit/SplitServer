@@ -53,9 +53,9 @@ public static class ExpenseEndpoints
             UserId = httpContext.GetUserId(),
             ExpenseId = request.ExpenseId
         };
-    
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
@@ -74,9 +74,9 @@ public static class ExpenseEndpoints
             PageSize = pageSize,
             Next = next
         };
-    
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
@@ -108,9 +108,9 @@ public static class ExpenseEndpoints
             Limit = limit,
             Query = query
         };
-    
+
         var result = await mediator.Send(command, ct);
-    
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }
