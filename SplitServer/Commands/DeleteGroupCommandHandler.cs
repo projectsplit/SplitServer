@@ -34,32 +34,51 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
         {
             return Result.Failure($"User with id {command.UserId} was not found");
         }
-        
+
         var user = userMaybe.Value;
-        
+
         var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure($"Group with id {command.GroupId} was not found");
         }
-        
+
         var group = groupMaybe.Value;
 
         if (group.OwnerId != user.Id)
         {
             return Result.Failure("This group does not belong to user");
         }
-        
-        var deleteResult = await _groupsRepository.SoftDelete(group.Id, ct);
 
-        if (deleteResult.IsFailure)
+        var deleteGroupResult = await _groupsRepository.SoftDelete(group.Id, ct);
+
+        if (deleteGroupResult.IsFailure)
         {
-            return deleteResult.ConvertFailure<Result>();
+            return deleteGroupResult.ConvertFailure<Result>();
         }
-        
-        var deleteInvitationsResult = await _expensesRepository.SoftDelete(group.Id, ct);
-        
+
+        var deleteExpensesResult = await _expensesRepository.SoftDeleteByGroupId(group.Id, ct);
+
+        if (deleteExpensesResult.IsFailure)
+        {
+            return deleteExpensesResult.ConvertFailure<Result>();
+        }
+
+        var deleteTransfersResult = await _transfersRepository.SoftDeleteByGroupId(group.Id, ct);
+
+        if (deleteTransfersResult.IsFailure)
+        {
+            return deleteTransfersResult.ConvertFailure<Result>();
+        }
+
+        var deleteInvitationsResult = await _invitationsRepository.DeleteByGroupId(group.Id, ct);
+
+        if (deleteInvitationsResult.IsFailure)
+        {
+            return deleteInvitationsResult.ConvertFailure<Result>();
+        }
+
         return Result.Success();
     }
 }
