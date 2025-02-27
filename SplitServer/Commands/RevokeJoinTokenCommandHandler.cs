@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Models;
 using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
