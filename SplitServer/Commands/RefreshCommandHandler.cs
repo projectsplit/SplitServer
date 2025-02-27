@@ -31,37 +31,16 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
             return Result.Failure<AuthTokensResult>(errorMessage);
         }
 
-        // if (sessionMaybe.HasNoValue)
-        // {
-        //     var faultySessionMaybe = await _sessionsRepository.GetByPreviousRefreshToken(command.RefreshToken, ct);
-        //
-        //     if (faultySessionMaybe.HasNoValue)
-        //     {
-        //         return Result.Failure<AuthTokensResult>(errorMessage);
-        //     }
-        //
-        //     var deleteFaultySessionResult = await _sessionsRepository.Delete(faultySessionMaybe.Value.Id, ct);
-        //
-        //     return Result.Failure<AuthTokensResult>(deleteFaultySessionResult.IsFailure ? deleteFaultySessionResult.Error : errorMessage);
-        // }
-
         var session = sessionMaybe.Value;
 
-        // var newRefreshToken = Guid.NewGuid().ToString();
-        // var updatedPreviousRefreshTokens = session
-        //     .PreviousRefreshTokens
-        //     .Concat(new List<string> { session.RefreshToken })
-        //     .ToList();
-
-        var updatedSession = new Session
+        if (_authService.HasSessionExpired(session))
         {
-            Id = session.Id,
-            Created = session.Created,
-            Updated = DateTime.UtcNow,
-            UserId = session.UserId,
-            RefreshToken = session.RefreshToken,
-            PreviousRefreshTokens = [],
-            IsDeleted = session.IsDeleted
+            return Result.Failure<AuthTokensResult>(errorMessage);
+        }
+
+        var updatedSession = session with
+        {
+            Updated = DateTime.UtcNow
         };
 
         var updateResult = await _sessionsRepository.Update(updatedSession, ct);

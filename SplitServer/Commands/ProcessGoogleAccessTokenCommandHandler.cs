@@ -70,7 +70,6 @@ public class ProcessGoogleAccessTokenCommandHandler : IRequestHandler<ProcessGoo
             Updated = now,
             UserId = userId,
             RefreshToken = refreshToken,
-            PreviousRefreshTokens = []
         };
 
         var writeResult = await _sessionsRepository.Insert(newSession, ct);
