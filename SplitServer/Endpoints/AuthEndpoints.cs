@@ -154,7 +154,6 @@ public static class AuthEndpoints
 
         if (refreshTokenResult.IsFailure)
         {
-            Console.WriteLine(refreshTokenResult.Error);
             return Results.Ok();
         }
 

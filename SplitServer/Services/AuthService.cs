@@ -50,8 +50,8 @@ public class AuthService
             {
                 Path = _authSettings.RefreshEndpointPath,
                 HttpOnly = _authSettings.RefreshTokenCookieHttpOnly,
-                Expires = DateTimeOffset.UtcNow.AddDays(_authSettings.RefreshTokenDurationInMinutes),
-                MaxAge = TimeSpan.FromDays(_authSettings.RefreshTokenDurationInMinutes),
+                Expires = DateTimeOffset.UtcNow.AddMinutes(_authSettings.RefreshTokenDurationInMinutes),
+                MaxAge = TimeSpan.FromMinutes(_authSettings.RefreshTokenDurationInMinutes),
                 Secure = _authSettings.RefreshTokenCookieSecure,
                 SameSite = _authSettings.RefreshTokenCookieSameSite
             });
