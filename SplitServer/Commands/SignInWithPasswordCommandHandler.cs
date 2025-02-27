@@ -62,7 +62,6 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
             Updated = now,
             UserId = user.Id,
             RefreshToken = refreshToken,
-            PreviousRefreshTokens = [],
             IsDeleted = false
         };
 

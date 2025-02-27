@@ -5,6 +5,7 @@ using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SplitServer.Configuration;
+using SplitServer.Models;
 
 namespace SplitServer.Services;
 
@@ -79,5 +80,10 @@ public class AuthService
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+    }
+
+    public bool HasSessionExpired(Session session)
+    {
+        return DateTime.UtcNow > session.Created + TimeSpan.FromMinutes(_authSettings.RefreshTokenDurationInMinutes);
     }
 }

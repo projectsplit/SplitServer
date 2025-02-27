@@ -22,13 +22,6 @@ public class SessionsMongoDbRepository : MongoDbRepositoryBase<Session, Session>
         return await Collection.Find(filter).SingleOrDefaultAsync(ct);
     }
 
-    public async Task<Maybe<Session>> GetByPreviousRefreshToken(string refreshToken, CancellationToken ct)
-    {
-        var filter = Builders<Session>.Filter.AnyStringIn(x => x.PreviousRefreshTokens, refreshToken);
-
-        return await Collection.Find(filter).SingleOrDefaultAsync(ct);
-    }
-
     public async Task<Result> DeleteByRefreshToken(string refreshToken, CancellationToken ct)
     {
         var filter = Builders<Session>.Filter.Eq(x => x.RefreshToken, refreshToken);
