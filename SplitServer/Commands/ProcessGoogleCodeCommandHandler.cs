@@ -1,57 +1,51 @@
-﻿using System.Net.Http.Headers;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using MediatR;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using SplitServer.Configuration;
 using SplitServer.Dto;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
+using SplitServer.Services.Models;
 
 namespace SplitServer.Commands;
 
-public class ProcessGoogleAccessTokenCommandHandler : IRequestHandler<ProcessGoogleAccessTokenCommand, Result<AuthTokensResult>>
+public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCodeCommand, Result<AuthTokensResult>>
 {
-    private readonly IHttpClientFactory _httpClientFactory;
-    private readonly AuthSettings _authSettings;
     private readonly IUsersRepository _usersRepository;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly AuthService _authService;
     private readonly LockService _lockService;
 
-    public ProcessGoogleAccessTokenCommandHandler(
-        IHttpClientFactory httpClientFactory,
+    public ProcessGoogleCodeCommandHandler(
         IOptions<AuthSettings> authSettingsOptions,
         IUsersRepository usersRepository,
         ISessionsRepository sessionsRepository,
         AuthService authService,
         LockService lockService)
     {
-        _httpClientFactory = httpClientFactory;
         _usersRepository = usersRepository;
         _sessionsRepository = sessionsRepository;
         _authService = authService;
         _lockService = lockService;
-        _authSettings = authSettingsOptions.Value;
     }
 
-    public async Task<Result<AuthTokensResult>> Handle(ProcessGoogleAccessTokenCommand command, CancellationToken ct)
+    public async Task<Result<AuthTokensResult>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
     {
-        var googleUserInfoResult = await GetUserInfo(command.GoogleAccessToken, ct);
+        var googleUserInfoResult = await _authService.GetGoogleUserInfo(command.Code, ct);
 
         if (googleUserInfoResult.IsFailure)
         {
             return googleUserInfoResult.ConvertFailure<AuthTokensResult>();
         }
 
-        var googleId = googleUserInfoResult.Value.Id;
+        var googleUserInfo = googleUserInfoResult.Value;
 
-        using var _ = _lockService.AcquireLock(googleId);
+        using var _ = _lockService.AcquireLock(googleUserInfo.Id);
 
         var now = DateTime.UtcNow;
 
-        var userResult = await GetOrCreateUser(googleUserInfoResult.Value, now, ct);
+        var userResult = await GetOrCreateUser(googleUserInfo, now, ct);
 
         if (userResult.IsFailure)
         {
@@ -86,29 +80,7 @@ public class ProcessGoogleAccessTokenCommandHandler : IRequestHandler<ProcessGoo
         };
     }
 
-    private async Task<Result<GoogleUserInfoResponse>> GetUserInfo(string googleAccessToken, CancellationToken ct)
-    {
-        var request = new HttpRequestMessage(HttpMethod.Get, _authSettings.GoogleUserInfoEndpoint);
-        request.Headers.Authorization = new AuthenticationHeaderValue(JwtBearerDefaults.AuthenticationScheme, googleAccessToken);
-
-        var response = await _httpClientFactory.CreateClient().SendAsync(request, ct);
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return Result.Failure<GoogleUserInfoResponse>("Google user info could not be retrieved");
-        }
-
-        var googleUserInfo = await response.Content.ReadFromJsonAsync<GoogleUserInfoResponse>(ct);
-
-        if (googleUserInfo is null)
-        {
-            return Result.Failure<GoogleUserInfoResponse>("Unable to process Google user info response");
-        }
-
-        return googleUserInfo;
-    }
-
-    private async Task<Result<User>> GetOrCreateUser(GoogleUserInfoResponse googleUserInfo, DateTime now, CancellationToken ct)
+    private async Task<Result<User>> GetOrCreateUser(GoogleUserInfo googleUserInfo, DateTime now, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetByGoogleId(googleUserInfo.Id, ct);
 

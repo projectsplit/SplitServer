@@ -1,6 +1,6 @@
-﻿namespace SplitServer.Dto;
+﻿namespace SplitServer.Services.Models;
 
-public class GoogleUserInfoResponse
+public class GoogleUserInfo
 {
     public required string Id { get; init; }
     public required string Email { get; init; }

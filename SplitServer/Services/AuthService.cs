@@ -1,21 +1,28 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SplitServer.Configuration;
 using SplitServer.Models;
+using SplitServer.Services.Models;
 
 namespace SplitServer.Services;
 
 public class AuthService
 {
     private readonly AuthSettings _authSettings;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public AuthService(IOptions<AuthSettings> jwtSettingsOptions)
+    public AuthService(
+        IOptions<AuthSettings> jwtSettingsOptions,
+        IHttpClientFactory httpClientFactory)
     {
         _authSettings = jwtSettingsOptions.Value;
+        _httpClientFactory = httpClientFactory;
     }
 
     public Result<string> GetRefreshTokenCookie(HttpContext httpContext)
@@ -86,4 +93,81 @@ public class AuthService
     {
         return DateTime.UtcNow > session.Created + TimeSpan.FromMinutes(_authSettings.RefreshTokenDurationInMinutes);
     }
+
+    public async Task<Result<GoogleUserInfo>> GetGoogleUserInfo(string code, CancellationToken ct)
+    {
+        var client = _httpClientFactory.CreateClient();
+        var request = new HttpRequestMessage(HttpMethod.Post, _authSettings.GoogleTokenEndpoint);
+        request.Content = new FormUrlEncodedContent(
+            new Dictionary<string, string>
+            {
+                { "code", code },
+                { "client_id", _authSettings.GoogleClientId },
+                { "client_secret", _authSettings.GoogleClientSecret },
+                { "redirect_uri", $"{_authSettings.ClientUrl}{_authSettings.ClientGoogleRedirectUri}" },
+                { "grant_type", "authorization_code" }
+            });
+
+        var tokenHttpResponse = await client.SendAsync(request, ct);
+
+        if (!tokenHttpResponse.IsSuccessStatusCode)
+        {
+            return Result.Failure<GoogleUserInfo>("Google id token could not be retrieved");
+        }
+
+        var tokenResponse = await tokenHttpResponse.Content.ReadFromJsonAsync<GoogleTokenResponse>(ct);
+        var idToken = tokenResponse!.IdToken;
+
+        var validationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKeys = await GetGoogleJsonWebKeySet(ct),
+            ValidateIssuer = true,
+            ValidIssuer = _authSettings.GoogleIdTokenIssuer,
+            ValidateAudience = true,
+            ValidAudience = _authSettings.GoogleClientId,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
+        };
+
+        var handler = new JwtSecurityTokenHandler();
+        var tokenValidationResult = await handler.ValidateTokenAsync(idToken, validationParameters);
+
+        if (!tokenValidationResult.IsValid || tokenValidationResult.SecurityToken is not JwtSecurityToken jwtSecurityToken)
+        {
+            return Result.Failure<GoogleUserInfo>("Google idToken is not valid");
+        }
+
+        return new GoogleUserInfo
+        {
+            Id = jwtSecurityToken.Subject,
+            Email = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value!,
+            Name = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "name")?.Value
+        };
+    }
+
+    private async Task<IList<JsonWebKey>> GetGoogleJsonWebKeySet(CancellationToken ct)
+    {
+        using var httpClient = _httpClientFactory.CreateClient();
+        var json = await httpClient.GetStringAsync(_authSettings.GoogleJsonWebKeySetEndpoint, ct);
+        return JsonSerializer.Deserialize<JsonWebKeySet>(json)!.Keys;
+    }
+}
+
+file class GoogleTokenResponse
+{
+    [JsonPropertyName("access_token")]
+    public required string AccessToken { get; set; }
+
+    [JsonPropertyName("expires_in")]
+    public required int ExpiresIn { get; set; }
+
+    [JsonPropertyName("refresh_token")]
+    public string? RefreshToken { get; set; }
+
+    [JsonPropertyName("token_type")]
+    public required string TokenType { get; set; }
+
+    [JsonPropertyName("id_token")]
+    public required string IdToken { get; set; }
 }
