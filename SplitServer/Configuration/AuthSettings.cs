@@ -10,9 +10,14 @@ public class AuthSettings : ISettings
     public required int RefreshTokenDurationInMinutes { get; init; }
     public required string RefreshTokenCookieName { get; init; }
     public required string RefreshEndpointPath { get; init; }
-    public required string GoogleUserInfoEndpoint { get; init; }
     public required bool RefreshTokenCookieSecure { get; init; }
     public required bool RefreshTokenCookieHttpOnly { get; init; }
     public required SameSiteMode RefreshTokenCookieSameSite { get; init; }
-    public required string ClientUrl { get; set; }
+    public required string ClientUrl { get; init; }
+    public required string ClientGoogleRedirectUri { get; init; }
+    public required string GoogleTokenEndpoint { get; init; }
+    public required string GoogleClientId { get; init; }
+    public required string GoogleClientSecret { get; init; }
+    public required string GoogleJsonWebKeySetEndpoint { get; init; }
+    public required string GoogleIdTokenIssuer { get; init; }
 }

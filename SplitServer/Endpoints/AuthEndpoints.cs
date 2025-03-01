@@ -23,9 +23,9 @@ public static class AuthEndpoints
         AuthService authService,
         CancellationToken ct)
     {
-        var command = new ProcessGoogleAccessTokenCommand
+        var command = new ProcessGoogleCodeCommand
         {
-            GoogleAccessToken = request.GoogleAccessToken
+            Code = request.Code
         };
 
         var result = await mediator.Send(command, ct);
