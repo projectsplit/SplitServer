@@ -1,12 +1,12 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Dto;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<AuthTokensResult>>
+public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<AuthenticationResponse>>
 {
     private readonly ISessionsRepository _sessionsRepository;
     private readonly AuthService _authService;
@@ -19,7 +19,7 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
         _authService = authService;
     }
 
-    public async Task<Result<AuthTokensResult>> Handle(RefreshCommand command, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(RefreshCommand command, CancellationToken ct)
     {
         const string errorMessage = "Error while refreshing token";
 
@@ -27,14 +27,14 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
 
         if (sessionMaybe.HasNoValue)
         {
-            return Result.Failure<AuthTokensResult>(errorMessage);
+            return Result.Failure<AuthenticationResponse>(errorMessage);
         }
 
         var session = sessionMaybe.Value;
 
         if (_authService.HasSessionExpired(session))
         {
-            return Result.Failure<AuthTokensResult>(errorMessage);
+            return Result.Failure<AuthenticationResponse>(errorMessage);
         }
 
         var updatedSession = session with
@@ -46,10 +46,10 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
 
         if (updateResult.IsFailure)
         {
-            return Result.Failure<AuthTokensResult>(updateResult.Error);
+            return Result.Failure<AuthenticationResponse>(updateResult.Error);
         }
 
-        return new AuthTokensResult
+        return new AuthenticationResponse
         {
             AccessToken = _authService.GenerateAccessToken(session.UserId, session.Id),
             RefreshToken = session.RefreshToken

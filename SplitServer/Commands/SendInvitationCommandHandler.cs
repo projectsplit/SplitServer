@@ -56,29 +56,19 @@ public class SendInvitationCommandHandler : IRequestHandler<SendInvitationComman
                 return Result.Failure("Guest is not a group member");
             }
 
-            var existingInvitationByGuestIdMaybe = await _invitationsRepository.GetByGuestId(command.GuestId, command.GroupId, ct);
+            var deleteByGuestResult = await _invitationsRepository.DeleteByGuestId(command.GuestId, command.GroupId, ct);
 
-            if (existingInvitationByGuestIdMaybe.HasValue)
+            if (deleteByGuestResult.IsFailure)
             {
-                var deleteInvitationByGuestIdResult = await _invitationsRepository.Delete(existingInvitationByGuestIdMaybe.Value.Id, ct);
-
-                if (deleteInvitationByGuestIdResult.IsFailure)
-                {
-                    return deleteInvitationByGuestIdResult;
-                }
+                return deleteByGuestResult;
             }
         }
 
-        var existingInvitationByReceiverIdMaybe = await _invitationsRepository.GetByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
+        var deleteExistingResult = await _invitationsRepository.DeleteByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
 
-        if (existingInvitationByReceiverIdMaybe.HasValue)
+        if (deleteExistingResult.IsFailure)
         {
-            var deleteInvitationByReceiverIdResult = await _invitationsRepository.Delete(existingInvitationByReceiverIdMaybe.Value.Id, ct);
-
-            if (deleteInvitationByReceiverIdResult.IsFailure)
-            {
-                return deleteInvitationByReceiverIdResult;
-            }
+            return deleteExistingResult;
         }
 
         var now = DateTime.UtcNow;

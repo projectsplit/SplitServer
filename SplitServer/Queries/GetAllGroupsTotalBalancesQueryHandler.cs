@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Dto;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 

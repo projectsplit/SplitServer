@@ -38,6 +38,17 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
             .ToListAsync(ct);
     }
 
+    public async Task<List<Invitation>> GetByReceiverIds(List<string> receiverIds, string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.In(x => x.ReceiverId, receiverIds));
+
+        return await Collection
+            .Find(filter)
+            .ToListAsync(ct);
+    }
+
     public async Task<Maybe<Invitation>> GetByGroupIdAndReceiverId(string receiverId, string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
@@ -62,5 +73,27 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
         var result = await Collection.DeleteManyAsync(filter, ct);
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group invitations");
+    }
+
+    public async Task<Result> DeleteByGroupIdAndReceiverId(string receiverId, string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.ReceiverId, receiverId),
+            FilterBuilder.Eq(x => x.GroupId, groupId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
+    }
+
+    public async Task<Result> DeleteByGuestId(string guestId, string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GuestId, guestId),
+            FilterBuilder.Eq(x => x.GroupId, groupId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
     }
 }
