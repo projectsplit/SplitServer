@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using SplitServer.Commands;
-using SplitServer.Dto;
 using SplitServer.Extensions;
 using SplitServer.Queries;
+using SplitServer.Requests;
 
 namespace SplitServer.Endpoints;
 
@@ -15,6 +15,7 @@ public static class InvitationEndpoints
         app.MapPost("/accept", AcceptInvitationHandler);
         app.MapPost("/decline", DeclineInvitationHandler);
         app.MapPost("/revoke", RevokeInvitationHandler);
+        app.MapGet("/search-users", SearchUsersHandler);
     }
 
     private static async Task<IResult> SendInvitationHandler(
@@ -79,7 +80,8 @@ public static class InvitationEndpoints
         var command = new RevokeInvitationCommand
         {
             UserId = httpContext.GetUserId(),
-            InvitationId = request.InvitationId
+            GroupId = request.GroupId,
+            ReceiverId = request.ReceiverId,
         };
 
         var result = await mediator.Send(command, ct);
@@ -99,6 +101,29 @@ public static class InvitationEndpoints
             UserId = httpContext.GetUserId(),
             PageSize = pageSize,
             Next = next,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchUsersHandler(
+        string groupId,
+        string? keyword,
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new SearchUserToInviteQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            PageSize = pageSize,
+            Keyword = keyword,
+            Next = next
         };
 
         var result = await mediator.Send(command, ct);

@@ -1,14 +1,14 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using SplitServer.Dto;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswordCommand, Result<AuthTokensResult>>
+public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswordCommand, Result<AuthenticationResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly ISessionsRepository _sessionsRepository;
@@ -27,7 +27,7 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
         _lockService = lockService;
     }
 
-    public async Task<Result<AuthTokensResult>> Handle(SignUpWithPasswordCommand command, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(SignUpWithPasswordCommand command, CancellationToken ct)
     {
         using var _ = _lockService.AcquireLock(command.Username);
 
@@ -35,7 +35,7 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
 
         if (userMaybe.HasValue)
         {
-            return Result.Failure<AuthTokensResult>("User with this username already exists");
+            return Result.Failure<AuthenticationResponse>("User with this username already exists");
         }
 
         var userId = Guid.NewGuid().ToString();
@@ -62,7 +62,7 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
 
         if (writeUserResult.IsFailure)
         {
-            return Result.Failure<AuthTokensResult>(writeUserResult.Error);
+            return Result.Failure<AuthenticationResponse>(writeUserResult.Error);
         }
 
         var refreshToken = Guid.NewGuid().ToString();
@@ -81,10 +81,10 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
 
         if (writeSessionResult.IsFailure)
         {
-            return Result.Failure<AuthTokensResult>(writeSessionResult.Error);
+            return Result.Failure<AuthenticationResponse>(writeSessionResult.Error);
         }
 
-        return new AuthTokensResult
+        return new AuthenticationResponse
         {
             RefreshToken = refreshToken,
             AccessToken = _authService.GenerateAccessToken(newUser.Id, newSession.Id)

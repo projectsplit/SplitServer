@@ -1,14 +1,14 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
-using SplitServer.Dto;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswordCommand, Result<AuthTokensResult>>
+public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswordCommand, Result<AuthenticationResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly ISessionsRepository _sessionsRepository;
@@ -24,7 +24,7 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
         _authService = authService;
     }
 
-    public async Task<Result<AuthTokensResult>> Handle(SignInWithPasswordCommand withPasswordCommand, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(SignInWithPasswordCommand withPasswordCommand, CancellationToken ct)
     {
         const string credentialErrorMessage = "Invalid credentials";
 
@@ -32,14 +32,14 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
 
         if (userMaybe.HasNoValue)
         {
-            return Result.Failure<AuthTokensResult>(credentialErrorMessage);
+            return Result.Failure<AuthenticationResponse>(credentialErrorMessage);
         }
 
         var user = userMaybe.Value;
 
         if (user.HashedPassword is null)
         {
-            return Result.Failure<AuthTokensResult>(credentialErrorMessage);
+            return Result.Failure<AuthenticationResponse>(credentialErrorMessage);
         }
 
         var hasher = new PasswordHasher<string>();
@@ -48,7 +48,7 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
 
         if (passwordVerificationResult is PasswordVerificationResult.Failed)
         {
-            return Result.Failure<AuthTokensResult>(credentialErrorMessage);
+            return Result.Failure<AuthenticationResponse>(credentialErrorMessage);
         }
 
         var now = DateTime.UtcNow;
@@ -69,10 +69,10 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
 
         if (writeSessionResult.IsFailure)
         {
-            return Result.Failure<AuthTokensResult>(writeSessionResult.Error);
+            return Result.Failure<AuthenticationResponse>(writeSessionResult.Error);
         }
 
-        return new AuthTokensResult
+        return new AuthenticationResponse
         {
             RefreshToken = refreshToken,
             AccessToken = _authService.GenerateAccessToken(user.Id, newSession.Id)

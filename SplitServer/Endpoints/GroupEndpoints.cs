@@ -1,8 +1,8 @@
 ﻿using MediatR;
 using SplitServer.Commands;
-using SplitServer.Dto;
 using SplitServer.Extensions;
 using SplitServer.Queries;
+using SplitServer.Requests;
 
 namespace SplitServer.Endpoints;
 

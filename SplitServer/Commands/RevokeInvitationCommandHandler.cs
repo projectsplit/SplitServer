@@ -29,20 +29,11 @@ public class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCo
             return Result.Failure($"User with id {command.UserId} was not found");
         }
 
-        var invitationMaybe = await _invitationsRepository.GetById(command.InvitationId, ct);
-
-        if (invitationMaybe.HasNoValue)
-        {
-            return Result.Failure($"Invitation with id {command.InvitationId} was not found");
-        }
-
-        var invitation = invitationMaybe.Value;
-
-        var groupMaybe = await _groupsRepository.GetById(invitation.GroupId, ct);
+        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure($"Group with id {invitation.GroupId} was not found");
+            return Result.Failure($"Group with id {command.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -52,13 +43,6 @@ public class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCo
             return Result.Failure("You must be a group member to revoke invitations");
         }
 
-        var deleteInvitationResult = await _invitationsRepository.Delete(command.InvitationId, ct);
-
-        if (deleteInvitationResult.IsFailure)
-        {
-            return deleteInvitationResult.ConvertFailure<Result>();
-        }
-
-        return Result.Success();
+        return await _invitationsRepository.DeleteByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
     }
 }

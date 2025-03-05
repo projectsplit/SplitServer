@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Dto;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
@@ -57,7 +57,7 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
             Name = group.Name,
             Currency = group.Currency,
             Members = group.Members.Select(
-                x => new GetGroupResponseMember
+                x => new GetGroupResponseMemberItem
                 {
                     Id = x.Id,
                     UserId = x.UserId,

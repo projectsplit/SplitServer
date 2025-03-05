@@ -2,41 +2,44 @@
 using MediatR;
 using Microsoft.Extensions.Options;
 using SplitServer.Configuration;
-using SplitServer.Dto;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 using SplitServer.Services;
 using SplitServer.Services.Models;
 
 namespace SplitServer.Commands;
 
-public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCodeCommand, Result<AuthTokensResult>>
+public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCodeCommand, Result<AuthenticationResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly AuthService _authService;
     private readonly LockService _lockService;
+    private readonly ValidationService _validationService;
 
     public ProcessGoogleCodeCommandHandler(
         IOptions<AuthSettings> authSettingsOptions,
         IUsersRepository usersRepository,
         ISessionsRepository sessionsRepository,
         AuthService authService,
-        LockService lockService)
+        LockService lockService,
+        ValidationService validationService)
     {
         _usersRepository = usersRepository;
         _sessionsRepository = sessionsRepository;
         _authService = authService;
         _lockService = lockService;
+        _validationService = validationService;
     }
 
-    public async Task<Result<AuthTokensResult>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
     {
         var googleUserInfoResult = await _authService.GetGoogleUserInfo(command.Code, ct);
 
         if (googleUserInfoResult.IsFailure)
         {
-            return googleUserInfoResult.ConvertFailure<AuthTokensResult>();
+            return googleUserInfoResult.ConvertFailure<AuthenticationResponse>();
         }
 
         var googleUserInfo = googleUserInfoResult.Value;
@@ -49,7 +52,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
         if (userResult.IsFailure)
         {
-            return userResult.ConvertFailure<AuthTokensResult>();
+            return userResult.ConvertFailure<AuthenticationResponse>();
         }
 
         var userId = userResult.Value.Id;
@@ -70,10 +73,10 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
         if (writeResult.IsFailure)
         {
-            return writeResult.ConvertFailure<AuthTokensResult>();
+            return writeResult.ConvertFailure<AuthenticationResponse>();
         }
 
-        return new AuthTokensResult
+        return new AuthenticationResponse
         {
             RefreshToken = refreshToken,
             AccessToken = _authService.GenerateAccessToken(userId, sessionId)
@@ -91,6 +94,8 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
         var userId = Guid.NewGuid().ToString();
 
+        var generatedUsername = CreateUsernameFromEmail(googleUserInfo.Email, userId);
+
         var newUser = new User
         {
             Id = userId,
@@ -99,7 +104,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
             Updated = now,
             Email = googleUserInfo.Email,
             HashedPassword = null,
-            Username = googleUserInfo.Name ?? googleUserInfo.Email.Split('@')[0],
+            Username = generatedUsername,
             GoogleId = googleUserInfo.Id
         };
 
@@ -111,5 +116,22 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
         }
 
         return newUser;
+    }
+
+    private string CreateUsernameFromEmail(string email, string userId)
+    {
+        var prefixWithValidChars = email
+            .Split('@')[0]
+            .Where(x => _validationService.UsernameAllowedChars.Contains(x))
+            .ToArray();
+
+        var validUsername = string.Concat(prefixWithValidChars);
+
+        if (validUsername.Length is >= ValidationService.UsernameMinLength and <= ValidationService.UsernameMaxLength)
+        {
+            return validUsername;
+        }
+
+        return string.Concat(validUsername.Take(12).Concat(userId.Take(4)));
     }
 }

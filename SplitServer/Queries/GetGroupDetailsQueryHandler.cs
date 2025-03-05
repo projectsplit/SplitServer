@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Dto;
 using SplitServer.Repositories;
+using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
@@ -58,12 +58,12 @@ public class GetGroupDetailsQueryHandler : IRequestHandler<GetGroupDetailsQuery,
         {
             if (transfer.SenderId == memberId)
             {
-                groupDetails[transfer.Currency] = groupDetails.GetValueOrDefault(transfer.Currency) + transfer.Amount;
+                groupDetails[transfer.Currency] = groupDetails.GetValueOrDefault(transfer.Currency) - transfer.Amount;
             }
 
             if (transfer.ReceiverId == memberId)
             {
-                groupDetails[transfer.Currency] = groupDetails.GetValueOrDefault(transfer.Currency) - transfer.Amount;
+                groupDetails[transfer.Currency] = groupDetails.GetValueOrDefault(transfer.Currency) + transfer.Amount;
             }
         }
 
@@ -72,13 +72,13 @@ public class GetGroupDetailsQueryHandler : IRequestHandler<GetGroupDetailsQuery,
             var payment = expense.Payments.FirstOrDefault(x => x.MemberId == memberId);
             if (payment is not null)
             {
-                groupDetails[expense.Currency] = groupDetails.GetValueOrDefault(expense.Currency) + payment.Amount;
+                groupDetails[expense.Currency] = groupDetails.GetValueOrDefault(expense.Currency) - payment.Amount;
             }
 
             var share = expense.Shares.FirstOrDefault(x => x.MemberId == memberId);
             if (share is not null)
             {
-                groupDetails[expense.Currency] = groupDetails.GetValueOrDefault(expense.Currency) - share.Amount;
+                groupDetails[expense.Currency] = groupDetails.GetValueOrDefault(expense.Currency) + share.Amount;
             }
         }
 

@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MongoDB.Driver;
+using MongoDB.Driver.Search;
 using SplitServer.Models;
 using SplitServer.Repositories.Mappers;
 
@@ -34,5 +35,36 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
         var filter = FilterBuilder.Eq(x => x.GoogleId, googleId);
 
         return await Collection.Find(filter).SingleOrDefaultAsync(ct);
+    }
+
+    public async Task<List<User>> SearchByUsername(string keyword, int skip, int pageSize, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.IsDeleted, false);
+
+        var search = SearchBuilder.Autocomplete(
+            x => x.Username,
+            new SingleSearchQueryDefinition(keyword),
+            fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 }
+        );
+
+        var pipelineDefinition = PipelineBuilder
+            .Search(search)
+            .Match(filter)
+            .Skip(skip)
+            .Limit(pageSize);
+
+        return await Collection
+            .Aggregate(pipelineDefinition, cancellationToken: ct)
+            .ToListAsync(ct);
+    }
+
+    public async Task<List<User>> GetLatestUsers(int skip, int pageSize, CancellationToken ct)
+    {
+        return await Collection
+            .Find(FilterBuilder.Eq(x => x.IsDeleted, false))
+            .SortByDescending(x => x.Created)
+            .Skip(skip)
+            .Limit(pageSize)
+            .ToListAsync(ct);
     }
 }
