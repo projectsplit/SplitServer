@@ -59,12 +59,12 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
             {
                 if (transfer.SenderId == memberId)
                 {
-                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) + transfer.Amount;
+                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) - transfer.Amount;
                 }
 
                 if (transfer.ReceiverId == memberId)
                 {
-                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) - transfer.Amount;
+                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) + transfer.Amount;
                 }
             }
 
@@ -73,13 +73,13 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
                 var payment = expense.Payments.FirstOrDefault(x => x.MemberId == memberId);
                 if (payment is not null)
                 {
-                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) + payment.Amount;
+                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) - payment.Amount;
                 }
 
                 var share = expense.Shares.FirstOrDefault(x => x.MemberId == memberId);
                 if (share is not null)
                 {
-                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) - share.Amount;
+                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) + share.Amount;
                 }
             }
         }
