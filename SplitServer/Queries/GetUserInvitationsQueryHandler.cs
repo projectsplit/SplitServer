@@ -11,13 +11,16 @@ public class GetUserInvitationsQueryHandler : IRequestHandler<GetUserInvitations
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly IGroupsRepository _groupsRepository;
 
     public GetUserInvitationsQueryHandler(
         IUsersRepository usersRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        IGroupsRepository groupsRepository)
     {
         _usersRepository = usersRepository;
         _invitationsRepository = invitationsRepository;
+        _groupsRepository = groupsRepository;
     }
 
     public async Task<Result<GetUserInvitationsResponse>> Handle(GetUserInvitationsQuery query, CancellationToken ct)
@@ -34,9 +37,27 @@ public class GetUserInvitationsQueryHandler : IRequestHandler<GetUserInvitations
 
         var invitations = await _invitationsRepository.GetByReceiverId(query.UserId, query.PageSize, maxCreatedDate, ct);
 
+        var groups = await _groupsRepository.GetByIds(invitations.Select(x => x.GroupId).ToList(), ct);
+
+        var groupNames = groups.ToDictionary(x => x.Id, x => x.Name);
+
+        var responseItems = invitations
+            .Select(
+                x => new InvitationResponseItem
+                {
+                    Id = x.Id,
+                    Created = x.Created,
+                    SenderId = x.SenderId,
+                    ReceiverId = x.ReceiverId,
+                    GroupId = x.GroupId,
+                    GroupName = groupNames[x.GroupId],
+                    GuestId = x.GuestId
+                })
+            .ToList();
+
         return new GetUserInvitationsResponse
         {
-            Invitations = invitations,
+            Invitations = responseItems,
             Next = CreateNext(query.PageSize, invitations)
         };
     }
