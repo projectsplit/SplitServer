@@ -2,8 +2,8 @@
 
 namespace SplitServer.Responses;
 
-public class GetGroupJoinTokensResponse
+public class GetGroupJoinCodesResponse
 {
-    public required List<JoinToken> JoinTokens { get; init; }
+    public required List<JoinCode> Codes { get; init; }
     public required string? Next { get; init; }
 }

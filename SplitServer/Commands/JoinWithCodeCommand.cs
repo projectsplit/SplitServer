@@ -3,8 +3,8 @@ using MediatR;
 
 namespace SplitServer.Commands;
 
-public class UseJoinTokenCommand : IRequest<Result>
+public class JoinWithCodeCommand : IRequest<Result>
 {
     public required string UserId { get; init; }
-    public required string JoinToken { get; init; }
+    public required string Code { get; init; }
 }

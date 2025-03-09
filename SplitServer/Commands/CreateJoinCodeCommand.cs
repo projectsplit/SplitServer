@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Commands;
 
-public class CreateJoinTokenCommand : IRequest<Result<CreateJoinTokenResponse>>
+public class CreateJoinCodeCommand : IRequest<Result<CreateJoinCodeResponse>>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }

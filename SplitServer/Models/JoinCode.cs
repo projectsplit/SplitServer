@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Models;
 
-public record JoinToken : EntityBase
+public record JoinCode : EntityBase
 {
     public required string GroupId { get; init; }
     public required string CreatorId { get; init; }
