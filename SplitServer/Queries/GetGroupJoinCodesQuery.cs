@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class GetGroupJoinTokensQuery : IRequest<Result<GetGroupJoinTokensResponse>>
+public class GetGroupJoinCodesQuery : IRequest<Result<GetGroupJoinCodesResponse>>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }

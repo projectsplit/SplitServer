@@ -5,23 +5,23 @@ using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
 
-public class UseJoinTokenCommandHandler : IRequestHandler<UseJoinTokenCommand, Result>
+public class JoinWithCodeCommandHandler : IRequestHandler<JoinWithCodeCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
-    private readonly IJoinTokensRepository _joinTokensRepository;
+    private readonly IJoinCodesRepository _joinCodesRepository;
     private readonly IGroupsRepository _groupsRepository;
 
-    public UseJoinTokenCommandHandler(
+    public JoinWithCodeCommandHandler(
         IUsersRepository usersRepository,
-        IJoinTokensRepository joinTokensRepository,
+        IJoinCodesRepository joinCodesRepository,
         IGroupsRepository groupsRepository)
     {
         _usersRepository = usersRepository;
-        _joinTokensRepository = joinTokensRepository;
+        _joinCodesRepository = joinCodesRepository;
         _groupsRepository = groupsRepository;
     }
 
-    public async Task<Result> Handle(UseJoinTokenCommand command, CancellationToken ct)
+    public async Task<Result> Handle(JoinWithCodeCommand command, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
@@ -30,32 +30,32 @@ public class UseJoinTokenCommandHandler : IRequestHandler<UseJoinTokenCommand, R
             return Result.Failure($"User with id {command.UserId} was not found");
         }
 
-        var normalizedJoinToken = command.JoinToken.ToLowerInvariant();
+        var normalizedJoinCode = command.Code.ToLowerInvariant();
 
-        var joinTokenMaybe = await _joinTokensRepository.GetById(normalizedJoinToken, ct);
+        var joinCodeMaybe = await _joinCodesRepository.GetById(normalizedJoinCode, ct);
 
-        if (joinTokenMaybe.HasNoValue)
+        if (joinCodeMaybe.HasNoValue)
         {
-            return Result.Failure($"Join token {command.JoinToken} was not found");
+            return Result.Failure($"Join token {command.Code} was not found");
         }
 
-        var joinToken = joinTokenMaybe.Value;
+        var joinCode = joinCodeMaybe.Value;
 
-        if (joinToken.Expires < DateTime.UtcNow)
+        if (joinCode.Expires < DateTime.UtcNow)
         {
-            return Result.Failure($"Join token {command.JoinToken} is expired");
+            return Result.Failure($"Join token {command.Code} is expired");
         }
 
-        if (joinToken.TimesUsed >= joinToken.MaxUses)
+        if (joinCode.TimesUsed >= joinCode.MaxUses)
         {
-            return Result.Failure($"Join token {command.JoinToken} has reached maximum number of uses");
+            return Result.Failure($"Join token {command.Code} has reached maximum number of uses");
         }
 
-        var groupMaybe = await _groupsRepository.GetById(joinToken.GroupId, ct);
+        var groupMaybe = await _groupsRepository.GetById(joinCode.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure($"Group with id {joinToken.GroupId} was not found");
+            return Result.Failure($"Group with id {joinCode.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -87,17 +87,17 @@ public class UseJoinTokenCommandHandler : IRequestHandler<UseJoinTokenCommand, R
             return updateGroupResult;
         }
 
-        var updatedJoinToken = joinToken with
+        var updatedJoinCode = joinCode with
         {
-            TimesUsed = joinToken.TimesUsed + 1,
+            TimesUsed = joinCode.TimesUsed + 1,
             Updated = now
         };
 
-        var updateJoinTokenResult = await _joinTokensRepository.Update(updatedJoinToken, ct);
+        var updateJoinCodeResult = await _joinCodesRepository.Update(updatedJoinCode, ct);
 
-        if (updateJoinTokenResult.IsFailure)
+        if (updateJoinCodeResult.IsFailure)
         {
-            return updateJoinTokenResult;
+            return updateJoinCodeResult;
         }
 
         return Result.Success();

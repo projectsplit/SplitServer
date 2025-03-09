@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Requests;
 
-public class CreateJoinTokenRequest
+public class CreateJoinCodeRequest
 {
     public required string GroupId { get; init; }
 }
