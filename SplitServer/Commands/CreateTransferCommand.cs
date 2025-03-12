@@ -11,7 +11,7 @@ public class CreateTransferCommand : IRequest<Result<CreateTransferResponse>>
     public required decimal Amount { get; init; }
     public required string Currency { get; init; }
     public required string Description { get; init; }
-    public required DateTime? Occured { get; init; }
+    public required DateTime? Occurred { get; init; }
     public required string SenderId { get; init; }
     public required string ReceiverId { get; init; }
 }

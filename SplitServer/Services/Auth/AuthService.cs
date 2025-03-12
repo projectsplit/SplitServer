@@ -8,9 +8,9 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using SplitServer.Configuration;
 using SplitServer.Models;
-using SplitServer.Services.Models;
+using SplitServer.Services.Auth.Models;
 
-namespace SplitServer.Services;
+namespace SplitServer.Services.Auth;
 
 public class AuthService
 {

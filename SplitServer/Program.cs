@@ -7,10 +7,23 @@ using SplitServer.Middlewares;
 using SplitServer.Repositories;
 using SplitServer.Repositories.Implementations;
 using SplitServer.Services;
+using SplitServer.Services.Auth;
+using SplitServer.Services.CurrencyExchangeRate;
+using SplitServer.Services.OpenExchangeRates.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configure<MongoDbSettings>();
+builder.Services.AddHttpClient();
+builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
+builder.Services.AddSingleton<AuthService>();
+builder.Services.AddSingleton<ValidationService>();
+builder.Services.AddSingleton<LockService>();
+builder.Services.AddSingleton<DebtService>();
+builder.Services.AddSingleton<CurrencyExchangeRateService>();
+builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
+builder.Services.AddSingleton<OpenExchangeRatesClient>();
+
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
 builder.Services.AddSingleton<ISessionsRepository, SessionsMongoDbRepository>();
@@ -19,18 +32,13 @@ builder.Services.AddSingleton<IExpensesRepository, ExpensesMongoDbRepository>();
 builder.Services.AddSingleton<ITransfersRepository, TransfersMongoDbRepository>();
 builder.Services.AddSingleton<IInvitationsRepository, InvitationsMongoDbRepository>();
 builder.Services.AddSingleton<IJoinCodesRepository, JoinCodesMongoDbRepository>();
+builder.Services.AddSingleton<ICurrencyExchangeRatesRepository, CurrencyExchangeRatesMongoDbRepository>();
 
-builder.Services.AddHttpClient();
-builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
-builder.Services.AddSingleton<ValidationService>();
-builder.Services.AddSingleton<LockService>();
-builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
+builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
-
+builder.Configure<OpenExchangeRatesSettings>();
 var authSettings = builder.Configure<AuthSettings>();
-builder.Services.AddSingleton<AuthService>();
-builder.AddAuthentication(authSettings);
+builder.Services.AddAuthentication(authSettings);
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddCors(
@@ -53,7 +61,6 @@ app.UseCors();
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
-// app.UseHttpsRedirection();
 app.MapGroup("/auth").MapAuthEndpoints();
 app.MapGroup("/users").RequireAuthorization().MapUserEndpoints();
 app.MapGroup("/groups").RequireAuthorization().MapGroupEndpoints();
@@ -62,5 +69,20 @@ app.MapGroup("/transfers").RequireAuthorization().MapTransferEndpoints();
 app.MapGroup("/debts").RequireAuthorization().MapDebtEndpoints();
 app.MapGroup("/invitations").RequireAuthorization().MapInvitationEndpoints();
 app.MapGroup("/join").RequireAuthorization().MapJoinEndpoints();
-app.MapGet("/", (HttpContext context) => new { UserId = context.GetUserId() }).RequireAuthorization();
+app.MapGet(
+        "/",
+        async (HttpContext context, CurrencyExchangeRateService currencyExchangeRateService) =>
+        {
+            var asd = new
+            {
+                UserId = context.GetUserId()
+            };
+
+            var rates = await currencyExchangeRateService.Get(DateOnly.Parse("2025-03-10"), CancellationToken.None);
+
+            const decimal amount = 10m;
+
+            return amount.Convert("USD", rates.Value, "EUR");
+        })
+    .RequireAuthorization();
 app.Run();

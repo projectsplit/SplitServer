@@ -110,6 +110,15 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
             ex => $"Insert failed {ex.Message}");
     }
 
+    public async Task<Result> InsertMany(IList<TEntity> entities, CancellationToken ct)
+    {
+        var documents = entities.Select(Mapper.ToDocument).ToList();
+
+        return await Result.Try(
+            async () => await Collection.InsertManyAsync(documents, cancellationToken: ct),
+            ex => $"Insert failed {ex.Message}");
+    }
+
     protected static readonly FilterDefinitionBuilder<TDocument> FilterBuilder = Builders<TDocument>.Filter;
     protected static readonly UpdateDefinitionBuilder<TDocument> UpdateBuilder = Builders<TDocument>.Update;
     protected static readonly SortDefinitionBuilder<TDocument> SortBuilder = Builders<TDocument>.Sort;

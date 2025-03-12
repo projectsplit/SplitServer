@@ -31,7 +31,7 @@ public static class ExpenseEndpoints
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,
-            Occured = request.Occured,
+            Occurred = request.Occurred,
             Payments = request.Payments,
             Shares = request.Shares,
             Labels = request.Labels,

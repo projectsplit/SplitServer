@@ -69,16 +69,16 @@ public class GetExpenseTimeBucketsQueryHandler : IRequestHandler<GetExpenseTimeB
 
         foreach (var bucket in timeBuckets)
         {
-            var expensesInBucket = expenses.Where(x => x.Occured >= bucket.StartDate && x.Occured < bucket.EndDate);
+            var expensesInBucket = expenses.Where(x => x.Occurred >= bucket.StartDate && x.Occurred < bucket.EndDate);
             var bucketSum = expensesInBucket.Sum(x => x.Amount);
             cumulativeSum += bucketSum;
             bucket.Amount = cumulativeSum;
         }
 
-        // var asd = expenses.GroupBy(e => (e.Occured - query.StartDate).Ticks / bucketDuration.Ticks);
+        // var asd = expenses.GroupBy(e => (e.Occurred - query.StartDate).Ticks / bucketDuration.Ticks);
         //
         // var amounts = expenses
-        //     .GroupBy(e => (e.Occured - query.StartDate).Ticks / bucketDuration.Ticks)
+        //     .GroupBy(e => (e.Occurred - query.StartDate).Ticks / bucketDuration.Ticks)
         //     .Select(g => g.Sum(e => e.Amount))
         //     .CumulativeSum()
         //     .ToList();

@@ -1,7 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Repositories;
-using SplitServer.Services;
+using SplitServer.Services.Auth;
 
 namespace SplitServer.Commands;
 

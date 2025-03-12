@@ -6,7 +6,7 @@ namespace SplitServer.Repositories;
 
 public interface IExpensesRepository : IRepositoryBase<Expense>
 {
-    Task<List<Expense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccured, DateTime? maxCreated, CancellationToken ct);
+    Task<List<Expense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct);
 
     Task<List<Expense>> GetAllByGroupId(string groupId, CancellationToken ct);
 
