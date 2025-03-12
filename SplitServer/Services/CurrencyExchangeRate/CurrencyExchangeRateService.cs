@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services.OpenExchangeRates;
 using SplitServer.Services.OpenExchangeRates.Models;
 
 namespace SplitServer.Services.CurrencyExchangeRate;

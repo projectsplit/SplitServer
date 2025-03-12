@@ -13,8 +13,4 @@
     <PackageReference Include="MongoDB.Driver" Version="3.0.0"/>
     <PackageReference Include="NMoneys" Version="7.3.0"/>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Services\Debt\" />
-    <Folder Include="Services\OpenExchangeRates\" />
-  </ItemGroup>
 </Project>

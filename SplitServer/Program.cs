@@ -9,6 +9,7 @@ using SplitServer.Repositories.Implementations;
 using SplitServer.Services;
 using SplitServer.Services.Auth;
 using SplitServer.Services.CurrencyExchangeRate;
+using SplitServer.Services.OpenExchangeRates;
 using SplitServer.Services.OpenExchangeRates.Models;
 
 var builder = WebApplication.CreateBuilder(args);
