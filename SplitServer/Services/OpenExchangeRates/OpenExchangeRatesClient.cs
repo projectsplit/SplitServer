@@ -5,8 +5,9 @@ using System.Web;
 using CSharpFunctionalExtensions;
 using Microsoft.Extensions.Options;
 using SplitServer.Configuration;
+using SplitServer.Services.OpenExchangeRates.Models;
 
-namespace SplitServer.Services.OpenExchangeRates.Models;
+namespace SplitServer.Services.OpenExchangeRates;
 
 public class OpenExchangeRatesClient
 {
