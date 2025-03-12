@@ -55,10 +55,10 @@ public class DebtService
 
         while (balances.Any(x => x.Value != 0))
         {
-            var maxDebtor = balances.MinBy(x => x.Value);
-            var maxCreditor = balances.MaxBy(x => x.Value);
+            var maxDebtor = balances.MaxBy(x => x.Value);
+            var maxCreditor = balances.MinBy(x => x.Value);
 
-            var amount = Math.Min(-maxDebtor.Value, maxCreditor.Value);
+            var amount = Math.Min(maxDebtor.Value, -maxCreditor.Value);
 
             var debt = new Debt
             {
@@ -70,8 +70,8 @@ public class DebtService
 
             debts.Add(debt);
 
-            balances[maxDebtor.Key] += amount;
-            balances[maxCreditor.Key] -= amount;
+            balances[maxDebtor.Key] -= amount;
+            balances[maxCreditor.Key] += amount;
         }
 
         return debts;
