@@ -18,15 +18,15 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
     public async Task<List<Transfer>> GetByGroupId(
         string groupId,
         int pageSize,
-        DateTime? maxOccured,
+        DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct)
     {
-        var paginationFilter = maxOccured is not null && maxCreated is not null
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
             ? FilterBuilder.Or(
-                FilterBuilder.Lt(x => x.Occured, maxOccured),
+                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
                 FilterBuilder.And(
-                    FilterBuilder.Eq(x => x.Occured, maxOccured),
+                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
                     FilterBuilder.Lt(x => x.Created, maxCreated)))
             : FilterBuilder.Empty;
 
@@ -35,7 +35,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             FilterBuilder.Eq(x => x.IsDeleted, false),
             paginationFilter);
 
-        var sort = SortBuilder.Descending(x => x.Occured).Descending(x => x.Created);
+        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
         return await Collection
             .Find(filter)

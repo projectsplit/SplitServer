@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Identity;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
-using SplitServer.Services;
+using SplitServer.Services.Auth;
 
 namespace SplitServer.Commands;
 

@@ -87,7 +87,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
             SenderId = command.SenderId,
             ReceiverId = command.ReceiverId,
             Amount = command.Amount,
-            Occured = command.Occured ?? now,
+            Occurred = command.Occurred ?? now,
             Description = command.Description,
             Currency = command.Currency
         };

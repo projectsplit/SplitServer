@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using CSharpFunctionalExtensions;
 using NMoneys;
+using SplitServer.Models;
 
 namespace SplitServer.Services;
 
@@ -76,6 +77,40 @@ public class ValidationService
         if (amountWithTrimmedInvalidDecimals != amount)
         {
             return Result.Failure($"{currency} supports up to {maxDecimalDigits} decimal digits");
+        }
+
+        return Result.Success();
+    }
+
+    public Result ValidateTransfer(
+        Group group,
+        string senderId,
+        string receiverId,
+        decimal amount,
+        string currency)
+    {
+        var amountValidationResult = ValidateAmount(amount, currency);
+
+        if (amountValidationResult.IsFailure)
+        {
+            return amountValidationResult;
+        }
+
+        var allMemberIds = group.Members.Select(m => m.Id).Concat(group.Guests.Select(g => g.Id)).ToList();
+
+        if (allMemberIds.All(x => x != senderId))
+        {
+            return Result.Failure("Sender must be a group member");
+        }
+
+        if (allMemberIds.All(x => x != receiverId))
+        {
+            return Result.Failure("Receiver must be a group member");
+        }
+
+        if (senderId == receiverId)
+        {
+            return Result.Failure("Receiver must be different from sender");
         }
 
         return Result.Success();

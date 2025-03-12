@@ -2,7 +2,7 @@
 using SplitServer.Commands;
 using SplitServer.Requests;
 using SplitServer.Responses;
-using SplitServer.Services;
+using SplitServer.Services.Auth;
 
 namespace SplitServer.Endpoints;
 

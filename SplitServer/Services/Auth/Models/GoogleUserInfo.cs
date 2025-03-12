@@ -1,4 +1,4 @@
-﻿namespace SplitServer.Services.Models;
+﻿namespace SplitServer.Services.Auth.Models;
 
 public class GoogleUserInfo
 {

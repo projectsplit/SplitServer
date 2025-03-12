@@ -51,7 +51,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
         var transfers = await _transfersRepository.GetByGroupId(
             query.GroupId,
             query.PageSize,
-            nextDetails?.Occured,
+            nextDetails?.Occurred,
             nextDetails?.Created,
             ct);
 
@@ -70,7 +70,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
             x => new NextTransferPageDetails
             {
                 Created = x.Last().Created,
-                Occured = x.Last().Occured
+                Occurred = x.Last().Occurred
             });
     }
 }
@@ -78,5 +78,5 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
 internal class NextTransferPageDetails
 {
     public required DateTime Created { get; init; }
-    public required DateTime Occured { get; init; }
+    public required DateTime Occurred { get; init; }
 }

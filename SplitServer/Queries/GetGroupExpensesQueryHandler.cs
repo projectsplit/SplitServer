@@ -51,7 +51,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
         var expenses = await _expensesRepository.GetByGroupId(
             query.GroupId,
             query.PageSize,
-            nextDetails?.Occured,
+            nextDetails?.Occurred,
             nextDetails?.Created,
             ct);
 
@@ -67,7 +67,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
         return Next.Create(
             expenses,
             query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occured = x.Last().Occured });
+            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
     }
 }
 
@@ -75,5 +75,5 @@ internal class NextExpensePageDetails
 {
     public required DateTime Created { get; init; }
 
-    public required DateTime Occured { get; init; }
+    public required DateTime Occurred { get; init; }
 }

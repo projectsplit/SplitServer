@@ -6,7 +6,8 @@ using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
-using SplitServer.Services.Models;
+using SplitServer.Services.Auth;
+using SplitServer.Services.Auth.Models;
 
 namespace SplitServer.Commands;
 
