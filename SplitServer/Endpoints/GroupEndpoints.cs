@@ -81,13 +81,13 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupQuery
+        var query = new GetGroupQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -99,14 +99,14 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupsQuery
+        var query = new GetGroupsQuery
         {
             UserId = httpContext.GetUserId(),
             PageSize = pageSize,
             Next = next
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -137,14 +137,14 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupsWithDetailsQuery
+        var query = new GetGroupsWithDetailsQuery
         {
             UserId = httpContext.GetUserId(),
             PageSize = pageSize,
             Next = next
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -155,13 +155,13 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupDetailsQuery
+        var query = new GetGroupDetailsQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -171,12 +171,12 @@ public static class GroupEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetAllGroupsTotalBalancesQuery
+        var query = new GetAllGroupsTotalBalancesQuery
         {
             UserId = httpContext.GetUserId(),
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

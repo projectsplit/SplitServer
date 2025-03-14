@@ -68,7 +68,7 @@ public static class ExpenseEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupExpensesQuery
+        var query = new GetGroupExpensesQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
@@ -76,7 +76,7 @@ public static class ExpenseEndpoints
             Next = next
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -102,7 +102,7 @@ public static class ExpenseEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetLabelsQuery
+        var q = new GetLabelsQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
@@ -110,7 +110,7 @@ public static class ExpenseEndpoints
             Query = query
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(q, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

@@ -83,7 +83,7 @@ public static class TransferEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupTransfersQuery
+        var query = new GetGroupTransfersQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
@@ -91,7 +91,7 @@ public static class TransferEndpoints
             Next = next
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

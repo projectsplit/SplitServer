@@ -34,6 +34,13 @@ public class RefreshCommandHandler : IRequestHandler<RefreshCommand, Result<Auth
 
         if (_authService.HasSessionExpired(session))
         {
+            var deleteByRefreshToken = await _sessionsRepository.DeleteByRefreshToken(command.RefreshToken, ct);
+
+            if (deleteByRefreshToken.IsFailure)
+            {
+                Console.WriteLine(deleteByRefreshToken.Error);
+            }
+
             return Result.Failure<AuthenticationResponse>(errorMessage);
         }
 
