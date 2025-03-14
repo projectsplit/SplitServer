@@ -25,7 +25,7 @@ public static class JoinEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupJoinCodesQuery
+        var query = new GetGroupJoinCodesQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
@@ -33,7 +33,7 @@ public static class JoinEndpoints
             Next = next,
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

@@ -96,4 +96,13 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
     }
+
+    public async Task<long> CountByReceiverIdAndMinCreated(string receiverId, DateTime minCreatedDate, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.ReceiverId, receiverId),
+            FilterBuilder.Gt(x => x.Created, minCreatedDate));
+
+        return await Collection.Find(filter).CountDocumentsAsync(ct);
+    }
 }

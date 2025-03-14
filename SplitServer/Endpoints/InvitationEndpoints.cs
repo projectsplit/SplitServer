@@ -96,14 +96,14 @@ public static class InvitationEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetUserInvitationsQuery
+        var query = new GetUserInvitationsQuery
         {
             UserId = httpContext.GetUserId(),
             PageSize = pageSize,
             Next = next,
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
@@ -117,7 +117,7 @@ public static class InvitationEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new SearchUserToInviteQuery
+        var query = new SearchUserToInviteQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
@@ -126,7 +126,7 @@ public static class InvitationEndpoints
             Next = next
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

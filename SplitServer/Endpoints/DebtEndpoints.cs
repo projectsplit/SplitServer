@@ -20,13 +20,13 @@ public static class DebtEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new GetGroupDebtsQuery
+        var query = new GetGroupDebtsQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId
         };
 
-        var result = await mediator.Send(command, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
