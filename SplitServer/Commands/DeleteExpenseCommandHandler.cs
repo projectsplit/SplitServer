@@ -29,11 +29,11 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
             return Result.Failure($"User with id {command.UserId} was not found");
         }
 
-        var expenseMaybe = await _expensesRepository.GetById(command.UserId, ct);
+        var expenseMaybe = await _expensesRepository.GetById(command.ExpenseId, ct);
 
         if (expenseMaybe.HasNoValue)
         {
-            return Result.Failure($"Expense with id {command.UserId} was not found");
+            return Result.Failure($"Expense with id {command.ExpenseId} was not found");
         }
 
         var expense = expenseMaybe.Value;
