@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Http.Json;
+using Serilog;
 using SplitServer.Configuration;
 using SplitServer.Endpoints;
 using SplitServer.Extensions;
@@ -39,6 +40,8 @@ builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDb
 builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
 builder.Configure<OpenExchangeRatesSettings>();
+builder.Configure<ErrorHandlingSettings>();
+var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
 builder.Services.AddAuthentication(authSettings);
 builder.Services.AddAuthorization();
@@ -57,8 +60,11 @@ builder.Services.AddCors(
             });
     });
 
+builder.ConfigureLogging(openTelemetrySettings);
+
 var app = builder.Build();
 
+app.UseSerilogRequestLogging();
 app.UseCors();
 app.UseMiddleware<ExceptionHandlerMiddleware>();
 app.UseAuthentication();
