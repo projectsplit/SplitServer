@@ -1,4 +1,8 @@
-﻿using SplitServer.Configuration;
+﻿using System.Reflection;
+using Serilog;
+using Serilog.Events;
+using Serilog.Sinks.OpenTelemetry;
+using SplitServer.Configuration;
 
 namespace SplitServer.Extensions;
 
@@ -15,5 +19,39 @@ public static class WebApplicationBuilderExtensions
         webApplicationBuilder.Configuration.GetSection(settings.SectionName).Bind(settings);
 
         return settings;
+    }
+
+    public static WebApplicationBuilder ConfigureLogging(
+        this WebApplicationBuilder webApplicationBuilder,
+        OpenTelemetrySettings openTelemetrySettings)
+    {
+        var loggerConfiguration = new LoggerConfiguration()
+            .MinimumLevel.Information()
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Fatal);
+
+        if (openTelemetrySettings.Enabled)
+        {
+            loggerConfiguration
+                .WriteTo.OpenTelemetry(
+                    options =>
+                    {
+                        options.Endpoint = openTelemetrySettings.Endpoint;
+                        options.Protocol = OtlpProtocol.HttpProtobuf;
+                        options.ResourceAttributes = new Dictionary<string, object>
+                        {
+                            ["service.version"] = Assembly.GetExecutingAssembly().GetName().Version!.ToString(),
+                            ["service.name"] = Assembly.GetExecutingAssembly().GetName().Name!,
+                            ["environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")!,
+                        };
+                    });
+        }
+
+        Log.Logger = loggerConfiguration
+            .WriteTo.Console()
+            .CreateBootstrapLogger();
+
+        webApplicationBuilder.Host.UseSerilog();
+
+        return webApplicationBuilder;
     }
 }
