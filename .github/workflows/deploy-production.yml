@@ -33,6 +33,7 @@ jobs:
             docker pull ghcr.io/projectsplit/splitserver:$TAG
             docker run -d \
               --name splitserver \
+              --network host \
               -p 5097:5097 \
               -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
               -e ASPNETCORE_URLS="http://0.0.0.0:5097" \
