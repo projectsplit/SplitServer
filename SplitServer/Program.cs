@@ -19,6 +19,7 @@ builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.A
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddSingleton<ValidationService>();
+builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<DebtService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
