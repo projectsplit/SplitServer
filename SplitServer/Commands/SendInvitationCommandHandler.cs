@@ -2,47 +2,33 @@
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
 public class SendInvitationCommandHandler : IRequestHandler<SendInvitationCommand, Result>
 {
-    private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
+    private readonly PermissionService _permissionService;
     private readonly IInvitationsRepository _invitationsRepository;
 
     public SendInvitationCommandHandler(
-        IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        PermissionService permissionService)
     {
-        _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _invitationsRepository = invitationsRepository;
+        _permissionService = permissionService;
     }
 
     public async Task<Result> Handle(SendInvitationCommand command, CancellationToken ct)
     {
-        var userMaybe = await _usersRepository.GetById(command.UserId, ct);
+        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
 
-        if (userMaybe.HasNoValue)
+        if (permissionResult.IsFailure)
         {
-            return Result.Failure($"User with id {command.UserId} was not found");
+            return permissionResult;
         }
 
-        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
-        {
-            return Result.Failure($"Group with id {command.GroupId} was not found");
-        }
-
-        var group = groupMaybe.Value;
-
-        if (group.Members.All(x => x.UserId != command.UserId))
-        {
-            return Result.Failure("You are not a member of this group");
-        }
+        var (_, group, _) = permissionResult.Value;
 
         if (group.Members.Any(x => x.UserId == command.ReceiverId))
         {

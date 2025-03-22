@@ -8,45 +8,30 @@ namespace SplitServer.Commands;
 
 public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtCommand, Result>
 {
-    private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
+    private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly DebtService _debtService;
 
     public SettleGuestDebtCommandHandler(
-        IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         DebtService debtService,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        PermissionService permissionService)
     {
-        _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _debtService = debtService;
         _transfersRepository = transfersRepository;
+        _permissionService = permissionService;
     }
 
     public async Task<Result> Handle(SettleGuestDebtCommand command, CancellationToken ct)
     {
-        var userMaybe = await _usersRepository.GetById(command.UserId, ct);
+        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
 
-        if (userMaybe.HasNoValue)
+        if (permissionResult.IsFailure)
         {
-            return Result.Failure($"User with id {command.UserId} was not found");
+            return permissionResult;
         }
 
-        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
-        {
-            return Result.Failure($"Group with id {command.GroupId} was not found");
-        }
-
-        var group = groupMaybe.Value;
-
-        if (group.Members.All(x => x.UserId != command.UserId))
-        {
-            return Result.Failure("You are not a member of this group");
-        }
+        var (_, group, _) = permissionResult.Value;
 
         if (group.Guests.All(x => x.Id != command.GuestId))
         {

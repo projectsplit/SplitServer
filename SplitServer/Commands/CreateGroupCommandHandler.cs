@@ -28,6 +28,11 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             return Result.Failure<CreateGroupResponse>($"User with id {command.UserId} was not found");
         }
 
+        if (string.IsNullOrWhiteSpace(command.Name))
+        {
+            return Result.Failure<CreateGroupResponse>("Group name cannot be null or empty");
+        }
+
         var now = DateTime.UtcNow;
         var groupId = Guid.NewGuid().ToString();
 
@@ -38,6 +43,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             Joined = now
         };
 
+        // TODO Validate currency
         var newGroup = new Group
         {
             Id = groupId,
