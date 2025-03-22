@@ -2,44 +2,33 @@
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
 public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
 {
-    private readonly IUsersRepository _usersRepository;
+    private readonly PermissionService _permissionService;
     private readonly IGroupsRepository _groupsRepository;
 
     public AddGuestCommandHandler(
-        IUsersRepository usersRepository,
+        PermissionService permissionService,
         IGroupsRepository groupsRepository)
     {
-        _usersRepository = usersRepository;
+        _permissionService = permissionService;
         _groupsRepository = groupsRepository;
     }
 
     public async Task<Result> Handle(AddGuestCommand command, CancellationToken ct)
     {
-        var userMaybe = await _usersRepository.GetById(command.UserId, ct);
+        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
 
-        if (userMaybe.HasNoValue)
+        if (permissionResult.IsFailure)
         {
-            return Result.Failure<Result>($"User with id {command.UserId} was not found");
+            return permissionResult;
         }
 
-        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
-        {
-            return Result.Failure<Result>($"Group with id {command.GroupId} was not found");
-        }
-
-        var group = groupMaybe.Value;
-
-        if (group.Members.All(x => x.UserId != command.UserId))
-        {
-            return Result.Failure<Result>("User is not a group member");
-        }
+        var (_, group, _) = permissionResult.Value;
 
         if (group.Guests.Any(x => x.Name == command.GuestName))
         {
