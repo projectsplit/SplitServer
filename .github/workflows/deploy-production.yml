@@ -11,7 +11,6 @@ jobs:
     env:
       SERVER_APP_DIR: /home/user/split-production/api
       APP_PORT: 5097
-      RM_IMAGES_SCRIPT: ./.github/workflows/scripts/rm-unused-repo-images.sh
       DOCKER_REPO: ghcr.io/projectsplit/splitserver
       CONTAINER_NAME: splitserver
 
