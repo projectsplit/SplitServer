@@ -40,3 +40,4 @@ jobs:
               -e ASPNETCORE_ENVIRONMENT=Production \
               --restart always \
               ghcr.io/projectsplit/splitserver:$TAG
+            docker images "ghcr.io/projectsplit/splitserver:*" -q | sort -u | xargs -r docker rmi -f
