@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Authentication;
 using SplitServer.Commands;
 using SplitServer.Queries;
 using SplitServer.Requests;
@@ -16,7 +15,7 @@ public static class CurrencyExchangeEndpoints
     }
 
     private static async Task<IResult> StoreHistoricalRatesHandler(
-        StoreHistoricalRatesRequest request,
+        StoreHistoricalRatesRequest? request,
         AuthService authService,
         IMediator mediator,
         HttpContext httpContext,
@@ -29,7 +28,7 @@ public static class CurrencyExchangeEndpoints
 
         var query = new StoreHistoricalRatesCommand
         {
-            Date = request.Date
+            Date = request?.Date
         };
 
         var result = await mediator.Send(query, ct);
