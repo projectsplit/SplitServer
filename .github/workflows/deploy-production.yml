@@ -11,7 +11,7 @@ jobs:
     env:
       SERVER_APP_DIR: /home/user/split-production/api
       APP_PORT: 5097
-      RM_UNUSED_REPO_IMAGES_SCRIPT: ./.github/workflows/scripts/rm-unused-repo-images.sh
+      RM_IMAGES_SCRIPT: ./.github/workflows/scripts/rm-unused-repo-images.sh
       DOCKER_REPO: ghcr.io/projectsplit/splitserver
       CONTAINER_NAME: splitserver
 
@@ -43,5 +43,4 @@ jobs:
               -e ASPNETCORE_ENVIRONMENT=Production \
               --restart always \
               ${{ env.DOCKER_REPO }}:$TAG
-            chmod +x ${{ env.RM_UNUSED_REPO_IMAGES_SCRIPT }}
-            ${{ env.RM_UNUSED_REPO_IMAGES_SCRIPT }} ${{ env.DOCKER_REPO }}
+            docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi
