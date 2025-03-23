@@ -19,7 +19,19 @@ public class CurrencyExchangeRateService
         _currencyExchangeRatesRepository = currencyExchangeRatesRepository;
     }
 
-    public async Task<Result<CurrencyExchangeRates>> Get(DateOnly date, CancellationToken ct)
+    public async Task<Result<CurrencyExchangeRates>> GetLatestStoredRates(CancellationToken ct)
+    {
+        var ratesMaybe = await _currencyExchangeRatesRepository.GetLatest(ct);
+
+        if (ratesMaybe.HasNoValue)
+        {
+            return Result.Failure<CurrencyExchangeRates>("No currency exchange rates found");
+        }
+
+        return ratesMaybe.Value;
+    }
+
+    public async Task<Result<CurrencyExchangeRates>> GetStoredOrStoreRates(DateOnly date, CancellationToken ct)
     {
         var storedRates = await _currencyExchangeRatesRepository.GetByDate(date, ct);
 

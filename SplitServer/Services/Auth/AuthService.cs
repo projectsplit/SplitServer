@@ -16,6 +16,7 @@ public class AuthService
 {
     private readonly AuthSettings _authSettings;
     private readonly IHttpClientFactory _httpClientFactory;
+    private const string ApiKeyHeaderName = "api-key";
 
     public AuthService(
         IOptions<AuthSettings> jwtSettingsOptions,
@@ -152,22 +153,16 @@ public class AuthService
         var json = await httpClient.GetStringAsync(_authSettings.GoogleJsonWebKeySetEndpoint, ct);
         return JsonSerializer.Deserialize<JsonWebKeySet>(json)!.Keys;
     }
-}
 
-file class GoogleTokenResponse
-{
-    [JsonPropertyName("access_token")]
-    public required string AccessToken { get; set; }
+    public Result ValidateApiKey(HttpContext httpContext)
+    {
+        if (!httpContext.Request.Headers.TryGetValue(ApiKeyHeaderName, out var apiKey) ||
+            string.IsNullOrWhiteSpace(apiKey) ||
+            apiKey != _authSettings.ApiKey)
+        {
+            return Result.Failure("Api key is missing or invalid");
+        }
 
-    [JsonPropertyName("expires_in")]
-    public required int ExpiresIn { get; set; }
-
-    [JsonPropertyName("refresh_token")]
-    public string? RefreshToken { get; set; }
-
-    [JsonPropertyName("token_type")]
-    public required string TokenType { get; set; }
-
-    [JsonPropertyName("id_token")]
-    public required string IdToken { get; set; }
+        return Result.Success();
+    }
 }
