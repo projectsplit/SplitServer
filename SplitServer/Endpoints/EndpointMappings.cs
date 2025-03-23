@@ -12,6 +12,7 @@ public static class EndpointMappings
         app.MapGroup("/debts").RequireAuthorization().MapDebtEndpoints();
         app.MapGroup("/invitations").RequireAuthorization().MapInvitationEndpoints();
         app.MapGroup("/join").RequireAuthorization().MapJoinEndpoints();
+        app.MapGroup("/currency-rates").RequireAuthorization().MapCurrencyExchangeEndpoints();
         app.MapGet("/", (HttpContext context) => throw new Exception("Fake Exception")).RequireAuthorization();
 
         return app;

@@ -20,4 +20,5 @@ public class AuthSettings : ISettings
     public required string GoogleClientSecret { get; init; }
     public required string GoogleJsonWebKeySetEndpoint { get; init; }
     public required string GoogleIdTokenIssuer { get; init; }
+    public required string ApiKey { get; init; }
 }

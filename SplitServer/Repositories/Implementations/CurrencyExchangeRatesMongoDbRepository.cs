@@ -28,4 +28,17 @@ public class CurrencyExchangeRatesMongoDbRepository :
             ? Mapper.ToEntity(document)
             : Maybe.None;
     }
+
+    public async Task<Maybe<CurrencyExchangeRates>> GetLatest(CancellationToken ct)
+    {
+        var document = await Collection
+            .Find(FilterBuilder.Empty)
+            .SortByDescending(x => x.Date)
+            .Limit(1)
+            .FirstOrDefaultAsync(ct);
+
+        return document is not null
+            ? Mapper.ToEntity(document)
+            : Maybe.None;
+    }
 }
