@@ -3,6 +3,7 @@ using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
@@ -11,22 +12,27 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
+    private readonly ValidationService _validationService;
 
     public CreateExpenseCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        IExpensesRepository expensesRepository)
+        IExpensesRepository expensesRepository,
+        ValidationService validationService)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
+        _validationService = validationService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateExpenseCommand command, CancellationToken ct)
     {
-        if (command.Amount <= 0)
+        var amountValidationResult = _validationService.ValidateAmount(command.Amount, command.Currency);
+
+        if (amountValidationResult.IsFailure)
         {
-            return Result.Failure<CreateExpenseResponse>("Amount must be greater than 0");
+            return amountValidationResult.ConvertFailure<CreateExpenseResponse>();
         }
 
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
