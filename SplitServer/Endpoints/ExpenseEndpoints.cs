@@ -15,7 +15,7 @@ public static class ExpenseEndpoints
         app.MapPost("/delete", DeleteExpenseHandler);
         app.MapGet("/", GetGroupExpensesHandler);
         app.MapGet("/labels", GetLabelsHandler);
-        // app.MapPost("/update", UpdateExpenseHandler);
+        app.MapPost("/edit", EditExpenseHandler);
     }
 
     private static async Task<IResult> CreateExpenseHandler(
@@ -81,19 +81,6 @@ public static class ExpenseEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
-    // private static async Task<IResult> UpdateExpenseHandler(
-    //     UpdateExpenseRequest request,
-    //     IMediator mediator,
-    //     HttpContext httpContext,
-    //     CancellationToken ct)
-    // {
-    //     var command = new UpdateExpenseCommand(httpContext.GetUserId(), request.ExpenseId, request.Name, request.Currency);
-    //
-    //     var result = await mediator.Send(command, ct);
-    //
-    //     return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
-    // }
-
     private static async Task<IResult> GetLabelsHandler(
         string groupId,
         int limit,
@@ -113,5 +100,30 @@ public static class ExpenseEndpoints
         var result = await mediator.Send(q, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> EditExpenseHandler(
+        EditExpenseRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditExpenseCommand
+        {
+            ExpenseId = request.ExpenseId,
+            UserId = httpContext.GetUserId(),
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occurred = request.Occurred,
+            Payments = request.Payments,
+            Shares = request.Shares,
+            Labels = request.Labels,
+            Location = request.Location
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 }
