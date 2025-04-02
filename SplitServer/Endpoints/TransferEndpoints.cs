@@ -14,7 +14,7 @@ public static class TransferEndpoints
         app.MapPost("/create-many", CreateManyTransfersHandler);
         app.MapPost("/delete", DeleteTransferHandler);
         app.MapGet("/", GetGroupTransfersHandler);
-        // app.MapPost("/update", UpdateTransferHandler);
+        app.MapPost("/edit", EditTransferHandler);
     }
 
     private static async Task<IResult> CreateTransferHandler(
@@ -96,16 +96,26 @@ public static class TransferEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
-    // private static async Task<IResult> UpdateTransferHandler(
-    //     UpdateTransferRequest request,
-    //     IMediator mediator,
-    //     HttpContext httpContext,
-    //     CancellationToken ct)
-    // {
-    //     var command = new UpdateTransferCommand(httpContext.GetUserId(), request.TransferId, request.Name, request.Currency);
-    //
-    //     var result = await mediator.Send(command, ct);
-    //
-    //     return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
-    // }
+    private static async Task<IResult> EditTransferHandler(
+        EditTransferRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditTransferCommand
+        {
+            TransferId = request.TransferId,
+            UserId = httpContext.GetUserId(),
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occurred = request.Occurred,
+            SenderId = request.SenderId,
+            ReceiverId = request.ReceiverId,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
 }
