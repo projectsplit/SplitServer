@@ -10,16 +10,19 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
-    private readonly DebtService _debtService;
+    private readonly IExpensesRepository _expensesRepository;
+    private readonly ITransfersRepository _transfersRepository;
 
     public GetGroupDebtsQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        DebtService debtService)
+        IExpensesRepository expensesRepository,
+        ITransfersRepository transfersRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
-        _debtService = debtService;
+        _expensesRepository = expensesRepository;
+        _transfersRepository = transfersRepository;
     }
 
     public async Task<Result<GetGroupDebtsResponse>> Handle(GetGroupDebtsQuery query, CancellationToken ct)
@@ -45,10 +48,13 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
             return Result.Failure<GetGroupDebtsResponse>("User must be a group member");
         }
 
+        var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
+        var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
+
         return new GetGroupDebtsResponse
         {
-            Debts = await _debtService.GetDebts(query.GroupId, ct)
+            Debts = GroupService.GetDebts(group, groupExpenses, groupTransfers),
+            TotalSpent = GroupService.GetTotalSpent(group, groupExpenses)
         };
     }
-
 }
