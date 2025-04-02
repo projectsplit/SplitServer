@@ -5,11 +5,12 @@ namespace SplitServer.Tests;
 
 public class ValidationServiceTests
 {
-    private readonly ITestOutputHelper _output;
+    private readonly ITestOutputHelper _testOutputHelper;
 
-    public ValidationServiceTests(ITestOutputHelper output)
+    public ValidationServiceTests(
+        ITestOutputHelper testOutputHelper)
     {
-        _output = output;
+        _testOutputHelper = testOutputHelper;
     }
 
     [Theory]
@@ -31,7 +32,7 @@ public class ValidationServiceTests
 
         Assert.True(result.IsFailure);
 
-        _output.WriteLine(result.Error);
+        _testOutputHelper.WriteLine(result.Error);
     }
 
     [Theory]

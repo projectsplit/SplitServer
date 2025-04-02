@@ -1,7 +1,4 @@
-﻿using SplitServer.Extensions;
-using SplitServer.Services.CurrencyExchangeRate;
-
-namespace SplitServer.Endpoints;
+﻿namespace SplitServer.Endpoints;
 
 public static class EndpointMappings
 {
@@ -15,22 +12,8 @@ public static class EndpointMappings
         app.MapGroup("/debts").RequireAuthorization().MapDebtEndpoints();
         app.MapGroup("/invitations").RequireAuthorization().MapInvitationEndpoints();
         app.MapGroup("/join").RequireAuthorization().MapJoinEndpoints();
-        app.MapGet(
-                "/",
-                async (HttpContext context, CurrencyExchangeRateService currencyExchangeRateService) =>
-                {
-                    var asd = new
-                    {
-                        UserId = context.GetUserId()
-                    };
-
-                    var rates = await currencyExchangeRateService.Get(DateOnly.Parse("2025-03-10"), CancellationToken.None);
-
-                    const decimal amount = 10m;
-
-                    return amount.Convert("USD", rates.Value, "EUR");
-                })
-            .RequireAuthorization();
+        app.MapGroup("/currency-rates").RequireAuthorization().MapCurrencyExchangeEndpoints();
+        app.MapGet("/", (HttpContext context) => throw new Exception("Fake Exception")).RequireAuthorization();
 
         return app;
     }

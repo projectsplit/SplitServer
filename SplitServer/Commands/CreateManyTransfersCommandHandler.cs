@@ -8,47 +8,30 @@ namespace SplitServer.Commands;
 
 public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTransfersCommand, Result>
 {
-    private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
+    private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
 
     public CreateManyTransfersCommandHandler(
-        IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         ITransfersRepository transfersRepository,
-        ValidationService validationService)
+        ValidationService validationService,
+        PermissionService permissionService)
     {
-        _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _transfersRepository = transfersRepository;
         _validationService = validationService;
+        _permissionService = permissionService;
     }
 
     public async Task<Result> Handle(CreateManyTransfersCommand command, CancellationToken ct)
     {
-        var userMaybe = await _usersRepository.GetById(command.UserId, ct);
+        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
 
-        if (userMaybe.HasNoValue)
+        if (permissionResult.IsFailure)
         {
-            return Result.Failure($"User with id {command.UserId} was not found");
+            return permissionResult;
         }
 
-        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
-        {
-            return Result.Failure($"Group with id {command.GroupId} was not found");
-        }
-
-        var group = groupMaybe.Value;
-
-        var creatorMemberId = group.Members.FirstOrDefault(m => m.UserId == command.UserId)?.Id;
-
-        if (creatorMemberId is null)
-        {
-            return Result.Failure("User must be a group member");
-        }
+        var (_, group, _) = permissionResult.Value;
 
         foreach (var t in command.Transfers)
         {

@@ -6,4 +6,6 @@ namespace SplitServer.Repositories;
 public interface ICurrencyExchangeRatesRepository : IRepositoryBase<CurrencyExchangeRates>
 {
     Task<Maybe<CurrencyExchangeRates>> GetByDate(DateOnly date, CancellationToken ct);
+
+    Task<Maybe<CurrencyExchangeRates>> GetLatest(CancellationToken ct);
 }

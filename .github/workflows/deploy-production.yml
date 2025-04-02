@@ -8,13 +8,15 @@ run-name: Deploy Production ${{ github.ref_name }}
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      SERVER_APP_DIR: /home/user/split-production/api
+      APP_PORT: 5097
+      DOCKER_REPO: ghcr.io/projectsplit/splitserver
+      CONTAINER_NAME: splitserver
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
 
       - name: SSH into server and deploy
         uses: appleboy/ssh-action@v1.2.0
@@ -27,15 +29,17 @@ jobs:
             TAG=${{ github.ref_name }}
             echo $TAG
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            cd /home/user/split-production/api
-            docker stop splitserver || true
-            docker rm splitserver || true
-            docker pull ghcr.io/projectsplit/splitserver:$TAG
+            cd ${{ env.SERVER_APP_DIR }}
+            docker stop ${{ env.CONTAINER_NAME }} || true
+            docker rm ${{ env.CONTAINER_NAME }} || true
+            docker pull ${{ env.DOCKER_REPO }}:$TAG
             docker run -d \
-              --name splitserver \
-              -p 5097:5097 \
+              --name ${{ env.CONTAINER_NAME }} \
+              --network host \
+              -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} \
               -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
-              -e ASPNETCORE_URLS="http://0.0.0.0:5097" \
+              -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
               -e ASPNETCORE_ENVIRONMENT=Production \
               --restart always \
-              ghcr.io/projectsplit/splitserver:$TAG
+              ${{ env.DOCKER_REPO }}:$TAG
+            docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi
