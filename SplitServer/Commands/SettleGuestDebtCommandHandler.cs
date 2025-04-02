@@ -10,16 +10,16 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
 {
     private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
-    private readonly DebtService _debtService;
+    private readonly IExpensesRepository _expensesRepository;
 
     public SettleGuestDebtCommandHandler(
-        DebtService debtService,
         ITransfersRepository transfersRepository,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        IExpensesRepository expensesRepository)
     {
-        _debtService = debtService;
         _transfersRepository = transfersRepository;
         _permissionService = permissionService;
+        _expensesRepository = expensesRepository;
     }
 
     public async Task<Result> Handle(SettleGuestDebtCommand command, CancellationToken ct)
@@ -38,7 +38,10 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
             return Result.Failure("Guest is not a member of this group");
         }
 
-        var debts = await _debtService.GetDebts(group.Id, ct);
+        var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
+        var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
+
+        var debts = GroupService.GetDebts(group, groupExpenses, groupTransfers);
 
         var now = DateTime.UtcNow;
 
