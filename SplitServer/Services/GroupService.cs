@@ -1,29 +1,32 @@
 ﻿using SplitServer.Models;
-using SplitServer.Repositories;
 
 namespace SplitServer.Services;
 
-public class DebtService
+public class GroupService
 {
-    private readonly IExpensesRepository _expensesRepository;
-    private readonly ITransfersRepository _transfersRepository;
-
-    public DebtService(
-        IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+    public static List<Debt> GetDebts(Group group, List<Expense> expenses, List<Transfer> transfers)
     {
-        _expensesRepository = expensesRepository;
-        _transfersRepository = transfersRepository;
-    }
-
-    public async Task<List<Debt>> GetDebts(string groupId, CancellationToken ct)
-    {
-        var expenses = await _expensesRepository.GetAllByGroupId(groupId, ct);
-        var transfers = await _transfersRepository.GetAllByGroupId(groupId, ct);
-
         var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
 
         return currencies.SelectMany(c => GetDebtsForCurrency(c, expenses, transfers)).ToList();
+    }
+
+    public static Dictionary<string, Dictionary<string, decimal>> GetTotalSpent(Group group, List<Expense> expenses)
+    {
+        var totalSpentByMember = new Dictionary<string, Dictionary<string, decimal>>();
+        var expensesByCurrency = expenses.GroupBy(x => x.Currency).ToList();
+
+        foreach (var member in group.Members)
+        {
+            totalSpentByMember[member.Id] = expensesByCurrency.ToDictionary(
+                currencyGroup => currencyGroup.Key,
+                currencyGroup => currencyGroup
+                    .SelectMany(expense => expense.Shares)
+                    .Where(share => share.MemberId == member.Id)
+                    .Sum(share => share.Amount));
+        }
+
+        return totalSpentByMember;
     }
 
     private static List<Debt> GetDebtsForCurrency(string currency, List<Expense> expenses, List<Transfer> transfers)
