@@ -16,13 +16,13 @@ public class GroupService
         var totalSpentByMember = new Dictionary<string, Dictionary<string, decimal>>();
         var expensesByCurrency = expenses.GroupBy(x => x.Currency).ToList();
 
-        foreach (var member in group.Members)
+        foreach (var memberId in group.Members.Select(m => m.Id).Concat(group.Guests.Select(g => g.Id)))
         {
-            totalSpentByMember[member.Id] = expensesByCurrency.ToDictionary(
+            totalSpentByMember[memberId] = expensesByCurrency.ToDictionary(
                 currencyGroup => currencyGroup.Key,
                 currencyGroup => currencyGroup
                     .SelectMany(expense => expense.Shares)
-                    .Where(share => share.MemberId == member.Id)
+                    .Where(share => share.MemberId == memberId)
                     .Sum(share => share.Amount));
         }
 
