@@ -8,11 +8,17 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="3.2.0"/>
-    <PackageReference Include="MediatR" Version="12.4.1"/>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11"/>
+    <PackageReference Include="MediatR" Version="12.5.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.3" />
     <PackageReference Include="MongoDB.Driver" Version="3.0.0"/>
     <PackageReference Include="NMoneys" Version="7.4.0"/>
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0"/>
     <PackageReference Include="Serilog.Sinks.OpenTelemetry" Version="4.1.1"/>
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="Resources\zone1970.tab">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 </Project>
