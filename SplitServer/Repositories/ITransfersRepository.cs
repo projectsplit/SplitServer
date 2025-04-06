@@ -15,5 +15,5 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
 
     Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
-    Task<bool> IsGuestInAnyTransfer(string groupId, string guestId, CancellationToken ct);
+    Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct);
 }

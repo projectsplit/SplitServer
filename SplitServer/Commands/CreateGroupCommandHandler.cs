@@ -3,6 +3,7 @@ using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
@@ -10,13 +11,16 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
+    private readonly ValidationService _validationService;
 
     public CreateGroupCommandHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository)
+        IGroupsRepository groupsRepository,
+        ValidationService validationService)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
+        _validationService = validationService;
     }
 
     public async Task<Result<CreateGroupResponse>> Handle(CreateGroupCommand command, CancellationToken ct)
@@ -33,6 +37,13 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             return Result.Failure<CreateGroupResponse>("Group name cannot be null or empty");
         }
 
+        var currencyValidationResult = _validationService.ValidateCurrency(command.Currency);
+
+        if (currencyValidationResult.IsFailure)
+        {
+            return Result.Failure<CreateGroupResponse>(currencyValidationResult.Error);
+        }
+
         var now = DateTime.UtcNow;
         var groupId = Guid.NewGuid().ToString();
 
@@ -43,7 +54,6 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             Joined = now
         };
 
-        // TODO Validate currency
         var newGroup = new Group
         {
             Id = groupId,
@@ -52,6 +62,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             OwnerId = command.UserId,
             Name = command.Name,
             Currency = command.Currency,
+            IsArchived = false,
             Members = [ownerMember],
             Guests = [],
             Labels = [],
@@ -62,7 +73,7 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
 
         if (writeResult.IsFailure)
         {
-            return Result.Failure<CreateGroupResponse>($"Failed to create group: {writeResult.Error}");
+            return writeResult.ConvertFailure<CreateGroupResponse>();
         }
 
         return new CreateGroupResponse

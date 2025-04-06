@@ -42,7 +42,7 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
 
         var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
 
-        var groups = await _groupsRepository.GetByUserId(query.UserId, query.PageSize, nextDetails?.Created, ct);
+        var groups = await _groupsRepository.GetByUserId(query.UserId, query.IsArchived, query.PageSize, nextDetails?.Created, ct);
         var userMemberIds = groups.Select(g => g.Members.First(m => m.UserId == query.UserId)).Select(m => m.Id).ToList();
 
         var expenses = await _expensesRepository.GetAllByMemberIds(userMemberIds, ct);
