@@ -44,8 +44,8 @@ public class RemoveGroupGuestCommandHandler : IRequestHandler<RemoveGroupGuestCo
             return Result.Failure<Result>("This guest does not exist in this group");
         }
 
-        var existsInAnyExpense = await _expensesRepository.IsGuestInAnyExpense(command.GroupId, command.GuestId, ct);
-        var existsInAnyTransfer = await _transfersRepository.IsGuestInAnyTransfer(command.GroupId, command.GuestId, ct);
+        var existsInAnyExpense = await _expensesRepository.ExistsInAnyExpense(command.GroupId, command.GuestId, ct);
+        var existsInAnyTransfer = await _transfersRepository.ExistsInAnyTransfer(command.GroupId, command.GuestId, ct);
 
         if (existsInAnyExpense || existsInAnyTransfer)
         {

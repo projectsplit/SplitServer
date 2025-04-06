@@ -82,8 +82,8 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
 
         foreach (var guest in guests)
         {
-            var existsInExpense = await _expensesRepository.IsGuestInAnyExpense(groupId, guest.Id, ct);
-            var existsInTransfer = await _transfersRepository.IsGuestInAnyTransfer(groupId, guest.Id, ct);
+            var existsInExpense = await _expensesRepository.ExistsInAnyExpense(groupId, guest.Id, ct);
+            var existsInTransfer = await _transfersRepository.ExistsInAnyTransfer(groupId, guest.Id, ct);
 
             guestResponseItems.Add(
                 new GetGroupResponseGuestItem

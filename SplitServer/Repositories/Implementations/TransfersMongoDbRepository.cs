@@ -90,13 +90,13 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
-    public async Task<bool> IsGuestInAnyTransfer(string groupId, string guestId, CancellationToken ct)
+    public async Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
             FilterBuilder.Or(
-                FilterBuilder.Eq(x => x.ReceiverId, guestId),
-                FilterBuilder.Eq(x => x.SenderId, guestId)));
+                FilterBuilder.Eq(x => x.ReceiverId, memberId),
+                FilterBuilder.Eq(x => x.SenderId, memberId)));
 
         return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }

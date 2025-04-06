@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Requests;
 
-public class UpdateGroupRequest
+public class EditGroupRequest
 {
     public required string GroupId { get; init; }
     public required string Name { get; init; }
