@@ -52,6 +52,6 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
             return Result.Failure("User must be a group member");
         }
 
-        return await _expensesRepository.SoftDelete(command.ExpenseId, ct);
+        return await _expensesRepository.Delete(command.ExpenseId, ct);
     }
 }

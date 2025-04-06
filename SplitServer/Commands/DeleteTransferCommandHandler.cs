@@ -52,6 +52,6 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
             return Result.Failure("User must be a group member");
         }
 
-        return await _transfersRepository.SoftDelete(command.TransferId, ct);
+        return await _transfersRepository.Delete(command.TransferId, ct);
     }
 }
