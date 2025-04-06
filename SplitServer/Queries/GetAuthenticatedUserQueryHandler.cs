@@ -1,7 +1,9 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services.TimeZone;
 
 namespace SplitServer.Queries;
 
@@ -11,20 +13,25 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IUserActivityRepository _userActivityRepository;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly TimeZoneService _timeZoneService;
 
     private const string DefaultCurrency = "EUR";
     private const string DefaultTimeZone = "Europe/Athens";
+    private readonly Coordinates _defaultCoordinates;
 
     public GetAuthenticatedUserQueryHandler(
         IUsersRepository usersRepository,
         IUserActivityRepository userActivityRepository,
         IUserPreferencesRepository userPreferencesRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        TimeZoneService timeZoneService)
     {
         _usersRepository = usersRepository;
         _userActivityRepository = userActivityRepository;
         _userPreferencesRepository = userPreferencesRepository;
         _invitationsRepository = invitationsRepository;
+        _timeZoneService = timeZoneService;
+        _defaultCoordinates = new Coordinates { Latitude = 37.96667, Longitude = 23.71667 };
     }
 
     public async Task<Result<GetAuthenticatedUserResponse>> Handle(GetAuthenticatedUserQuery query, CancellationToken ct)
@@ -59,6 +66,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             HasNewerNotifications = notificationsCount > 0,
             Currency = currency,
             TimeZone = timeZone,
+            TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(_defaultCoordinates),
             RecentGroupId = recentGroupId,
         };
     }

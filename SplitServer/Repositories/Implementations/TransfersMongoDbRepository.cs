@@ -55,6 +55,15 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .ToListAsync(ct);
     }
 
+    public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+
+        var result = await Collection.DeleteManyAsync(filter, null, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers");
+    }
+
     public async Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
@@ -79,5 +88,16 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .ToListAsync(ct);
 
         return documents.Select(Mapper.ToEntity).ToList();
+    }
+
+    public async Task<bool> IsGuestInAnyTransfer(string groupId, string guestId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.Or(
+                FilterBuilder.Eq(x => x.ReceiverId, guestId),
+                FilterBuilder.Eq(x => x.SenderId, guestId)));
+
+        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }
 }

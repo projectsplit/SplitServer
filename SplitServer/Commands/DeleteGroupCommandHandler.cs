@@ -51,21 +51,21 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
             return Result.Failure("This group does not belong to user");
         }
 
-        var deleteGroupResult = await _groupsRepository.SoftDelete(group.Id, ct);
+        var deleteGroupResult = await _groupsRepository.Delete(group.Id, ct);
 
         if (deleteGroupResult.IsFailure)
         {
             return deleteGroupResult.ConvertFailure<Result>();
         }
 
-        var deleteExpensesResult = await _expensesRepository.SoftDeleteByGroupId(group.Id, ct);
+        var deleteExpensesResult = await _expensesRepository.DeleteByGroupId(group.Id, ct);
 
         if (deleteExpensesResult.IsFailure)
         {
             return deleteExpensesResult.ConvertFailure<Result>();
         }
 
-        var deleteTransfersResult = await _transfersRepository.SoftDeleteByGroupId(group.Id, ct);
+        var deleteTransfersResult = await _transfersRepository.DeleteByGroupId(group.Id, ct);
 
         if (deleteTransfersResult.IsFailure)
         {

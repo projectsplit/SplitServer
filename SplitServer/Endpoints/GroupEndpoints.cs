@@ -15,6 +15,8 @@ public static class GroupEndpoints
         app.MapPost("/update", UpdateGroupHandler);
         app.MapGet("/{groupId}", GetGroupHandler);
         app.MapPost("/{groupId}/add-guest", AddGuestHandler);
+        app.MapPost("/{groupId}/remove-member", RemoveMemberHandler);
+        app.MapPost("/{groupId}/remove-guest", RemoveGuestHandler);
         app.MapGet("/", GetGroupsHandler);
         app.MapGet("/details", GetGroupsWithDetailsHandler);
         app.MapGet("/{groupId}/details", GetGroupDetailsHandler);
@@ -179,5 +181,43 @@ public static class GroupEndpoints
         var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> RemoveMemberHandler(
+        string groupId,
+        RemoveMemberRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new RemoveGroupMemberCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            MemberId = request.MemberId,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> RemoveGuestHandler(
+        string groupId,
+        RemoveGuestRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new RemoveGroupGuestCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            GuestId = request.GuestId,
+        };
+    
+        var result = await mediator.Send(command, ct);
+    
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 }

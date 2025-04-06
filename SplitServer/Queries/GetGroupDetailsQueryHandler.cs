@@ -86,6 +86,7 @@ public class GetGroupDetailsQueryHandler : IRequestHandler<GetGroupDetailsQuery,
         {
             Id = group.Id,
             Name = group.Name,
+            Currency = group.Currency,
             Details = groupDetails,
         };
     }
