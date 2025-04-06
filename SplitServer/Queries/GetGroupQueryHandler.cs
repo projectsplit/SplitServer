@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 
@@ -9,13 +10,19 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
+    private readonly IExpensesRepository _expensesRepository;
+    private readonly ITransfersRepository _transfersRepository;
 
     public GetGroupQueryHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository)
+        IGroupsRepository groupsRepository,
+        IExpensesRepository expensesRepository,
+        ITransfersRepository transfersRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
+        _expensesRepository = expensesRepository;
+        _transfersRepository = transfersRepository;
     }
 
     public async Task<Result<GetGroupResponse>> Handle(GetGroupQuery query, CancellationToken ct)
@@ -61,11 +68,33 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
                 {
                     Id = x.Id,
                     UserId = x.UserId,
-                    Name = usersById.GetValueOrDefault(x.UserId)?.Username ?? "N/A",
+                    Name = usersById.GetValueOrDefault(x.UserId)?.Username ?? "deleted-user",
                     Joined = x.Joined
                 }).ToList(),
-            Guests = group.Guests,
+            Guests = await GetGuestResponseItems(group.Id, group.Guests, ct),
             Labels = group.Labels
         };
+    }
+
+    private async Task<List<GetGroupResponseGuestItem>> GetGuestResponseItems(string groupId, List<Guest> guests, CancellationToken ct)
+    {
+        var guestResponseItems = new List<GetGroupResponseGuestItem>();
+
+        foreach (var guest in guests)
+        {
+            var existsInExpense = await _expensesRepository.IsGuestInAnyExpense(groupId, guest.Id, ct);
+            var existsInTransfer = await _transfersRepository.IsGuestInAnyTransfer(groupId, guest.Id, ct);
+
+            guestResponseItems.Add(
+                new GetGroupResponseGuestItem
+                {
+                    Id = guest.Id,
+                    Name = guest.Name,
+                    Joined = guest.Joined,
+                    CanBeRemoved = !existsInExpense && !existsInTransfer,
+                });
+        }
+
+        return guestResponseItems;
     }
 }

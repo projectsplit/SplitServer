@@ -82,6 +82,15 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             .ToListAsync(ct);
     }
 
+    public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+
+        var result = await Collection.DeleteManyAsync(filter, null, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
+    }
+
     public async Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
@@ -127,5 +136,16 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             .ToListAsync(ct);
 
         return documents.Select(Mapper.ToEntity).ToList();
+    }
+
+    public async Task<bool> IsGuestInAnyExpense(string groupId, string guestId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.Or(
+                FilterBuilder.In("Shares.MemberId", guestId),
+                FilterBuilder.In("Payments.MemberId", guestId)));
+
+        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }
 }

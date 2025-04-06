@@ -1,0 +1,63 @@
+﻿using CSharpFunctionalExtensions;
+using MediatR;
+using SplitServer.Models;
+using SplitServer.Repositories;
+using SplitServer.Services;
+
+namespace SplitServer.Commands;
+
+public class RemoveGroupGuestCommandHandler : IRequestHandler<RemoveGroupGuestCommand, Result>
+{
+    private readonly PermissionService _permissionService;
+    private readonly IGroupsRepository _groupsRepository;
+    private readonly IExpensesRepository _expensesRepository;
+    private readonly ITransfersRepository _transfersRepository;
+
+    public RemoveGroupGuestCommandHandler(
+        PermissionService permissionService,
+        IUsersRepository usersRepository,
+        IGroupsRepository groupsRepository,
+        IExpensesRepository expensesRepository,
+        ITransfersRepository transfersRepository)
+    {
+        _permissionService = permissionService;
+        _groupsRepository = groupsRepository;
+        _expensesRepository = expensesRepository;
+        _transfersRepository = transfersRepository;
+    }
+
+    public async Task<Result> Handle(RemoveGroupGuestCommand command, CancellationToken ct)
+    {
+        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
+
+        if (permissionResult.IsFailure)
+        {
+            return permissionResult;
+        }
+
+        var (_, group, _) = permissionResult.Value;
+
+        var guestToRemove = group.Guests.FirstOrDefault(g => g.Id == command.GuestId);
+
+        if (guestToRemove is null)
+        {
+            return Result.Failure<Result>("This guest does not exist in this group");
+        }
+
+        var existsInAnyExpense = await _expensesRepository.IsGuestInAnyExpense(command.GroupId, command.GuestId, ct);
+        var existsInAnyTransfer = await _transfersRepository.IsGuestInAnyTransfer(command.GroupId, command.GuestId, ct);
+
+        if (existsInAnyExpense || existsInAnyTransfer)
+        {
+            return Result.Failure<Result>("This guest has group activity");
+        }
+
+        var editedGroup = group with
+        {
+            Guests = group.Guests.Where(g => g.Id != command.GuestId).ToList(),
+            Updated = DateTime.UtcNow
+        };
+
+        return await _groupsRepository.Update(editedGroup, ct);
+    }
+}

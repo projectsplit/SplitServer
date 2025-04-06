@@ -14,7 +14,11 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
 
+    Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
+
     Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
     Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct);
+
+    Task<bool> IsGuestInAnyExpense(string groupId, string guestId, CancellationToken ct);
 }
