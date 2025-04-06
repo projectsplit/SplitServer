@@ -86,13 +86,16 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
 
         return new GetGroupsWithDetailsResponse
         {
-            Groups = groups.Select(
-                x => new GetGroupsWithDetailsResponseItem
-                {
-                    Id = x.Id,
-                    Name = x.Name,
-                    Details = groupDetails[x.Id],
-                }).ToList(),
+            Groups = groups
+                .Select(
+                    g => new GetGroupsWithDetailsResponseItem
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        Currency = g.Currency,
+                        Details = groupDetails[g.Id],
+                    })
+                .ToList(),
             Next = GetNext(query, groups)
         };
     }
