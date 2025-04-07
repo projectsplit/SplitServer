@@ -36,7 +36,7 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
 
         var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
 
-        var groups = await _groupsRepository.GetByUserId(query.UserId, query.PageSize, nextDetails?.Created, ct);
+        var groups = await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct);
 
         return new GetGroupsResponse
         {

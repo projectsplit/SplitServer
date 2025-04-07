@@ -20,5 +20,5 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct);
 
-    Task<bool> IsGuestInAnyExpense(string groupId, string guestId, CancellationToken ct);
+    Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 }

@@ -12,11 +12,14 @@ public static class GroupEndpoints
     {
         app.MapPost("/create", CreateGroupHandler);
         app.MapPost("/delete", DeleteGroupHandler);
-        app.MapPost("/update", UpdateGroupHandler);
         app.MapGet("/{groupId}", GetGroupHandler);
         app.MapPost("/{groupId}/add-guest", AddGuestHandler);
         app.MapPost("/{groupId}/remove-member", RemoveMemberHandler);
         app.MapPost("/{groupId}/remove-guest", RemoveGuestHandler);
+        app.MapPost("/{groupId}/leave", LeaveGroupHandler);
+        app.MapPut("/{groupId}/name", EditGroupNameHandler);
+        app.MapPut("/{groupId}/currency", EditGroupCurrencyHandler);
+        app.MapPut("/{groupId}/archive", EditGroupArchiveStatusHandler);
         app.MapGet("/", GetGroupsHandler);
         app.MapGet("/details", GetGroupsWithDetailsHandler);
         app.MapGet("/{groupId}/details", GetGroupDetailsHandler);
@@ -51,25 +54,6 @@ public static class GroupEndpoints
         {
             UserId = httpContext.GetUserId(),
             GroupId = request.GroupId
-        };
-
-        var result = await mediator.Send(command, ct);
-
-        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
-    }
-
-    private static async Task<IResult> UpdateGroupHandler(
-        UpdateGroupRequest request,
-        IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken ct)
-    {
-        var command = new UpdateGroupCommand
-        {
-            UserId = httpContext.GetUserId(),
-            GroupId = request.GroupId,
-            Name = request.Name,
-            Currency = request.Currency
         };
 
         var result = await mediator.Send(command, ct);
@@ -134,6 +118,7 @@ public static class GroupEndpoints
 
     private static async Task<IResult> GetGroupsWithDetailsHandler(
         int pageSize,
+        bool? isArchived,
         string? next,
         IMediator mediator,
         HttpContext httpContext,
@@ -142,6 +127,7 @@ public static class GroupEndpoints
         var query = new GetGroupsWithDetailsQuery
         {
             UserId = httpContext.GetUserId(),
+            IsArchived = isArchived,
             PageSize = pageSize,
             Next = next
         };
@@ -215,9 +201,83 @@ public static class GroupEndpoints
             GroupId = groupId,
             GuestId = request.GuestId,
         };
-    
+
         var result = await mediator.Send(command, ct);
-    
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> LeaveGroupHandler(
+        string groupId,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new LeaveGroupCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> EditGroupNameHandler(
+        string groupId,
+        EditGroupNameRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditGroupNameCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            Name = request.Name,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> EditGroupCurrencyHandler(
+        string groupId,
+        EditGroupCurrencyRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditGroupCurrencyCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            Currency = request.Currency,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> EditGroupArchiveStatusHandler(
+        string groupId,
+        EditGroupArchiveStatusRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditGroupArchiveStatusCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            IsArchived = request.IsArchived,
+        };
+
+        var result = await mediator.Send(command, ct);
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 }

@@ -14,8 +14,12 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
     {
     }
 
-    public async Task<List<Group>> GetByUserId(string userId, int pageSize, DateTime? maxCreated, CancellationToken ct)
+    public async Task<List<Group>> GetByUserId(string userId, bool? isArchived, int pageSize, DateTime? maxCreated, CancellationToken ct)
     {
+        var archiveFilter = isArchived is not null
+            ? FilterBuilder.Eq(x => x.IsArchived, isArchived)
+            : FilterBuilder.Empty;
+
         var paginationFilter = maxCreated is not null
             ? FilterBuilder.Lt(x => x.Created, maxCreated)
             : FilterBuilder.Empty;
@@ -23,6 +27,7 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
         var filter = FilterBuilder.And(
             FilterBuilder.ElemMatch(x => x.Members, x => x.UserId == userId),
             FilterBuilder.Eq(x => x.IsDeleted, false),
+            archiveFilter,
             paginationFilter);
 
         var sort = SortBuilder.Descending(x => x.Created);

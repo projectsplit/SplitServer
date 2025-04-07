@@ -46,22 +46,19 @@ public class ValidationService
 
     public Result ValidateAmount(decimal amount, string currency)
     {
-        if (currency.Any(char.IsLower))
+        var currencyResult = ValidateCurrency(currency);
+
+        if (currencyResult.IsFailure)
         {
-            return Result.Failure("Currency code must be all upper case");
+            return currencyResult;
         }
+
+        var validCurrency = currencyResult.Value;
 
         if (amount <= 0)
         {
             return Result.Failure("Amount must be greater than 0");
         }
-
-        if (!Currency.TryGet(currency, out var parsedCurrency))
-        {
-            return Result.Failure("Currency should be a valid ISO 4217 code");
-        }
-
-        var validCurrency = parsedCurrency!;
 
         if (!Money.TryParse(amount.ToString(CultureInfo.InvariantCulture), validCurrency, out _))
         {
@@ -80,6 +77,21 @@ public class ValidationService
         }
 
         return Result.Success();
+    }
+
+    public Result<Currency> ValidateCurrency(string currency)
+    {
+        if (currency.Any(char.IsLower))
+        {
+            return Result.Failure<Currency>("Currency code must be all upper case");
+        }
+
+        if (!Currency.TryGet(currency, out var parsedCurrency))
+        {
+            return Result.Failure<Currency>("Currency should be a valid ISO 4217 code");
+        }
+
+        return parsedCurrency!;
     }
 
     public Result ValidateExpense(Group group, List<Payment> payments, List<Share> shares, decimal amount, string currency)

@@ -138,13 +138,13 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
-    public async Task<bool> IsGuestInAnyExpense(string groupId, string guestId, CancellationToken ct)
+    public async Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
             FilterBuilder.Or(
-                FilterBuilder.In("Shares.MemberId", guestId),
-                FilterBuilder.In("Payments.MemberId", guestId)));
+                FilterBuilder.In("Shares.MemberId", memberId),
+                FilterBuilder.In("Payments.MemberId", memberId)));
 
         return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }
