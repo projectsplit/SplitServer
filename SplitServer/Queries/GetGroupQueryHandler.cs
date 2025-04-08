@@ -63,6 +63,7 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
             OwnerId = group.OwnerId,
             Name = group.Name,
             Currency = group.Currency,
+            IsArchived = group.IsArchived,
             Members = group.Members.Select(
                 x => new GetGroupResponseMemberItem
                 {
@@ -71,8 +72,11 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
                     Name = usersById.GetValueOrDefault(x.UserId)?.Username ?? "deleted-user",
                     Joined = x.Joined
                 }).ToList(),
-            Guests = await GetGuestResponseItems(group.Id, group.Guests, ct),
-            Labels = group.Labels
+            Guests = await GetGuestResponseItems(
+                group.Id,
+                group.Guests,
+                ct),
+            Labels = group.Labels,
         };
     }
 

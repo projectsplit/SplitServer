@@ -13,19 +13,22 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IUserActivityRepository _userActivityRepository;
 
     public RemoveGroupMemberCommandHandler(
         PermissionService permissionService,
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        IUserActivityRepository userActivityRepository)
     {
         _permissionService = permissionService;
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _userActivityRepository = userActivityRepository;
     }
 
     public async Task<Result> Handle(RemoveGroupMemberCommand command, CancellationToken ct)
@@ -59,7 +62,14 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
             ? await GroupWithReplacedMember(group, memberToRemove, ct)
             : GroupWithRemovedMember(group, memberToRemove);
 
-        return await _groupsRepository.Update(editedGroup, ct);
+        var groupUpdateResult = await _groupsRepository.Update(editedGroup, ct);
+
+        if (groupUpdateResult.IsFailure)
+        {
+            return groupUpdateResult;
+        }
+
+        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, ct);
     }
 
     private async Task<Group> GroupWithReplacedMember(Group group, Member memberToRemove, CancellationToken ct)
