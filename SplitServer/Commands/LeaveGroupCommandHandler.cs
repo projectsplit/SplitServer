@@ -58,7 +58,7 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
             return groupUpdateResult;
         }
 
-        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, ct);
+        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, now, ct);
     }
 
     private static Group GroupWithReplacedMember(Group group, Member memberToRemove, User user, DateTime now)

@@ -15,13 +15,15 @@ public class UserActivityMongoDbRepository : MongoDbRepositoryBase<UserActivity,
     {
     }
 
-    public async Task<Result> ClearRecentGroupForUser(string userId, string groupId, CancellationToken ct)
+    public async Task<Result> ClearRecentGroupForUser(string userId, string groupId, DateTime updated, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.Id, userId),
             FilterBuilder.Eq(x => x.RecentGroupId, groupId));
 
-        var update = UpdateBuilder.Set(x => x.RecentGroupId, null);
+        var update = UpdateBuilder
+            .Set(x => x.RecentGroupId, null)
+            .Set(x => x.Updated, updated);
 
         var result = await Collection.UpdateManyAsync(filter, update, null, ct);
 
@@ -30,11 +32,13 @@ public class UserActivityMongoDbRepository : MongoDbRepositoryBase<UserActivity,
             : Result.Failure("Failed to clear recent group for user");
     }
 
-    public async Task<Result> ClearRecentGroupForAllUsers(string groupId, CancellationToken ct)
+    public async Task<Result> ClearRecentGroupForAllUsers(string groupId, DateTime updated, CancellationToken ct)
     {
         var filter = FilterBuilder.Eq(x => x.RecentGroupId, groupId);
 
-        var update = UpdateBuilder.Set(x => x.RecentGroupId, null);
+        var update = UpdateBuilder
+            .Set(x => x.RecentGroupId, null)
+            .Set(x => x.Updated, updated);
 
         var result = await Collection.UpdateManyAsync(filter, update, null, ct);
 

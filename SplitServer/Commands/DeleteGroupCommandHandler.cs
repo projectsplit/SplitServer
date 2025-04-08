@@ -82,6 +82,6 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
             return deleteInvitationsResult;
         }
 
-        return await _userActivityRepository.ClearRecentGroupForAllUsers(group.Id, ct);
+        return await _userActivityRepository.ClearRecentGroupForAllUsers(group.Id, DateTime.UtcNow, ct);
     }
 }

@@ -58,9 +58,11 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
             await _expensesRepository.ExistsInAnyExpense(command.GroupId, memberToRemove.Id, ct) ||
             await _transfersRepository.ExistsInAnyTransfer(command.GroupId, memberToRemove.Id, ct);
 
+        var now = DateTime.UtcNow;
+
         var editedGroup = memberHasAnyActivity
-            ? await GroupWithReplacedMember(group, memberToRemove, ct)
-            : GroupWithRemovedMember(group, memberToRemove);
+            ? await GroupWithReplacedMember(group, memberToRemove, now, ct)
+            : GroupWithRemovedMember(group, memberToRemove, now);
 
         var groupUpdateResult = await _groupsRepository.Update(editedGroup, ct);
 
@@ -69,10 +71,10 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
             return groupUpdateResult;
         }
 
-        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, ct);
+        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, now, ct);
     }
 
-    private async Task<Group> GroupWithReplacedMember(Group group, Member memberToRemove, CancellationToken ct)
+    private async Task<Group> GroupWithReplacedMember(Group group, Member memberToRemove, DateTime now, CancellationToken ct)
     {
         var userToRemoveMaybe = await _usersRepository.GetById(memberToRemove.UserId, ct);
 
@@ -89,16 +91,16 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
         {
             Guests = group.Guests.Concat([newGuest]).ToList(),
             Members = group.Members.Where(x => x.Id != memberToRemove.Id).ToList(),
-            Updated = DateTime.UtcNow
+            Updated = now
         };
     }
 
-    private static Group GroupWithRemovedMember(Group group, Member memberToRemove)
+    private static Group GroupWithRemovedMember(Group group, Member memberToRemove, DateTime now)
     {
         return group with
         {
             Members = group.Members.Where(x => x.Id != memberToRemove.Id).ToList(),
-            Updated = DateTime.UtcNow
+            Updated = now
         };
     }
 }
