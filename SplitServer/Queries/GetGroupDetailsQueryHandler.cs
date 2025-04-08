@@ -88,6 +88,7 @@ public class GetGroupDetailsQueryHandler : IRequestHandler<GetGroupDetailsQuery,
             Name = group.Name,
             Currency = group.Currency,
             Details = groupDetails,
+            IsArchived = group.IsArchived,
         };
     }
 }

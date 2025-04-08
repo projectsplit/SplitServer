@@ -12,17 +12,20 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IUserActivityRepository _userActivityRepository;
 
     public LeaveGroupCommandHandler(
         PermissionService permissionService,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        IUserActivityRepository userActivityRepository)
     {
         _permissionService = permissionService;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _userActivityRepository = userActivityRepository;
     }
 
     public async Task<Result> Handle(LeaveGroupCommand command, CancellationToken ct)
@@ -42,14 +45,23 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
             await _expensesRepository.ExistsInAnyExpense(command.GroupId, memberToRemove.Id, ct) ||
             await _transfersRepository.ExistsInAnyTransfer(command.GroupId, memberToRemove.Id, ct);
 
-        var editedGroup = memberHasAnyActivity
-            ? GroupWithReplacedMember(group, memberToRemove, user)
-            : GroupWithRemovedMember(group, memberToRemove);
+        var now = DateTime.UtcNow;
 
-        return await _groupsRepository.Update(editedGroup, ct);
+        var editedGroup = memberHasAnyActivity
+            ? GroupWithReplacedMember(group, memberToRemove, user, now)
+            : GroupWithRemovedMember(group, memberToRemove, now);
+
+        var groupUpdateResult = await _groupsRepository.Update(editedGroup, ct);
+
+        if (groupUpdateResult.IsFailure)
+        {
+            return groupUpdateResult;
+        }
+
+        return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, ct);
     }
 
-    private static Group GroupWithReplacedMember(Group group, Member memberToRemove, User user)
+    private static Group GroupWithReplacedMember(Group group, Member memberToRemove, User user, DateTime now)
     {
         var newGuest = new Guest
         {
@@ -62,16 +74,16 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
         {
             Guests = group.Guests.Concat([newGuest]).ToList(),
             Members = group.Members.Where(x => x.Id != memberToRemove.Id).ToList(),
-            Updated = DateTime.UtcNow
+            Updated = now
         };
     }
 
-    private static Group GroupWithRemovedMember(Group group, Member memberToRemove)
+    private static Group GroupWithRemovedMember(Group group, Member memberToRemove, DateTime now)
     {
         return group with
         {
             Members = group.Members.Where(x => x.Id != memberToRemove.Id).ToList(),
-            Updated = DateTime.UtcNow
+            Updated = now
         };
     }
 }
