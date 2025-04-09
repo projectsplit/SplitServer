@@ -143,8 +143,8 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
             FilterBuilder.Or(
-                FilterBuilder.In("Shares.MemberId", memberId),
-                FilterBuilder.In("Payments.MemberId", memberId)));
+                FilterBuilder.Eq("Shares.MemberId", memberId),
+                FilterBuilder.Eq("Payments.MemberId", memberId)));
 
         return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }
