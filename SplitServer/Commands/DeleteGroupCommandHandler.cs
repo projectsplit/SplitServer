@@ -11,19 +11,22 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly IUserActivityRepository _userActivityRepository;
 
     public DeleteGroupCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
         ITransfersRepository transfersRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        IUserActivityRepository userActivityRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
         _invitationsRepository = invitationsRepository;
+        _userActivityRepository = userActivityRepository;
     }
 
     public async Task<Result> Handle(DeleteGroupCommand command, CancellationToken ct)
@@ -55,30 +58,30 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
 
         if (deleteGroupResult.IsFailure)
         {
-            return deleteGroupResult.ConvertFailure<Result>();
+            return deleteGroupResult;
         }
 
         var deleteExpensesResult = await _expensesRepository.DeleteByGroupId(group.Id, ct);
 
         if (deleteExpensesResult.IsFailure)
         {
-            return deleteExpensesResult.ConvertFailure<Result>();
+            return deleteExpensesResult;
         }
 
         var deleteTransfersResult = await _transfersRepository.DeleteByGroupId(group.Id, ct);
 
         if (deleteTransfersResult.IsFailure)
         {
-            return deleteTransfersResult.ConvertFailure<Result>();
+            return deleteTransfersResult;
         }
 
         var deleteInvitationsResult = await _invitationsRepository.DeleteByGroupId(group.Id, ct);
 
         if (deleteInvitationsResult.IsFailure)
         {
-            return deleteInvitationsResult.ConvertFailure<Result>();
+            return deleteInvitationsResult;
         }
 
-        return Result.Success();
+        return await _userActivityRepository.ClearRecentGroupForAllUsers(group.Id, DateTime.UtcNow, ct);
     }
 }
