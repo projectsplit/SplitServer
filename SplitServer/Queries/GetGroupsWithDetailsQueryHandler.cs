@@ -94,6 +94,8 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
                         Name = g.Name,
                         Currency = g.Currency,
                         Details = groupDetails[g.Id],
+                        IsArchived = g.IsArchived
+                        
                     })
                 .ToList(),
             Next = GetNext(query, groups)
