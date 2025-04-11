@@ -24,6 +24,7 @@ public static class GroupEndpoints
         app.MapGet("/details", GetGroupsWithDetailsHandler);
         app.MapGet("/{groupId}/details", GetGroupDetailsHandler);
         app.MapGet("/all-balances", GetAllGroupsBalancesHandler);
+        app.MapPost("/{groupId}/remove-label", RemoveLabelHandler);
     }
 
     private static async Task<IResult> CreateGroupHandler(
@@ -274,6 +275,25 @@ public static class GroupEndpoints
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
             IsArchived = request.IsArchived,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> RemoveLabelHandler(
+        string groupId,
+        RemoveLabelRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new RemoveGroupLabelCommand
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            LabelId = request.LabelId,
         };
 
         var result = await mediator.Send(command, ct);

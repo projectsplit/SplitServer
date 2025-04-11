@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using SplitServer.Models;
-using SplitServer.Repositories.Implementations.Models;
 
 namespace SplitServer.Repositories;
 
@@ -10,7 +9,7 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<List<Expense>> GetAllByGroupId(string groupId, CancellationToken ct);
 
-    Task<List<LabelCount>> GetAllLabels(string groupId, CancellationToken ct);
+    Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
 
     Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
 
@@ -21,4 +20,6 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct);
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
+
+    Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct);
 }

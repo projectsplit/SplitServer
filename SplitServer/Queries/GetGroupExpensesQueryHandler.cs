@@ -46,6 +46,8 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
             return Result.Failure<GetGroupExpensesResponse>("User must be a group member");
         }
 
+        var groupLabels = group.Labels.ToDictionary(x => x.Id);
+
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
         var expenses = await _expensesRepository.GetByGroupId(
@@ -57,7 +59,23 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
 
         return new GetGroupExpensesResponse
         {
-            Expenses = expenses,
+            Expenses = expenses.Select(
+                x => new ExpenseResponseItem
+                {
+                    Id = x.Id,
+                    Created = x.Created,
+                    Updated = x.Updated,
+                    GroupId = x.GroupId,
+                    CreatorId = x.CreatorId,
+                    Amount = x.Amount,
+                    Occurred = x.Occurred,
+                    Description = x.Description,
+                    Currency = x.Currency,
+                    Payments = x.Payments,
+                    Shares = x.Shares,
+                    Labels = x.Labels.Select(id => groupLabels[id]).ToList(),
+                    Location = x.Location,
+                }).ToList(),
             Next = GetNext(query, expenses)
         };
     }

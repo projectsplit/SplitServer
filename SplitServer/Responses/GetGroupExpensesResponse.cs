@@ -1,9 +1,7 @@
-﻿using SplitServer.Models;
-
-namespace SplitServer.Responses;
+﻿namespace SplitServer.Responses;
 
 public class GetGroupExpensesResponse
 {
-    public required List<Expense> Expenses { get; init; }
+    public required List<ExpenseResponseItem> Expenses { get; init; }
     public required string? Next { get; init; }
 }

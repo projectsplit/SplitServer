@@ -1,9 +1,19 @@
-﻿using SplitServer.Models;
+﻿using CSharpFunctionalExtensions;
+using SplitServer.Models;
+using SplitServer.Repositories;
+using SplitServer.Requests;
 
 namespace SplitServer.Services;
 
 public class GroupService
 {
+    private readonly IGroupsRepository _groupsRepository;
+
+    public GroupService(IGroupsRepository groupsRepository)
+    {
+        _groupsRepository = groupsRepository;
+    }
+
     public static List<Debt> GetDebts(Group group, List<Expense> expenses, List<Transfer> transfers)
     {
         var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
@@ -78,5 +88,29 @@ public class GroupService
         }
 
         return debts;
+    }
+
+    public static List<Label> CreateLabelsWithIds(List<LabelRequestItem> labelItems, List<Label> groupLabels)
+    {
+        return labelItems
+            .Select(
+                x =>
+                    groupLabels.SingleOrDefault(xx => xx.Text == x.Text) ??
+                    new Label { Id = Guid.NewGuid().ToString(), Text = x.Text, Color = x.Color })
+            .ToList();
+    }
+
+    public async Task<Result> AddLabelsToGroupIfMissing(Group group, List<Label> labels, DateTime now, CancellationToken ct)
+    {
+        var labelsNotInGroup = labels.Where(x => !group.Labels.Select(xx => xx.Id).Contains(x.Id)).ToList();
+
+        if (labelsNotInGroup.Count <= 0)
+        {
+            return Result.Success();
+        }
+
+        return await _groupsRepository.Update(
+            group with { Labels = group.Labels.Concat(labelsNotInGroup).DistinctBy(x => x.Id).ToList(), Updated = now },
+            ct);
     }
 }

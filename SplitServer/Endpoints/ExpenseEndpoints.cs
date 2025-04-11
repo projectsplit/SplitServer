@@ -83,21 +83,17 @@ public static class ExpenseEndpoints
 
     private static async Task<IResult> GetLabelsHandler(
         string groupId,
-        int limit,
-        string? query,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var q = new GetLabelsQuery
+        var query = new GetLabelsQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,
-            Limit = limit,
-            Query = query
         };
 
-        var result = await mediator.Send(q, ct);
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
