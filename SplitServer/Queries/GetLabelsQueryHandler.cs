@@ -9,19 +9,13 @@ namespace SplitServer.Queries;
 
 public class GetLabelsQueryHandler : IRequestHandler<GetLabelsQuery, Result<GetLabelsResponse>>
 {
-    private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly PermissionService _permissionService;
 
     public GetLabelsQueryHandler(
-        IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
         PermissionService permissionService)
     {
-        _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _permissionService = permissionService;
     }
@@ -54,22 +48,4 @@ public class GetLabelsQueryHandler : IRequestHandler<GetLabelsQuery, Result<GetL
                 .ToList()
         };
     }
-
-    // private static List<ExpenseLabelRequestItem> AutoCompleteSearch(Dictionary<Label, int> labelCountGroups, string? query)
-    // {
-    //     if (string.IsNullOrEmpty(query))
-    //     {
-    //         return labelCountGroups
-    //             .Select(x => new ExpenseLabelRequestItem { Text = x.Key.Text, Color = x.Key.Color })
-    //             .ToList();
-    //     }
-    //
-    //     return labelCountGroups
-    //         .Where(x => x.Key.Text.StartsWith(query, StringComparison.InvariantCultureIgnoreCase))
-    //         .OrderBy(x => x.Key.Text.Length)
-    //         .ThenBy(x => x.Value)
-    //         .ThenBy(x => x.Key.Text)
-    //         .Select(x => new ExpenseLabelRequestItem { Text = x.Key.Text, Color = x.Key.Color })
-    //         .ToList();
-    // }
 }

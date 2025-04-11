@@ -51,7 +51,6 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
                 x => new Transfer
                 {
                     Id = Guid.NewGuid().ToString(),
-                    IsDeleted = false,
                     Created = now,
                     Updated = now,
                     GroupId = command.GroupId,

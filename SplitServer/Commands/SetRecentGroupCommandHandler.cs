@@ -57,7 +57,6 @@ public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupComman
             : new UserActivity
             {
                 Id = command.UserId,
-                IsDeleted = false,
                 Created = now,
                 Updated = now,
                 RecentGroupId = command.GroupId,

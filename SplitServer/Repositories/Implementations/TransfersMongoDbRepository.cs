@@ -32,7 +32,6 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Eq(x => x.IsDeleted, false),
             paginationFilter);
 
         var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
@@ -46,9 +45,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
     public async Task<List<Transfer>> GetAllByGroupId(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
 
         return await Collection
             .Find(filter)
@@ -64,23 +61,12 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers");
     }
 
-    public async Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct)
-    {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
-        var update = UpdateBuilder.Set(x => x.IsDeleted, true);
-
-        var result = await Collection.UpdateManyAsync(filter, update, null, ct);
-
-        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers");
-    }
-
     public async Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
         var receiverFilter = FilterBuilder.In(x => x.ReceiverId, memberIds);
         var senderFilter = FilterBuilder.In(x => x.SenderId, memberIds);
 
         var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.IsDeleted, false),
             FilterBuilder.Or(receiverFilter, senderFilter));
 
         var documents = await Collection

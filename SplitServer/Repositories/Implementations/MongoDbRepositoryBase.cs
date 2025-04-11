@@ -22,15 +22,9 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
         Collection = mongoConnection.GetDatabase().GetCollection<TDocument>(collectionName);
     }
 
-    public async Task<Maybe<TEntity>> GetById(string id, CancellationToken ct, bool includeDeleted = false)
+    public async Task<Maybe<TEntity>> GetById(string id, CancellationToken ct)
     {
-        var idQuery = FilterBuilder.Eq(x => x.Id, id);
-
-        var filter = includeDeleted
-            ? idQuery
-            : FilterBuilder.And(
-                idQuery,
-                FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.Eq(x => x.Id, id);
 
         var document = await Collection
             .Find(filter)
@@ -41,15 +35,9 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
             : Maybe<TEntity>.None;
     }
 
-    public async Task<IList<TEntity>> GetByIds(IList<string> ids, CancellationToken ct, bool includeDeleted = false)
+    public async Task<IList<TEntity>> GetByIds(IList<string> ids, CancellationToken ct)
     {
-        var idsQuery = FilterBuilder.In(x => x.Id, ids);
-
-        var filter = includeDeleted
-            ? idsQuery
-            : FilterBuilder.And(
-                idsQuery,
-                FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.In(x => x.Id, ids);
 
         var documents = await Collection
             .Find(filter)
@@ -76,16 +64,6 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
         var filter = FilterBuilder.Eq(x => x.Id, id);
 
         var result = await Collection.DeleteOneAsync(filter, ct);
-
-        return result.IsAcknowledged ? Result.Success() : Result.Failure("Delete failed");
-    }
-
-    public async Task<Result> SoftDelete(string id, CancellationToken ct)
-    {
-        var filter = FilterBuilder.Eq(x => x.Id, id);
-        var update = UpdateBuilder.Set(x => x.IsDeleted, true);
-
-        var result = await Collection.UpdateOneAsync(filter, update, null, ct);
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Delete failed");
     }

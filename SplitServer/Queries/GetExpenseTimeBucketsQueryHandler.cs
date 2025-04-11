@@ -75,14 +75,6 @@ public class GetExpenseTimeBucketsQueryHandler : IRequestHandler<GetExpenseTimeB
             bucket.Amount = cumulativeSum;
         }
 
-        // var asd = expenses.GroupBy(e => (e.Occurred - query.StartDate).Ticks / bucketDuration.Ticks);
-        //
-        // var amounts = expenses
-        //     .GroupBy(e => (e.Occurred - query.StartDate).Ticks / bucketDuration.Ticks)
-        //     .Select(g => g.Sum(e => e.Amount))
-        //     .CumulativeSum()
-        //     .ToList();
-
         return new GetExpenseTimeBucketsResponse
         {
             Buckets = timeBuckets

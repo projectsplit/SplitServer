@@ -26,7 +26,6 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
 
         var filter = FilterBuilder.And(
             FilterBuilder.ElemMatch(x => x.Members, x => x.UserId == userId),
-            FilterBuilder.Eq(x => x.IsDeleted, false),
             archiveFilter,
             paginationFilter);
 
@@ -41,9 +40,7 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
 
     public async Task<List<Group>> GetAllByUserId(string userId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq("Members.UserId", userId),
-            FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.Eq("Members.UserId", userId);
 
         return await Collection
             .Find(filter)

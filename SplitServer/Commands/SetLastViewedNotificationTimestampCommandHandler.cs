@@ -40,7 +40,6 @@ public class SetLastViewedNotificationTimestampCommandHandler : IRequestHandler<
             : new UserActivity
             {
                 Id = command.UserId,
-                IsDeleted = false,
                 Created = now,
                 Updated = now,
                 RecentGroupId = null,

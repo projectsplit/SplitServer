@@ -50,7 +50,6 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
                 x => new Transfer
                 {
                     Id = Guid.NewGuid().ToString(),
-                    IsDeleted = false,
                     Created = now,
                     Updated = now,
                     GroupId = command.GroupId,

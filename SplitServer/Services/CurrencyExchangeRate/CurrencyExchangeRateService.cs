@@ -54,7 +54,6 @@ public class CurrencyExchangeRateService
         var ratesEntity = new CurrencyExchangeRates
         {
             Id = $"{date.ToString("O")}_{BaseCurrency}",
-            IsDeleted = false,
             Created = now,
             Updated = now,
             Base = BaseCurrency,

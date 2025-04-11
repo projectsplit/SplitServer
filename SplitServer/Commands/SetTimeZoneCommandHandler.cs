@@ -40,7 +40,6 @@ public class SetTimeZoneCommandHandler : IRequestHandler<SetTimeZoneCommand, Res
             : new UserPreferences
             {
                 Id = command.UserId,
-                IsDeleted = false,
                 Created = now,
                 Updated = now,
                 Currency = null,

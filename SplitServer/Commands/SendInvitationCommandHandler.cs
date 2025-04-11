@@ -68,7 +68,6 @@ public class SendInvitationCommandHandler : IRequestHandler<SendInvitationComman
             ReceiverId = command.ReceiverId,
             GroupId = command.GroupId,
             GuestId = command.GuestId,
-            IsDeleted = false,
         };
 
         var writeResult = await _invitationsRepository.Insert(newInvitation, ct);

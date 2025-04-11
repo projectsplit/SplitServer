@@ -1,5 +1,4 @@
-﻿
-using SplitServer.Models;
+﻿using SplitServer.Models;
 
 namespace SplitServer.Responses;
 

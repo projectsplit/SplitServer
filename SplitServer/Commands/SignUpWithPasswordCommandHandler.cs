@@ -50,7 +50,6 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
         var newUser = new User
         {
             Id = userId,
-            IsDeleted = false,
             Created = now,
             Updated = now,
             Email = null,
@@ -75,7 +74,6 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             Updated = now,
             UserId = newUser.Id,
             RefreshToken = refreshToken,
-            IsDeleted = false
         };
 
         var writeSessionResult = await _sessionsRepository.Insert(newSession, ct);

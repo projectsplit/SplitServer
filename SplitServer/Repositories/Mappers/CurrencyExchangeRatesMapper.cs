@@ -10,7 +10,6 @@ public class CurrencyExchangeRatesMapper : IMapper<CurrencyExchangeRates, Curren
         return new CurrencyExchangeRates
         {
             Id = document.Id,
-            IsDeleted = document.IsDeleted,
             Created = document.Created,
             Updated = document.Updated,
             Base = document.Base,
@@ -24,7 +23,6 @@ public class CurrencyExchangeRatesMapper : IMapper<CurrencyExchangeRates, Curren
         return new CurrencyExchangeRatesMongoDbDocument
         {
             Id = entity.Id,
-            IsDeleted = entity.IsDeleted,
             Created = entity.Created,
             Updated = entity.Updated,
             Base = entity.Base,
