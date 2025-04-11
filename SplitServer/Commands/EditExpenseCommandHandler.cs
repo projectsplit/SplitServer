@@ -10,14 +10,17 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
     private readonly IExpensesRepository _expensesRepository;
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
+    private readonly GroupService _groupService;
 
     public EditExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
-        ValidationService validationService)
+        ValidationService validationService,
+        GroupService groupService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
+        _groupService = groupService;
         _permissionService = permissionService;
     }
 
@@ -42,6 +45,15 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
 
         var now = DateTime.UtcNow;
 
+        var labelsWithIds = GroupService.CreateLabelsWithIds(command.Labels, group.Labels);
+
+        var addLabelsToGroupResult = await _groupService.AddLabelsToGroupIfMissing(group, labelsWithIds, now, ct);
+
+        if (addLabelsToGroupResult.IsFailure)
+        {
+            return addLabelsToGroupResult;
+        }
+
         var editedExpense = expense with
         {
             Updated = now,
@@ -51,7 +63,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             Currency = command.Currency,
             Payments = command.Payments,
             Shares = command.Shares,
-            Labels = command.Labels,
+            Labels = labelsWithIds.Select(x => x.Id).ToList(),
             Location = command.Location
         };
 

@@ -1,6 +1,8 @@
-﻿namespace SplitServer.Responses;
+﻿using SplitServer.Requests;
+
+namespace SplitServer.Responses;
 
 public class GetLabelsResponse
 {
-    public required List<string> Labels { get; init; }
+    public required List<LabelResponseItem> Labels { get; init; }
 }

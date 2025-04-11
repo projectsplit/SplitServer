@@ -60,26 +60,28 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
-    public async Task<List<LabelCount>> GetAllLabels(string groupId, CancellationToken ct)
+    public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
             FilterBuilder.Eq(x => x.IsDeleted, false));
 
-        return await Collection
+        var result = await Collection
             .Aggregate()
             .Match(filter)
             .Unwind(x => x.Labels)
             .Group(
-                x => x["Labels"],
-                g => new LabelCount
+                x => x[nameof(Expense.Labels)],
+                g => new
                 {
-                    Label = g.Key.ToString()!,
+                    LabelId = g.Key.ToString()!,
                     Count = g.Count()
                 })
             .SortByDescending(x => x.Count)
-            .ThenBy(x => x.Label)
+            .ThenBy(x => x.LabelId)
             .ToListAsync(ct);
+
+        return result.ToDictionary(x => x.LabelId, x => x.Count);
     }
 
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
@@ -145,6 +147,15 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             FilterBuilder.Or(
                 FilterBuilder.Eq("Shares.MemberId", memberId),
                 FilterBuilder.Eq("Payments.MemberId", memberId)));
+
+        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
+    }
+
+    public async Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            FilterBuilder.AnyEq(x => x.Labels, labelId));
 
         return await Collection.Find(filter).Limit(1).AnyAsync(ct);
     }

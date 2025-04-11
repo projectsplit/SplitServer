@@ -11,6 +11,6 @@ public class EditExpenseRequest
     public required DateTime? Occurred { get; init; }
     public required List<Payment> Payments { get; init; }
     public required List<Share> Shares { get; init; }
-    public required List<string> Labels { get; init; }
+    public required List<LabelRequestItem> Labels { get; init; }
     public required Location? Location { get; init; }
 }

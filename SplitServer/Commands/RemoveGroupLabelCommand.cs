@@ -1,11 +1,11 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Responses;
 
-namespace SplitServer.Queries;
+namespace SplitServer.Commands;
 
-public class GetLabelsQuery : IRequest<Result<GetLabelsResponse>>
+public class RemoveGroupLabelCommand : IRequest<Result>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }
+    public required string LabelId { get; init; }
 }
