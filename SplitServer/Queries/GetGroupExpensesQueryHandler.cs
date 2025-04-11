@@ -57,6 +57,8 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
             nextDetails?.Created,
             ct);
 
+        var emptyLabel = new Label { Id = "", Text = "", Color = "" };
+
         return new GetGroupExpensesResponse
         {
             Expenses = expenses.Select(
@@ -73,7 +75,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
                     Currency = x.Currency,
                     Payments = x.Payments,
                     Shares = x.Shares,
-                    Labels = x.Labels.Select(id => groupLabels[id]).ToList(),
+                    Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, emptyLabel)).ToList(),
                     Location = x.Location,
                 }).ToList(),
             Next = GetNext(query, expenses)
