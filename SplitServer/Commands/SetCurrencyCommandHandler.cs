@@ -46,7 +46,6 @@ public class SetCurrencyCommandHandler : IRequestHandler<SetCurrencyCommand, Res
             : new UserPreferences
             {
                 Id = command.UserId,
-                IsDeleted = false,
                 Created = now,
                 Updated = now,
                 TimeZone = null,

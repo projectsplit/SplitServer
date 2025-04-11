@@ -66,7 +66,6 @@ public class CreateGroupCommandHandler : IRequestHandler<CreateGroupCommand, Res
             Members = [ownerMember],
             Guests = [],
             Labels = [],
-            IsDeleted = false
         };
 
         var writeResult = await _groupsRepository.Insert(newGroup, ct);

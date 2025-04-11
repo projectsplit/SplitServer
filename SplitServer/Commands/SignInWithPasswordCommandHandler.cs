@@ -62,7 +62,6 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
             Updated = now,
             UserId = user.Id,
             RefreshToken = refreshToken,
-            IsDeleted = false
         };
 
         var writeSessionResult = await _sessionsRepository.Insert(newSession, ct);

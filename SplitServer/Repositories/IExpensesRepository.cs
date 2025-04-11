@@ -11,8 +11,6 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
 
-    Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct);
-
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
     Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);

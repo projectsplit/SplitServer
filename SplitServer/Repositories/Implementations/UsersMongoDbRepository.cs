@@ -39,17 +39,13 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
 
     public async Task<List<User>> SearchByUsername(string keyword, int skip, int pageSize, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.IsDeleted, false);
-
         var search = SearchBuilder.Autocomplete(
             x => x.Username,
             new SingleSearchQueryDefinition(keyword),
-            fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 }
-        );
+            fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 });
 
         var pipelineDefinition = PipelineBuilder
             .Search(search)
-            .Match(filter)
             .Skip(skip)
             .Limit(pageSize);
 
@@ -61,7 +57,7 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
     public async Task<List<User>> GetLatestUsers(int skip, int pageSize, CancellationToken ct)
     {
         return await Collection
-            .Find(FilterBuilder.Eq(x => x.IsDeleted, false))
+            .Find(FilterBuilder.Empty)
             .SortByDescending(x => x.Created)
             .Skip(skip)
             .Limit(pageSize)

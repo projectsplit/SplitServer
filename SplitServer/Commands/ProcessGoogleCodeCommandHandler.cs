@@ -63,7 +63,6 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
         var newSession = new Session
         {
             Id = sessionId,
-            IsDeleted = false,
             Created = now,
             Updated = now,
             UserId = userId,
@@ -100,7 +99,6 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
         var newUser = new User
         {
             Id = userId,
-            IsDeleted = false,
             Created = now,
             Updated = now,
             Email = googleUserInfo.Email,

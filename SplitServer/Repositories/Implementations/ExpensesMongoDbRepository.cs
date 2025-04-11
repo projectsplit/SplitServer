@@ -33,7 +33,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var filter = FilterBuilder.And(
             FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Eq(x => x.IsDeleted, false),
             paginationFilter);
 
         var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
@@ -49,9 +48,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<List<Expense>> GetAllByGroupId(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
 
         var documents = await Collection
             .Find(filter)
@@ -62,9 +59,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Eq(x => x.IsDeleted, false));
+        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
 
         var result = await Collection
             .Aggregate()
@@ -93,24 +88,12 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
     }
 
-    public async Task<Result> SoftDeleteByGroupId(string groupId, CancellationToken ct)
-    {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
-        var update = UpdateBuilder.Set(x => x.IsDeleted, true);
-
-        var result = await Collection.UpdateManyAsync(filter, update, null, ct);
-
-        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
-    }
-
     public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
         var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
         var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.IsDeleted, false),
-            FilterBuilder.Or(sharesFilter, paymentsFilter));
+        var filter = FilterBuilder.Or(sharesFilter, paymentsFilter);
 
         var documents = await Collection
             .Find(filter)
@@ -128,7 +111,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             FilterBuilder.Lte(x => x.Occurred, endDate));
 
         var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.IsDeleted, false),
             FilterBuilder.Or(sharesFilter, paymentsFilter),
             occurredFilter);
 

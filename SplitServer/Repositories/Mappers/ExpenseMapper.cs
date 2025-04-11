@@ -11,7 +11,6 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
         return new Expense
         {
             Id = document.Id,
-            IsDeleted = document.IsDeleted,
             Created = document.Created,
             Updated = document.Updated,
             GroupId = document.GroupId,
@@ -32,7 +31,6 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
         return new ExpenseMongoDbDocument
         {
             Id = entity.Id,
-            IsDeleted = entity.IsDeleted,
             Created = entity.Created,
             Updated = entity.Updated,
             GroupId = entity.GroupId,

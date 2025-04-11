@@ -43,7 +43,6 @@ public class CreateJoinCodeCommandHandler : IRequestHandler<CreateJoinCodeComman
         var joinCode = new JoinCode
         {
             Id = JoinService.GenerateToken(_tokenLength),
-            IsDeleted = false,
             Created = now,
             Updated = now,
             GroupId = command.GroupId,

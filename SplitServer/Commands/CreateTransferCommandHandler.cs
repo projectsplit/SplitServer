@@ -48,7 +48,6 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         var newTransfer = new Transfer
         {
             Id = transferId,
-            IsDeleted = false,
             Created = now,
             Updated = now,
             GroupId = command.GroupId,

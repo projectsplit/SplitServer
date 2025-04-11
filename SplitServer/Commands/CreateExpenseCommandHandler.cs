@@ -61,7 +61,6 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
         var newExpense = new Expense
         {
             Id = expenseId,
-            IsDeleted = false,
             Created = now,
             Updated = now,
             GroupId = command.GroupId,
