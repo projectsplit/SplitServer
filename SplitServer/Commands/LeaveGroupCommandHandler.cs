@@ -39,6 +39,11 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
 
         var (user, group, memberId) = permissionResult.Value;
 
+        if (group.OwnerId == command.UserId)
+        {
+            return Result.Failure("Group owner cannot leave");
+        }
+
         var memberToRemove = group.Members.First(m => m.Id == memberId);
 
         var memberHasAnyActivity =
