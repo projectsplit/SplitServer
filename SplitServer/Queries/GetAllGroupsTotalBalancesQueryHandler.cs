@@ -2,6 +2,7 @@
 using MediatR;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services.CurrencyExchangeRate;
 
 namespace SplitServer.Queries;
 
@@ -12,17 +13,23 @@ public class GetAllGroupsTotalBalancesQueryHandler :
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly CurrencyExchangeRateService _currencyExchangeRateService;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
 
     public GetAllGroupsTotalBalancesQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        CurrencyExchangeRateService currencyExchangeRateService,
+        IUserPreferencesRepository userPreferencesRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _currencyExchangeRateService = currencyExchangeRateService;
+        _userPreferencesRepository = userPreferencesRepository;
     }
 
     public async Task<Result<GetAllGroupsTotalBalancesResponse>> Handle(GetAllGroupsTotalBalancesQuery query, CancellationToken ct)
@@ -41,17 +48,17 @@ public class GetAllGroupsTotalBalancesQueryHandler :
         var expenses = await _expensesRepository.GetAllByMemberIds(memberIds, ct);
         var transfers = await _transfersRepository.GetAllByMemberIds(memberIds, ct);
 
-        var balanceByCurrency = new Dictionary<string, decimal>();
+        var balancesByCurrency = new Dictionary<string, decimal>();
 
         foreach (var expense in expenses)
         {
             var memberId = membersByGroup[expense.GroupId].Id;
 
             var shareAmount = expense.Shares.FirstOrDefault(x => x.MemberId == memberId)?.Amount ?? 0;
-            balanceByCurrency[expense.Currency] = balanceByCurrency.GetValueOrDefault(expense.Currency) + shareAmount;
+            balancesByCurrency[expense.Currency] = balancesByCurrency.GetValueOrDefault(expense.Currency) + shareAmount;
 
             var paymentAmount = expense.Payments.FirstOrDefault(x => x.MemberId == memberId)?.Amount ?? 0;
-            balanceByCurrency[expense.Currency] = balanceByCurrency.GetValueOrDefault(expense.Currency) - paymentAmount;
+            balancesByCurrency[expense.Currency] = balancesByCurrency.GetValueOrDefault(expense.Currency) - paymentAmount;
         }
 
         foreach (var transfer in transfers)
@@ -60,19 +67,36 @@ public class GetAllGroupsTotalBalancesQueryHandler :
 
             if (transfer.SenderId == memberId)
             {
-                balanceByCurrency[transfer.Currency] = balanceByCurrency.GetValueOrDefault(transfer.Currency) - transfer.Amount;
+                balancesByCurrency[transfer.Currency] = balancesByCurrency.GetValueOrDefault(transfer.Currency) - transfer.Amount;
             }
 
             if (transfer.ReceiverId == memberId)
             {
-                balanceByCurrency[transfer.Currency] = balanceByCurrency.GetValueOrDefault(transfer.Currency) + transfer.Amount;
+                balancesByCurrency[transfer.Currency] = balancesByCurrency.GetValueOrDefault(transfer.Currency) + transfer.Amount;
             }
         }
 
         return new GetAllGroupsTotalBalancesResponse
         {
-            Balances = balanceByCurrency,
-            GroupCount = groups.Count
+            Balances = balancesByCurrency,
+            GroupCount = groups.Count,
+            ConvertedBalance = await GetConvertedBalance(query.UserId, balancesByCurrency, ct)
         };
+    }
+
+    private async Task<decimal> GetConvertedBalance(
+        string userId,
+        Dictionary<string, decimal> balanceByCurrency,
+        CancellationToken ct)
+    {
+        var ratesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
+        var rates = ratesResult.GetValueOrDefault();
+
+        var preferredCurrencyMaybe = await _userPreferencesRepository.GetById(userId, ct);
+        var preferredCurrency = preferredCurrencyMaybe.GetValueOrDefault()?.Currency ?? DefaultValues.Currency;
+
+        return balanceByCurrency
+            .Select(x => _currencyExchangeRateService.Convert(x.Value, x.Key, rates, preferredCurrency))
+            .Sum();
     }
 }

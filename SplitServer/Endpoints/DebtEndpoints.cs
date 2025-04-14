@@ -20,7 +20,6 @@ public static class DebtEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        
         var query = new GetGroupDebtsQuery
         {
             UserId = httpContext.GetUserId(),

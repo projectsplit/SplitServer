@@ -7,4 +7,5 @@ public class GetGroupsWithDetailsResponseItem
     public required string Currency { get; init; }
     public required Dictionary<string, decimal> Details { get; init; }
     public required bool IsArchived { get; init; }
+    public required decimal ConvertedBalance { get; init; }
 }
