@@ -2,6 +2,7 @@
 using CSharpFunctionalExtensions;
 using NMoneys;
 using SplitServer.Models;
+// ReSharper disable ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
 
 namespace SplitServer.Services;
 
@@ -103,6 +104,26 @@ public class ValidationService
             return amountValidationResult;
         }
 
+        foreach (var payment in payments)
+        {
+            var paymentValidationResult = ValidateAmount(payment.Amount, currency);
+
+            if (paymentValidationResult.IsFailure)
+            {
+                return paymentValidationResult;
+            }
+        }
+
+        foreach (var share in shares)
+        {
+            var shareValidationResult = ValidateAmount(share.Amount, currency);
+
+            if (shareValidationResult.IsFailure)
+            {
+                return shareValidationResult;
+            }
+        }
+
         var payers = payments.Select(x => x.MemberId).ToList();
         var participants = shares.Select(x => x.MemberId).ToList();
 
@@ -141,8 +162,6 @@ public class ValidationService
         {
             return Result.Failure("Payment amount sum must be equal to expense amount");
         }
-
-        // TODO Validate share and payment amounts also
 
         return Result.Success();
     }

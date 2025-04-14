@@ -19,6 +19,18 @@ public class CurrencyExchangeRateService
         _currencyExchangeRatesRepository = currencyExchangeRatesRepository;
     }
 
+    public decimal Convert(decimal sourceAmount, string sourceCurrency, CurrencyExchangeRates rates, string targetCurrency)
+    {
+        if (sourceCurrency == targetCurrency)
+        {
+            return sourceAmount;
+        }
+
+        var rate = rates.Rates[sourceCurrency] / rates.Rates[targetCurrency];
+
+        return sourceAmount / rate;
+    }
+
     public async Task<Result<CurrencyExchangeRates>> GetLatestStoredRates(CancellationToken ct)
     {
         var ratesMaybe = await _currencyExchangeRatesRepository.GetLatest(ct);

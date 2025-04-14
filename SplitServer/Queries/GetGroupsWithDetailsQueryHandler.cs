@@ -4,6 +4,7 @@ using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
+using SplitServer.Services.CurrencyExchangeRate;
 
 namespace SplitServer.Queries;
 
@@ -13,17 +14,23 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly CurrencyExchangeRateService _currencyExchangeRateService;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
 
     public GetGroupsWithDetailsQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        CurrencyExchangeRateService currencyExchangeRateService,
+        IUserPreferencesRepository userPreferencesRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _currencyExchangeRateService = currencyExchangeRateService;
+        _userPreferencesRepository = userPreferencesRepository;
     }
 
     public async Task<Result<GetGroupsWithDetailsResponse>> Handle(GetGroupsWithDetailsQuery query, CancellationToken ct)
@@ -59,12 +66,14 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
             {
                 if (transfer.SenderId == memberId)
                 {
-                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) - transfer.Amount;
+                    groupDetails[group.Id][transfer.Currency] =
+                        groupDetails[group.Id].GetValueOrDefault(transfer.Currency) - transfer.Amount;
                 }
 
                 if (transfer.ReceiverId == memberId)
                 {
-                    groupDetails[group.Id][transfer.Currency] = groupDetails[group.Id].GetValueOrDefault(transfer.Currency) + transfer.Amount;
+                    groupDetails[group.Id][transfer.Currency] =
+                        groupDetails[group.Id].GetValueOrDefault(transfer.Currency) + transfer.Amount;
                 }
             }
 
@@ -84,18 +93,31 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
             }
         }
 
+        var ratesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
+        var rates = ratesResult.GetValueOrDefault();
+
+        var preferredCurrencyMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var preferredCurrency = preferredCurrencyMaybe.GetValueOrDefault()?.Currency ?? DefaultValues.Currency;
+
         return new GetGroupsWithDetailsResponse
         {
             Groups = groups
                 .Select(
-                    g => new GetGroupsWithDetailsResponseItem
+                    g =>
                     {
-                        Id = g.Id,
-                        Name = g.Name,
-                        Currency = g.Currency,
-                        Details = groupDetails[g.Id],
-                        IsArchived = g.IsArchived
-                        
+                        var convertedBalance = groupDetails[g.Id]
+                            .Select(x => _currencyExchangeRateService.Convert(x.Value, x.Key, rates, preferredCurrency))
+                            .Sum();
+
+                        return new GetGroupsWithDetailsResponseItem
+                        {
+                            Id = g.Id,
+                            Name = g.Name,
+                            Currency = g.Currency,
+                            Details = groupDetails[g.Id],
+                            IsArchived = g.IsArchived,
+                            ConvertedBalance = convertedBalance,
+                        };
                     })
                 .ToList(),
             Next = GetNext(query, groups)

@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services.TimeZone;
@@ -15,10 +14,6 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IInvitationsRepository _invitationsRepository;
     private readonly TimeZoneService _timeZoneService;
 
-    private const string DefaultCurrency = "EUR";
-    private const string DefaultTimeZone = "Europe/Athens";
-    private readonly Coordinates _defaultCoordinates;
-
     public GetAuthenticatedUserQueryHandler(
         IUsersRepository usersRepository,
         IUserActivityRepository userActivityRepository,
@@ -31,7 +26,6 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         _userPreferencesRepository = userPreferencesRepository;
         _invitationsRepository = invitationsRepository;
         _timeZoneService = timeZoneService;
-        _defaultCoordinates = new Coordinates { Latitude = 37.96667, Longitude = 23.71667 };
     }
 
     public async Task<Result<GetAuthenticatedUserResponse>> Handle(GetAuthenticatedUserQuery query, CancellationToken ct)
@@ -55,8 +49,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
 
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
 
-        var currency = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.Currency ?? DefaultCurrency : DefaultCurrency;
-        var timeZone = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.TimeZone ?? DefaultTimeZone : DefaultTimeZone;
+        var currency = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.Currency ?? DefaultValues.Currency : DefaultValues.Currency;
+        var timeZone = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone : DefaultValues.TimeZone;
         var recentGroupId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentGroupId : null;
 
         return new GetAuthenticatedUserResponse
@@ -66,7 +60,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             HasNewerNotifications = notificationsCount > 0,
             Currency = currency,
             TimeZone = timeZone,
-            TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(_defaultCoordinates),
+            TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
             RecentGroupId = recentGroupId,
         };
     }
