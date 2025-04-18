@@ -11,23 +11,35 @@ public class HttpClientLoggingHandler : DelegatingHandler
     {
         var response = await base.SendAsync(request, ct);
 
-        var logEventEnrichers = new ILogEventEnricher[]
+        if (!response.IsSuccessStatusCode)
         {
-            new PropertyEnricher("RequestUri", request.RequestUri?.ToString() ?? string.Empty),
-            new PropertyEnricher("RequestHeaders", HeaderString(request.Headers)),
-            new PropertyEnricher("RequestBody", request.Content is not null ? await request.Content.ReadAsStringAsync(ct) : string.Empty),
-            new PropertyEnricher("ResponseHeaders", HeaderString(response.Headers)),
-            new PropertyEnricher("ResponseBody", await response.Content.ReadAsStringAsync(ct)),
-        };
+            var logEventEnrichers = new ILogEventEnricher[]
+            {
+                new PropertyEnricher("RequestUri", request.RequestUri?.ToString() ?? string.Empty),
+                new PropertyEnricher("RequestHeaders", HeaderString(request.Headers)),
+                new PropertyEnricher("RequestBody", request.Content is not null ? await request.Content.ReadAsStringAsync(ct) : string.Empty),
+                new PropertyEnricher("ResponseHeaders", HeaderString(response.Headers)),
+                new PropertyEnricher("ResponseBody", await response.Content.ReadAsStringAsync(ct)),
+            };
 
-        Log
-            .ForContext(logEventEnrichers)
-            .Information(
-                "HTTP CLIENT: {Method} {Uri} {StatusCode} {ReasonPhrase}",
+            Log
+                .ForContext(logEventEnrichers)
+                .Error(
+                    "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase}",
+                    request.Method,
+                    request.RequestUri,
+                    (int)response.StatusCode,
+                    response.ReasonPhrase);
+        }
+        else
+        {
+            Log.Information(
+                "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase}",
                 request.Method,
                 request.RequestUri,
                 (int)response.StatusCode,
                 response.ReasonPhrase);
+        }
 
         return response;
     }
