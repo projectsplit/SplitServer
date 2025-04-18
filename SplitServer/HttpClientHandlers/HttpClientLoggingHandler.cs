@@ -1,4 +1,5 @@
-﻿using Serilog;
+﻿using System.Net.Http.Headers;
+using Serilog;
 using Serilog.Core;
 using Serilog.Core.Enrichers;
 
@@ -10,17 +11,17 @@ public class HttpClientLoggingHandler : DelegatingHandler
     {
         var response = await base.SendAsync(request, ct);
 
-        var propertyEnrichers = new ILogEventEnricher[]
+        var logEventEnrichers = new ILogEventEnricher[]
         {
             new PropertyEnricher("RequestUri", request.RequestUri?.ToString() ?? string.Empty),
-            new PropertyEnricher("RequestHeaders", string.Join(" \n", request.Headers.Select(h => $"{h.Key}: {h.Value}"))),
+            new PropertyEnricher("RequestHeaders", HeaderString(request.Headers)),
             new PropertyEnricher("RequestBody", request.Content is not null ? await request.Content.ReadAsStringAsync(ct) : string.Empty),
-            new PropertyEnricher("ResponseHeaders", string.Join(" \n", response.Headers.Select(h => $"{h.Key}: {h.Value}"))),
+            new PropertyEnricher("ResponseHeaders", HeaderString(response.Headers)),
             new PropertyEnricher("ResponseBody", await response.Content.ReadAsStringAsync(ct)),
         };
 
         Log
-            .ForContext(propertyEnrichers)
+            .ForContext(logEventEnrichers)
             .Information(
                 "HTTP CLIENT: {Method} {Uri} {StatusCode} {ReasonPhrase}",
                 request.Method,
@@ -29,5 +30,15 @@ public class HttpClientLoggingHandler : DelegatingHandler
                 response.ReasonPhrase);
 
         return response;
+    }
+
+    private static string HeaderString(HttpRequestHeaders header)
+    {
+        return string.Join("\n", header.Select(h => $"{h.Key}: {string.Join(" ", h.Value)}"));
+    }
+
+    private static string HeaderString(HttpResponseHeaders header)
+    {
+        return string.Join("\n", header.Select(h => $"{h.Key}: {string.Join(" ", h.Value)}"));
     }
 }
