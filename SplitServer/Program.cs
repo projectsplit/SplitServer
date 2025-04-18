@@ -4,6 +4,7 @@ using Serilog;
 using SplitServer.Configuration;
 using SplitServer.Endpoints;
 using SplitServer.Extensions;
+using SplitServer.HttpClientHandlers;
 using SplitServer.Middlewares;
 using SplitServer.Repositories;
 using SplitServer.Repositories.Implementations;
@@ -16,6 +17,14 @@ using SplitServer.Services.TimeZone;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpClient();
+
+builder.Services.ConfigureHttpClientDefaults(clientBuilder =>
+{
+    clientBuilder.AddHttpMessageHandler<HttpClientLoggingHandler>();
+});
+
+builder.Services.AddSingleton<HttpClientLoggingHandler>();
+
 builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
 builder.Services.AddSingleton<AuthService>();
