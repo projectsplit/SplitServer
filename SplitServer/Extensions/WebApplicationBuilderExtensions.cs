@@ -27,7 +27,8 @@ public static class WebApplicationBuilderExtensions
     {
         var loggerConfiguration = new LoggerConfiguration()
             .MinimumLevel.Information()
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Fatal);
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Fatal)
+            .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
 
         if (openTelemetrySettings.Enabled)
         {
