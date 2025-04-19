@@ -137,6 +137,6 @@ public static class UserEndpoints
 
         var result = await mediator.Send(command, ct);
 
-        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }
