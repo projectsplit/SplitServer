@@ -63,4 +63,11 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
             .Limit(pageSize)
             .ToListAsync(ct);
     }
+
+    public async Task<bool> AnyWithUsername(string username, CancellationToken ct)
+    {
+        return await Collection
+            .Find(FilterBuilder.Eq(x => x.Username, username))
+            .AnyAsync(ct);
+    }
 }

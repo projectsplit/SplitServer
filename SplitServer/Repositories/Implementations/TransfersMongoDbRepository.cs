@@ -84,6 +84,6 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
                 FilterBuilder.Eq(x => x.ReceiverId, memberId),
                 FilterBuilder.Eq(x => x.SenderId, memberId)));
 
-        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
+        return await Collection.Find(filter).AnyAsync(ct);
     }
 }
