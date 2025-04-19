@@ -23,7 +23,7 @@ builder.Services.ConfigureHttpClientDefaults(clientBuilder =>
     clientBuilder.AddHttpMessageHandler<HttpClientLoggingHandler>();
 });
 
-builder.Services.AddSingleton<HttpClientLoggingHandler>();
+builder.Services.AddTransient<HttpClientLoggingHandler>();
 
 builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
