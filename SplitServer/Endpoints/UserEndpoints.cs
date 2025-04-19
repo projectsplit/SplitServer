@@ -15,7 +15,8 @@ public static class UserEndpoints
         app.MapPut("/activity/last-viewed-notification", SetLastViewedNotificationTimestampHandler);
         app.MapPut("/activity/recent-group", SetRecentGroupHandler);
         app.MapPut("/preferences/time-zone", SetTimeZoneHandler);
-        app.MapPut("/preferences/currency", SetCurrency);
+        app.MapPut("/preferences/currency", SetCurrencyHandler);
+        app.MapGet("/username/{username}", GetUsernameStatusHandler);
     }
 
     private static async Task<IResult> GetAuthenticatedUserHandler(
@@ -105,7 +106,7 @@ public static class UserEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
-    private static async Task<IResult> SetCurrency(
+    private static async Task<IResult> SetCurrencyHandler(
         SetCurrencyRequest request,
         IMediator mediator,
         HttpContext httpContext,
@@ -115,6 +116,23 @@ public static class UserEndpoints
         {
             UserId = httpContext.GetUserId(),
             Currency = request.Currency
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> GetUsernameStatusHandler(
+        string username,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new GetUsernameStatusQuery
+        {
+            UserId = httpContext.GetUserId(),
+            Username = username
         };
 
         var result = await mediator.Send(command, ct);

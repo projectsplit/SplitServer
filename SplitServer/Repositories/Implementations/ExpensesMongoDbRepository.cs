@@ -130,7 +130,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
                 FilterBuilder.Eq("Shares.MemberId", memberId),
                 FilterBuilder.Eq("Payments.MemberId", memberId)));
 
-        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
+        return await Collection.Find(filter).AnyAsync(ct);
     }
 
     public async Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct)
@@ -139,6 +139,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             FilterBuilder.Eq(x => x.GroupId, groupId),
             FilterBuilder.AnyEq(x => x.Labels, labelId));
 
-        return await Collection.Find(filter).Limit(1).AnyAsync(ct);
+        return await Collection.Find(filter).AnyAsync(ct);
     }
 }

@@ -32,7 +32,7 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
     {
         using var _ = _lockService.AcquireLock(command.Username);
 
-        var userMaybe = await _usersRepository.GetByEmail(command.Username, ct);
+        var userMaybe = await _usersRepository.GetByUsername(command.Username, ct);
 
         if (userMaybe.HasValue)
         {

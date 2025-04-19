@@ -19,12 +19,12 @@ public class ValidationService
     {
         if (username.Length is < UsernameMinLength or > UsernameMaxLength)
         {
-            return Result.Failure($"Username must be between {UsernameMinLength} and {UsernameMaxLength} characters");
+            return Result.Failure($"Username length must be between {UsernameMinLength} and {UsernameMaxLength}");
         }
 
         if (username.Any(x => !UsernameAllowedChars.Contains(x)))
         {
-            return Result.Failure("Username can only contain English letters, numbers, underscores and periods");
+            return Result.Failure("Username can only contain English characters, numbers, underscores and periods");
         }
 
         if (_usernameForbiddenLeadingChars.Where(username.StartsWith).Any())
@@ -39,7 +39,7 @@ public class ValidationService
 
         if (_usernameForbiddenSequences.Any(username.Contains))
         {
-            return Result.Failure("Username cannot contain subsequent special characters");
+            return Result.Failure("Username cannot contain consecutive special characters");
         }
 
         return Result.Success();
