@@ -17,6 +17,7 @@ public static class UserEndpoints
         app.MapPut("/preferences/time-zone", SetTimeZoneHandler);
         app.MapPut("/preferences/currency", SetCurrencyHandler);
         app.MapGet("/username/{username}", GetUsernameStatusHandler);
+        app.MapPut("/username", EditUsernameHandler);
     }
 
     private static async Task<IResult> GetAuthenticatedUserHandler(
@@ -116,6 +117,23 @@ public static class UserEndpoints
         {
             UserId = httpContext.GetUserId(),
             Currency = request.Currency
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> EditUsernameHandler(
+        EditUsernameRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditUsernameCommand
+        {
+            UserId = httpContext.GetUserId(),
+            Username = request.Username
         };
 
         var result = await mediator.Send(command, ct);
