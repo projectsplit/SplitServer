@@ -34,6 +34,11 @@ public class EditUsernameCommandHandler : IRequestHandler<EditUsernameCommand, R
 
         var user = userMaybe.Value;
 
+        if (user.Username == command.Username)
+        {
+            return Result.Success();
+        }
+
         var usernameValidationResult = _validationService.ValidateUsername(command.Username);
 
         if (usernameValidationResult.IsFailure)
@@ -41,9 +46,10 @@ public class EditUsernameCommandHandler : IRequestHandler<EditUsernameCommand, R
             return usernameValidationResult;
         }
 
-        var userByUsernameMaybe = await _usersRepository.GetByUsername(command.Username, ct);
+        var isSimilar = string.Equals(command.Username, user.Username, StringComparison.InvariantCultureIgnoreCase);
+        var alreadyTaken = await _usersRepository.AnyWithUsername(command.Username, ct);
 
-        if (userByUsernameMaybe.HasValue)
+        if (!isSimilar && alreadyTaken)
         {
             return Result.Failure("Username is already taken");
         }

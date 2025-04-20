@@ -28,20 +28,18 @@ public class GetUsernameStatusQueryHandler : IRequestHandler<GetUsernameStatusQu
             return Result.Failure<GetUsernameStatusResponse>($"User with id {query.UserId} was not found");
         }
 
+        var user = userMaybe.Value;
+
         var usernameValidationResult = _validationService.ValidateUsername(query.Username);
 
-        if (usernameValidationResult.IsFailure)
-        {
-            return usernameValidationResult.ConvertFailure<GetUsernameStatusResponse>();
-        }
-
-        var usernameAlreadyExists = await _usersRepository.AnyWithUsername(query.Username, ct);
+        var alreadyTaken = await _usersRepository.AnyWithUsername(query.Username, ct);
+        var isSimilar = string.Equals(query.Username, user.Username, StringComparison.InvariantCultureIgnoreCase);
 
         return new GetUsernameStatusResponse
         {
             IsValid = usernameValidationResult.IsSuccess,
             ErrorMessage = usernameValidationResult.IsFailure ? usernameValidationResult.Error : null,
-            IsAvailable = !usernameAlreadyExists
+            IsAvailable = isSimilar || !alreadyTaken
         };
     }
 }
