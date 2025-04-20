@@ -1,4 +1,6 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Search;
 using SplitServer.Models;
@@ -25,9 +27,7 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
 
     public async Task<Maybe<User>> GetByUsername(string username, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.Username, username);
-
-        return await Collection.Find(filter).SingleOrDefaultAsync(ct);
+        return await Collection.Find(UsernameFilter(username)).SingleOrDefaultAsync(ct);
     }
 
     public async Task<Maybe<User>> GetByGoogleId(string googleId, CancellationToken ct)
@@ -67,7 +67,12 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
     public async Task<bool> AnyWithUsername(string username, CancellationToken ct)
     {
         return await Collection
-            .Find(FilterBuilder.Eq(x => x.Username, username))
+            .Find(UsernameFilter(username))
             .AnyAsync(ct);
+    }
+
+    private static FilterDefinition<User> UsernameFilter(string username)
+    {
+        return FilterBuilder.Regex(x => x.Username, new BsonRegularExpression($"^{Regex.Escape(username)}$", "i"));
     }
 }

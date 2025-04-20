@@ -24,11 +24,11 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
         _authService = authService;
     }
 
-    public async Task<Result<AuthenticationResponse>> Handle(SignInWithPasswordCommand withPasswordCommand, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(SignInWithPasswordCommand command, CancellationToken ct)
     {
         const string credentialErrorMessage = "Invalid credentials";
 
-        var userMaybe = await _usersRepository.GetByUsername(withPasswordCommand.Username, ct);
+        var userMaybe = await _usersRepository.GetByUsername(command.Username, ct);
 
         if (userMaybe.HasNoValue)
         {
@@ -44,7 +44,7 @@ public class SignInWithPasswordCommandHandler : IRequestHandler<SignInWithPasswo
 
         var hasher = new PasswordHasher<string>();
 
-        var passwordVerificationResult = hasher.VerifyHashedPassword(user.Id, user.HashedPassword, withPasswordCommand.Password);
+        var passwordVerificationResult = hasher.VerifyHashedPassword(user.Id, user.HashedPassword, command.Password);
 
         if (passwordVerificationResult is PasswordVerificationResult.Failed)
         {
