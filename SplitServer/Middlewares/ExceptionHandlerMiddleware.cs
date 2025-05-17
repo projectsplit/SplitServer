@@ -78,7 +78,7 @@ public class ExceptionHandlerMiddleware : IMiddleware
         var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress?.ToString() ?? "";
         var headers = string.Join(" \n", context.Request.Headers.Select(h => $"{h.Key}: {h.Value.ToString()}"));
 
-        _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request));
+        _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request, context.RequestAborted));
         _diagnosticContext.Set("RequestId", context.TraceIdentifier);
         _diagnosticContext.Set("UserId", context.GetNullableUserId() ?? "");
         _diagnosticContext.Set("QueryString", context.Request.QueryString.ToString());
@@ -87,9 +87,9 @@ public class ExceptionHandlerMiddleware : IMiddleware
         _diagnosticContext.Set("Ip", ip);
     }
 
-    private static async Task<string> ReadRequestBodyAsync(HttpRequest request)
+    private static async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken ct)
     {
         request.Body.Seek(0, SeekOrigin.Begin);
-        return await new StreamReader(request.Body).ReadToEndAsync();
+        return await new StreamReader(request.Body).ReadToEndAsync(ct);
     }
 }
