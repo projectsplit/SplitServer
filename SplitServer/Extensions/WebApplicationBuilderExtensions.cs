@@ -42,7 +42,7 @@ public static class WebApplicationBuilderExtensions
                         {
                             ["service.version"] = Assembly.GetExecutingAssembly().GetName().Version!.ToString(),
                             ["service.name"] = Assembly.GetExecutingAssembly().GetName().Name!,
-                            ["environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")!,
+                            ["deployment.environment"] = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")!,
                         };
                     });
         }
