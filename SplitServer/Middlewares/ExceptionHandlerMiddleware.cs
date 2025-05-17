@@ -28,6 +28,10 @@ public class ExceptionHandlerMiddleware : IMiddleware
         {
             context.Request.EnableBuffering();
             await next(context);
+            if (context.Response.StatusCode > 299)
+            {
+                await SetDiagnosticContextProperties(context);
+            }
         }
         catch (BadHttpRequestException ex)
         {
@@ -50,17 +54,7 @@ public class ExceptionHandlerMiddleware : IMiddleware
         }
         catch (Exception ex)
         {
-            var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress?.ToString() ?? "";
-            var headers = string.Join(" \n", context.Request.Headers.Select(h => $"{h.Key}: {h.Value.ToString()}"));
-            var userId = context.GetNullableUserId() ?? "";
-
-            _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request));
-            _diagnosticContext.Set("RequestId", context.TraceIdentifier);
-            _diagnosticContext.Set("UserId", userId);
-            _diagnosticContext.Set("QueryString", context.Request.QueryString.ToString());
-            _diagnosticContext.Set("Headers", headers);
-            _diagnosticContext.Set("Protocol", context.Request.Protocol);
-            _diagnosticContext.Set("Ip", ip);
+            await SetDiagnosticContextProperties(context);
             _diagnosticContext.SetException(ex);
 
             if (_showExceptionInResponse)
@@ -77,6 +71,20 @@ public class ExceptionHandlerMiddleware : IMiddleware
                     RequestId = context.TraceIdentifier
                 });
         }
+    }
+
+    private async Task SetDiagnosticContextProperties(HttpContext context)
+    {
+        var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress?.ToString() ?? "";
+        var headers = string.Join(" \n", context.Request.Headers.Select(h => $"{h.Key}: {h.Value.ToString()}"));
+
+        _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request));
+        _diagnosticContext.Set("RequestId", context.TraceIdentifier);
+        _diagnosticContext.Set("UserId", context.GetNullableUserId() ?? "");
+        _diagnosticContext.Set("QueryString", context.Request.QueryString.ToString());
+        _diagnosticContext.Set("Headers", headers);
+        _diagnosticContext.Set("Protocol", context.Request.Protocol);
+        _diagnosticContext.Set("Ip", ip);
     }
 
     private static async Task<string> ReadRequestBodyAsync(HttpRequest request)
