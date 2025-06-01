@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using NMoneys;
 using SplitServer.Models;
 // ReSharper disable ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
@@ -59,11 +58,6 @@ public class ValidationService
         if (amount <= 0)
         {
             return Result.Failure("Amount must be greater than 0");
-        }
-
-        if (!Money.TryParse(amount.ToString(CultureInfo.InvariantCulture), validCurrency, out _))
-        {
-            return Result.Failure("Amount must respect provided currency format");
         }
 
         var maxDecimalDigits = validCurrency.SignificantDecimalDigits;
