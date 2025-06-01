@@ -30,13 +30,11 @@ public class ExceptionHandlerMiddleware : IMiddleware
             await next(context);
             if (context.Response.StatusCode > 299)
             {
-                await SetDetailedRequestDiagnosticContextProperties(context);
+                await SetDetailedDiagnosticContextProperties(context);
             }
         }
         catch (BadHttpRequestException ex)
         {
-            _diagnosticContext.SetException(ex);
-
             context.Response.StatusCode = ex.StatusCode;
             context.Response.ContentType = MediaTypeNames.Application.Json;
 
@@ -48,18 +46,22 @@ public class ExceptionHandlerMiddleware : IMiddleware
             {
                 await context.Response.WriteAsJsonAsync(ex.Message);
             }
+
+            _diagnosticContext.SetException(ex);
+            await SetDetailedDiagnosticContextProperties(context);
         }
         catch (ResourceLockedException ex)
         {
-            _diagnosticContext.SetException(ex);
-
             context.Response.StatusCode = StatusCodes.Status423Locked;
             context.Response.ContentType = MediaTypeNames.Application.Json;
+
+            _diagnosticContext.SetException(ex);
+            await SetDetailedDiagnosticContextProperties(context);
         }
         catch (Exception ex)
         {
             _diagnosticContext.SetException(ex);
-            await SetDetailedRequestDiagnosticContextProperties(context);
+            await SetDetailedDiagnosticContextProperties(context);
 
             if (_showExceptionInResponse)
             {
@@ -91,18 +93,29 @@ public class ExceptionHandlerMiddleware : IMiddleware
         _diagnosticContext.Set("Ip", ip);
     }
 
-    private async Task SetDetailedRequestDiagnosticContextProperties(HttpContext context)
+    private async Task SetDetailedDiagnosticContextProperties(HttpContext context)
     {
-        var headers = string.Join(" \n", context.Request.Headers.Select(h => $"{h.Key}: {h.Value.ToString()}"));
+        var requestHeaders = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray());
 
         _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request, context.RequestAborted));
         _diagnosticContext.Set("QueryString", context.Request.QueryString.ToString());
-        _diagnosticContext.Set("Headers", headers);
+        _diagnosticContext.Set("RequestHeaders", requestHeaders);
+
+        var responseHeaders = context.Response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray());
+
+        _diagnosticContext.Set("ResponseBody", await ReadResponseBodyAsync(context.Response, context.RequestAborted));
+        _diagnosticContext.Set("ResponseHeaders", responseHeaders);
     }
 
     private static async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken ct)
     {
         request.Body.Seek(0, SeekOrigin.Begin);
         return await new StreamReader(request.Body).ReadToEndAsync(ct);
+    }
+
+    private static async Task<string> ReadResponseBodyAsync(HttpResponse response, CancellationToken ct)
+    {
+        response.Body.Seek(0, SeekOrigin.Begin);
+        return await new StreamReader(response.Body).ReadToEndAsync(ct);
     }
 }
