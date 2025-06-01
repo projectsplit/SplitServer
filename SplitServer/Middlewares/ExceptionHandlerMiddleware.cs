@@ -97,25 +97,18 @@ public class ExceptionHandlerMiddleware : IMiddleware
     {
         var requestHeaders = context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray());
 
-        _diagnosticContext.Set("RequestBody", await ReadRequestBodyAsync(context.Request, context.RequestAborted));
+        _diagnosticContext.Set("RequestBody", await ReadRequestBody(context.Request, context.RequestAborted));
         _diagnosticContext.Set("QueryString", context.Request.QueryString.ToString());
         _diagnosticContext.Set("RequestHeaders", requestHeaders);
 
         var responseHeaders = context.Response.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray());
 
-        _diagnosticContext.Set("ResponseBody", await ReadResponseBodyAsync(context.Response, context.RequestAborted));
         _diagnosticContext.Set("ResponseHeaders", responseHeaders);
     }
 
-    private static async Task<string> ReadRequestBodyAsync(HttpRequest request, CancellationToken ct)
+    private static async Task<string> ReadRequestBody(HttpRequest request, CancellationToken ct)
     {
         request.Body.Seek(0, SeekOrigin.Begin);
         return await new StreamReader(request.Body).ReadToEndAsync(ct);
-    }
-
-    private static async Task<string> ReadResponseBodyAsync(HttpResponse response, CancellationToken ct)
-    {
-        response.Body.Seek(0, SeekOrigin.Begin);
-        return await new StreamReader(response.Body).ReadToEndAsync(ct);
     }
 }
