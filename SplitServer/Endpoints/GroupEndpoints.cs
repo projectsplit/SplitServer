@@ -113,8 +113,7 @@ public static class GroupEndpoints
         };
 
         var result = await mediator.Send(command, ct);
-
-        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
     private static async Task<IResult> GetGroupsWithDetailsHandler(
