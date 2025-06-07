@@ -8,8 +8,7 @@ using SplitServer.Services.CurrencyExchangeRate;
 
 namespace SplitServer.Queries;
 
-public class
-    GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDetailsQuery, Result<GetGroupsWithDetailsResponse>>
+public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDetailsQuery, Result<GetGroupsWithDetailsResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
@@ -34,7 +33,8 @@ public class
         _userPreferencesRepository = userPreferencesRepository;
     }
 
-    public async Task<Result<GetGroupsWithDetailsResponse>> Handle(GetGroupsWithDetailsQuery query,
+    public async Task<Result<GetGroupsWithDetailsResponse>> Handle(
+        GetGroupsWithDetailsQuery query,
         CancellationToken ct)
     {
         if (query.PageSize < 1)
@@ -51,10 +51,16 @@ public class
 
         var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
 
-        var groups =
-            await _groupsRepository.GetByUserId(query.UserId, query.IsArchived, query.PageSize, nextDetails?.Created,
-                ct);
-        var userMemberIds = groups.Select(g => g.Members.First(m => m.UserId == query.UserId)).Select(m => m.Id)
+        var groups = await _groupsRepository.GetByUserId(
+            query.UserId,
+            query.IsArchived,
+            query.PageSize,
+            nextDetails?.Created,
+            ct);
+
+        var userMemberIds = groups
+            .Select(g => g.Members.First(m => m.UserId == query.UserId))
+            .Select(m => m.Id)
             .ToList();
 
         var expenses = await _expensesRepository.GetAllByMemberIds(userMemberIds, ct);
@@ -87,15 +93,13 @@ public class
                 var payment = expense.Payments.FirstOrDefault(x => x.MemberId == memberId);
                 if (payment is not null)
                 {
-                    groupDetails[group.Id][expense.Currency] =
-                        groupDetails[group.Id].GetValueOrDefault(expense.Currency) - payment.Amount;
+                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) - payment.Amount;
                 }
 
                 var share = expense.Shares.FirstOrDefault(x => x.MemberId == memberId);
                 if (share is not null)
                 {
-                    groupDetails[group.Id][expense.Currency] =
-                        groupDetails[group.Id].GetValueOrDefault(expense.Currency) + share.Amount;
+                    groupDetails[group.Id][expense.Currency] = groupDetails[group.Id].GetValueOrDefault(expense.Currency) + share.Amount;
                 }
             }
         }
@@ -109,23 +113,22 @@ public class
         return new GetGroupsWithDetailsResponse
         {
             Groups = groups
-                .Select(
-                    g =>
-                    {
-                        var convertedBalance = groupDetails[g.Id]
-                            .Select(x => _currencyExchangeRateService.Convert(x.Value, x.Key, rates, preferredCurrency))
-                            .Sum();
+                .Select(g =>
+                {
+                    var convertedBalance = groupDetails[g.Id]
+                        .Select(x => _currencyExchangeRateService.Convert(x.Value, x.Key, rates, preferredCurrency))
+                        .Sum();
 
-                        return new GetGroupsWithDetailsResponseItem
-                        {
-                            Id = g.Id,
-                            Name = g.Name,
-                            Currency = g.Currency,
-                            Details = groupDetails[g.Id],
-                            IsArchived = g.IsArchived,
-                            ConvertedBalance = convertedBalance,
-                        };
-                    })
+                    return new GetGroupsWithDetailsResponseItem
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        Currency = g.Currency,
+                        Details = groupDetails[g.Id],
+                        IsArchived = g.IsArchived,
+                        ConvertedBalance = convertedBalance,
+                    };
+                })
                 .ToList(),
             Next = GetNext(query, groups)
         };

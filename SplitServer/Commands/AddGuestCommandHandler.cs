@@ -25,7 +25,7 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result<Gu
 
         if (permissionResult.IsFailure)
         {
-            return Result.Failure<Guest>(permissionResult.Error);;
+            return Result.Failure<Guest>(permissionResult.Error);
         }
 
         var (_, group, _) = permissionResult.Value;
@@ -54,7 +54,7 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result<Gu
 
         if (updateResult.IsFailure)
         {
-            return Result.Failure<Guest>(updateResult.Error);
+            return updateResult.ConvertFailure<Guest>();
         }
 
         return Result.Success(newGuest);
