@@ -65,6 +65,8 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
             Debts = GroupService.GetDebts(group, groupExpenses, groupTransfers),
             TotalSpent = totalSpentByMember,
             ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByMember, ct),
+            TotalSent = GroupService.GetTotalSent(group, groupTransfers),
+            TotalReceived = GroupService.GetTotalReceived(group, groupTransfers),
         };
     }
 

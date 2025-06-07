@@ -39,6 +39,40 @@ public class GroupService
         return totalSpentByMember;
     }
 
+    public static Dictionary<string, Dictionary<string, decimal>> GetTotalReceived(Group group, List<Transfer> transfers)
+    {
+        var totalReceivedByMember = new Dictionary<string, Dictionary<string, decimal>>();
+        var transfersByCurrency = transfers.GroupBy(x => x.Currency).ToList();
+
+        foreach (var memberId in group.Members.Select(m => m.Id).Concat(group.Guests.Select(g => g.Id)))
+        {
+            totalReceivedByMember[memberId] = transfersByCurrency.ToDictionary(
+                currencyGroup => currencyGroup.Key,
+                currencyGroup => currencyGroup
+                    .Where(transfer => transfer.ReceiverId == memberId)
+                    .Sum(transfer => transfer.Amount));
+        }
+
+        return totalReceivedByMember;
+    }
+
+    public static Dictionary<string, Dictionary<string, decimal>> GetTotalSent(Group group, List<Transfer> transfers)
+    {
+        var totalSentByMember = new Dictionary<string, Dictionary<string, decimal>>();
+        var transfersByCurrency = transfers.GroupBy(x => x.Currency).ToList();
+
+        foreach (var memberId in group.Members.Select(m => m.Id).Concat(group.Guests.Select(g => g.Id)))
+        {
+            totalSentByMember[memberId] = transfersByCurrency.ToDictionary(
+                currencyGroup => currencyGroup.Key,
+                currencyGroup => currencyGroup
+                    .Where(transfer => transfer.SenderId == memberId)
+                    .Sum(transfer => transfer.Amount));
+        }
+
+        return totalSentByMember;
+    }
+
     private static List<Debt> GetDebtsForCurrency(string currency, List<Expense> expenses, List<Transfer> transfers)
     {
         var balances = new Dictionary<string, decimal>();
