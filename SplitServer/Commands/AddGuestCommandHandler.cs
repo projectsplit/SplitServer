@@ -6,7 +6,7 @@ using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
+public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result<Guest>>
 {
     private readonly PermissionService _permissionService;
     private readonly IGroupsRepository _groupsRepository;
@@ -19,20 +19,20 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
         _groupsRepository = groupsRepository;
     }
 
-    public async Task<Result> Handle(AddGuestCommand command, CancellationToken ct)
+    public async Task<Result<Guest>> Handle(AddGuestCommand command, CancellationToken ct)
     {
         var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
 
         if (permissionResult.IsFailure)
         {
-            return permissionResult;
+            return Result.Failure<Guest>(permissionResult.Error);;
         }
 
         var (_, group, _) = permissionResult.Value;
 
         if (group.Guests.Any(x => x.Name == command.GuestName))
         {
-            return Result.Failure<Result>($"Guest with name {command.GuestName} already exists");
+            return Result.Failure<Guest>($"Guest with name {command.GuestName} already exists");
         }
 
         var now = DateTime.UtcNow;
@@ -54,9 +54,9 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result>
 
         if (updateResult.IsFailure)
         {
-            return updateResult.ConvertFailure<Result>();
+            return Result.Failure<Guest>(updateResult.Error);
         }
 
-        return Result.Success();
+        return Result.Success(newGuest);
     }
 }
