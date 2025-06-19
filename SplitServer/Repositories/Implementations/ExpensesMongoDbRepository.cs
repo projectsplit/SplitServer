@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SplitServer.Models;
 using SplitServer.Repositories.Implementations.Models;
@@ -140,5 +141,71 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             FilterBuilder.AnyEq(x => x.Labels, labelId));
 
         return await Collection.Find(filter).AnyAsync(ct);
+    }
+
+    public async Task<List<Expense>> Search(
+        string groupId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? participantIds,
+        string[]? payerIds,
+        string[]? labelIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? FilterBuilder.Or(
+                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
+                FilterBuilder.And(
+                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    FilterBuilder.Lt(x => x.Created, maxCreated)))
+            : FilterBuilder.Empty;
+
+        var participantsFilter = participantIds is not null && participantIds.Length > 0
+            ? FilterBuilder.In("Shares.MemberId", participantIds)
+            : FilterBuilder.Empty;
+
+        var payersFilter = payerIds is not null && payerIds.Length > 0
+            ? FilterBuilder.In("Payments.MemberId", payerIds)
+            : FilterBuilder.Empty;
+
+        var labelsFilter = labelIds is not null && labelIds.Length > 0
+            ? FilterBuilder.AnyIn(x => x.Labels, labelIds)
+            : FilterBuilder.Empty;
+
+        var minTimeFilter = minTime is not null
+            ? FilterBuilder.Gte(x => x.Occurred, minTime)
+            : FilterBuilder.Empty;
+
+        var maxTimeFilter = maxTime is not null
+            ? FilterBuilder.Lte(x => x.Occurred, maxTime)
+            : FilterBuilder.Empty;
+
+        var descriptionFilter = searchTerm is not null
+            ? FilterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : FilterBuilder.Empty;
+
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            participantsFilter,
+            payersFilter,
+            descriptionFilter,
+            labelsFilter,
+            minTimeFilter,
+            maxTimeFilter,
+            paginationFilter);
+
+        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await Collection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(Mapper.ToEntity).ToList();
     }
 }
