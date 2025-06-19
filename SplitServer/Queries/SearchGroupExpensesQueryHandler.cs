@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Queries.Models;
 using SplitServer.Repositories;
@@ -8,23 +9,26 @@ using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
-public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuery, Result<GroupExpensesResponse>>
+public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpensesQuery, Result<GroupExpensesResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
 
-    public GetGroupExpensesQueryHandler(
+    public SearchGroupExpensesQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        IExpensesRepository expensesRepository)
+        IExpensesRepository expensesRepository,
+        IUserPreferencesRepository userPreferencesRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
+        _userPreferencesRepository = userPreferencesRepository;
     }
 
-    public async Task<Result<GroupExpensesResponse>> Handle(GetGroupExpensesQuery query, CancellationToken ct)
+    public async Task<Result<GroupExpensesResponse>> Handle(SearchGroupExpensesQuery query, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(query.UserId, ct);
 
@@ -32,6 +36,11 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
         {
             return Result.Failure<GroupExpensesResponse>($"User with id {query.UserId} was not found");
         }
+
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var userTimeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
 
         var groupMaybe = await _groupsRepository.GetById(query.GroupId, ct);
 
@@ -51,8 +60,17 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var expenses = await _expensesRepository.GetByGroupId(
+        var minOccurred = query.After?.Date.ToUtc(userTimeZoneId);
+        var maxOccurred = query.Before?.Date.AddDays(1).AddTicks(-1).ToUtc(userTimeZoneId);
+
+        var expenses = await _expensesRepository.Search(
             query.GroupId,
+            query.SearchTerm,
+            minOccurred,
+            maxOccurred,
+            query.ParticipantIds,
+            query.PayerIds,
+            query.LabelIds,
             query.PageSize,
             nextDetails?.Occurred,
             nextDetails?.Created,
@@ -62,28 +80,27 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
 
         return new GroupExpensesResponse
         {
-            Expenses = expenses.Select(
-                x => new ExpenseResponseItem
-                {
-                    Id = x.Id,
-                    Created = x.Created,
-                    Updated = x.Updated,
-                    GroupId = x.GroupId,
-                    CreatorId = x.CreatorId,
-                    Amount = x.Amount,
-                    Occurred = x.Occurred,
-                    Description = x.Description,
-                    Currency = x.Currency,
-                    Payments = x.Payments,
-                    Shares = x.Shares,
-                    Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, emptyLabel)).ToList(),
-                    Location = x.Location,
-                }).ToList(),
+            Expenses = expenses.Select(x => new ExpenseResponseItem
+            {
+                Id = x.Id,
+                Created = x.Created,
+                Updated = x.Updated,
+                GroupId = x.GroupId,
+                CreatorId = x.CreatorId,
+                Amount = x.Amount,
+                Occurred = x.Occurred,
+                Description = x.Description,
+                Currency = x.Currency,
+                Payments = x.Payments,
+                Shares = x.Shares,
+                Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, emptyLabel)).ToList(),
+                Location = x.Location,
+            }).ToList(),
             Next = GetNext(query, expenses)
         };
     }
 
-    private static string? GetNext(GetGroupExpensesQuery query, List<Expense> expenses)
+    private static string? GetNext(SearchGroupExpensesQuery query, List<Expense> expenses)
     {
         return Next.Create(
             expenses,

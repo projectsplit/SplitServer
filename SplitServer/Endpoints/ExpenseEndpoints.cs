@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using SplitServer.Commands;
 using SplitServer.Extensions;
 using SplitServer.Queries;
@@ -11,10 +12,11 @@ public static class ExpenseEndpoints
 {
     public static void MapExpenseEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet("/", GetGroupExpensesHandler);
+        app.MapGet("/search", SearchExpensesHandler);
+        app.MapGet("/labels", GetLabelsHandler);
         app.MapPost("/create", CreateExpenseHandler);
         app.MapPost("/delete", DeleteExpenseHandler);
-        app.MapGet("/", GetGroupExpensesHandler);
-        app.MapGet("/labels", GetLabelsHandler);
         app.MapPost("/edit", EditExpenseHandler);
     }
 
@@ -74,6 +76,39 @@ public static class ExpenseEndpoints
             GroupId = groupId,
             PageSize = pageSize,
             Next = next
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchExpensesHandler(
+        string groupId,
+        DateTime? before,
+        DateTime? after,
+        string? searchTerm,
+        [FromQuery] string[]? labelIds,
+        [FromQuery] string[]? participantIds,
+        [FromQuery] string[]? payerIds,
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchGroupExpensesQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            Before = before,
+            After = after,
+            SearchTerm = searchTerm,
+            LabelIds = labelIds,
+            ParticipantIds = participantIds,
+            PayerIds = payerIds,
+            PageSize = pageSize,
+            Next = next,
         };
 
         var result = await mediator.Send(query, ct);

@@ -20,4 +20,17 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
     Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct);
+
+    Task<List<Expense>> Search(
+        string groupId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? participantIds,
+        string[]? payerIds,
+        string[]? labelIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
 }
