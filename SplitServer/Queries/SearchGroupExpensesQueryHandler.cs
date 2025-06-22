@@ -60,14 +60,11 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var minOccurred = query.After?.Date.ToUtc(userTimeZoneId);
-        var maxOccurred = query.Before?.Date.AddDays(1).AddTicks(-1).ToUtc(userTimeZoneId);
-
         var expenses = await _expensesRepository.Search(
             query.GroupId,
             query.SearchTerm,
-            minOccurred,
-            maxOccurred,
+            query.After?.ToUtc(userTimeZoneId),
+            query.Before?.ToUtc(userTimeZoneId),
             query.ParticipantIds,
             query.PayerIds,
             query.LabelIds,
@@ -75,8 +72,6 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
             nextDetails?.Occurred,
             nextDetails?.Created,
             ct);
-
-        var emptyLabel = new Label { Id = "", Text = "", Color = "" };
 
         return new GroupExpensesResponse
         {
@@ -93,7 +88,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                 Currency = x.Currency,
                 Payments = x.Payments,
                 Shares = x.Shares,
-                Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, emptyLabel)).ToList(),
+                Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
                 Location = x.Location,
             }).ToList(),
             Next = GetNext(query, expenses)
