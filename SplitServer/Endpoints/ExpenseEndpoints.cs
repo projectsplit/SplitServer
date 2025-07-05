@@ -1,12 +1,10 @@
-﻿using CSharpFunctionalExtensions;
-using MediatR;
+﻿using MediatR;
 using Microsoft.IdentityModel.Tokens;
 using SplitServer.Commands;
 using SplitServer.Extensions;
 using SplitServer.Queries;
 using SplitServer.Requests;
 using SplitServer.Responses;
-using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -85,7 +83,7 @@ public static class ExpenseEndpoints
                                  !participantIds.IsNullOrEmpty() ||
                                  !payerIds.IsNullOrEmpty();
 
-        IRequest<Result<GroupExpensesResponse>> query = hasAnySearchParams
+        IRequest<CSharpFunctionalExtensions.Result<GroupExpensesResponse>> query = hasAnySearchParams
             ? new SearchGroupExpensesQuery
             {
                 UserId = httpContext.GetUserId(),
