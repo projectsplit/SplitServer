@@ -1,10 +1,12 @@
-﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
+﻿using CSharpFunctionalExtensions;
+using MediatR;
+using Microsoft.IdentityModel.Tokens;
 using SplitServer.Commands;
 using SplitServer.Extensions;
 using SplitServer.Queries;
 using SplitServer.Requests;
 using SplitServer.Responses;
+using IResult = Microsoft.AspNetCore.Http.IResult;
 
 namespace SplitServer.Endpoints;
 
@@ -63,20 +65,47 @@ public static class ExpenseEndpoints
     }
 
     private static async Task<IResult> GetGroupExpensesHandler(
+        HttpContext httpContext,
+        IMediator mediator,
         string groupId,
         int pageSize,
         string? next,
-        IMediator mediator,
-        HttpContext httpContext,
+        DateTime? before,
+        DateTime? after,
+        string? searchTerm,
+        string[]? labelIds,
+        string[]? participantIds,
+        string[]? payerIds,
         CancellationToken ct)
     {
-        var query = new GetGroupExpensesQuery
-        {
-            UserId = httpContext.GetUserId(),
-            GroupId = groupId,
-            PageSize = pageSize,
-            Next = next
-        };
+        var hasAnySearchParams = before is not null ||
+                                 after is not null ||
+                                 searchTerm is not null ||
+                                 !labelIds.IsNullOrEmpty() ||
+                                 !participantIds.IsNullOrEmpty() ||
+                                 !payerIds.IsNullOrEmpty();
+
+        IRequest<Result<GroupExpensesResponse>> query = hasAnySearchParams
+            ? new SearchGroupExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                GroupId = groupId,
+                Before = before,
+                After = after,
+                SearchTerm = searchTerm,
+                LabelIds = labelIds,
+                ParticipantIds = participantIds,
+                PayerIds = payerIds,
+                PageSize = pageSize,
+                Next = next,
+            }
+            : new GetGroupExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                GroupId = groupId,
+                PageSize = pageSize,
+                Next = next
+            };
 
         var result = await mediator.Send(query, ct);
 
@@ -88,9 +117,9 @@ public static class ExpenseEndpoints
         DateTime? before,
         DateTime? after,
         string? searchTerm,
-        [FromQuery] string[]? labelIds,
-        [FromQuery] string[]? participantIds,
-        [FromQuery] string[]? payerIds,
+        string[]? labelIds,
+        string[]? participantIds,
+        string[]? payerIds,
         int pageSize,
         string? next,
         IMediator mediator,
