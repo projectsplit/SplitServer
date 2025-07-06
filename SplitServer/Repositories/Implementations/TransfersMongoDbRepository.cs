@@ -1,4 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
+using Microsoft.IdentityModel.Tokens;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using SplitServer.Models;
 using SplitServer.Repositories.Mappers;
@@ -85,5 +87,63 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
                 FilterBuilder.Eq(x => x.SenderId, memberId)));
 
         return await Collection.Find(filter).AnyAsync(ct);
+    }
+
+    public async Task<List<Transfer>> Search(
+        string groupId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? receiverIds,
+        string[]? senderIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? FilterBuilder.Or(
+                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
+                FilterBuilder.And(
+                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    FilterBuilder.Lt(x => x.Created, maxCreated)))
+            : FilterBuilder.Empty;
+
+        var receiversFilter = !receiverIds.IsNullOrEmpty()
+            ? FilterBuilder.In(x => x.ReceiverId, receiverIds)
+            : FilterBuilder.Empty;
+
+        var sendersFilter = !senderIds.IsNullOrEmpty()
+            ? FilterBuilder.In(x => x.SenderId, senderIds)
+            : FilterBuilder.Empty;
+
+        var minTimeFilter = minTime is not null
+            ? FilterBuilder.Gte(x => x.Occurred, minTime)
+            : FilterBuilder.Empty;
+
+        var maxTimeFilter = maxTime is not null
+            ? FilterBuilder.Lte(x => x.Occurred, maxTime)
+            : FilterBuilder.Empty;
+
+        var descriptionFilter = searchTerm is not null
+            ? FilterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : FilterBuilder.Empty;
+
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.GroupId, groupId),
+            receiversFilter,
+            sendersFilter,
+            minTimeFilter,
+            maxTimeFilter,
+            descriptionFilter,
+            paginationFilter);
+
+        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        return await Collection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
     }
 }

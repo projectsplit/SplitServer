@@ -1,4 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SplitServer.Models;
@@ -164,15 +165,15 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
                     FilterBuilder.Lt(x => x.Created, maxCreated)))
             : FilterBuilder.Empty;
 
-        var participantsFilter = participantIds is not null && participantIds.Length > 0
+        var participantsFilter = !participantIds.IsNullOrEmpty()
             ? FilterBuilder.In("Shares.MemberId", participantIds)
             : FilterBuilder.Empty;
 
-        var payersFilter = payerIds is not null && payerIds.Length > 0
+        var payersFilter = !payerIds.IsNullOrEmpty()
             ? FilterBuilder.In("Payments.MemberId", payerIds)
             : FilterBuilder.Empty;
 
-        var labelsFilter = labelIds is not null && labelIds.Length > 0
+        var labelsFilter = !labelIds.IsNullOrEmpty()
             ? FilterBuilder.AnyIn(x => x.Labels, labelIds)
             : FilterBuilder.Empty;
 
