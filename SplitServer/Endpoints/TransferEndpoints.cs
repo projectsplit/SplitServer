@@ -1,8 +1,10 @@
 ﻿using MediatR;
+using Microsoft.IdentityModel.Tokens;
 using SplitServer.Commands;
 using SplitServer.Extensions;
 using SplitServer.Queries;
 using SplitServer.Requests;
+using SplitServer.Responses;
 
 namespace SplitServer.Endpoints;
 
@@ -10,10 +12,10 @@ public static class TransferEndpoints
 {
     public static void MapTransferEndpoints(this IEndpointRouteBuilder app)
     {
+        app.MapGet("/", GetGroupTransfersHandler);
         app.MapPost("/create", CreateTransferHandler);
         app.MapPost("/create-many", CreateManyTransfersHandler);
         app.MapPost("/delete", DeleteTransferHandler);
-        app.MapGet("/", GetGroupTransfersHandler);
         app.MapPost("/edit", EditTransferHandler);
     }
 
@@ -76,20 +78,44 @@ public static class TransferEndpoints
     }
 
     private static async Task<IResult> GetGroupTransfersHandler(
+        HttpContext httpContext,
+        IMediator mediator,
         string groupId,
         int pageSize,
         string? next,
-        IMediator mediator,
-        HttpContext httpContext,
+        DateTime? before,
+        DateTime? after,
+        string? searchTerm,
+        string[]? receiverIds,
+        string[]? senderIds,
         CancellationToken ct)
     {
-        var query = new GetGroupTransfersQuery
-        {
-            UserId = httpContext.GetUserId(),
-            GroupId = groupId,
-            PageSize = pageSize,
-            Next = next
-        };
+        var hasAnySearchParams = before is not null ||
+                                 after is not null ||
+                                 searchTerm is not null ||
+                                 !receiverIds.IsNullOrEmpty() ||
+                                 !senderIds.IsNullOrEmpty();
+
+        IRequest<CSharpFunctionalExtensions.Result<GroupTransfersResponse>> query = hasAnySearchParams
+            ? new SearchGroupTransfersQuery
+            {
+                UserId = httpContext.GetUserId(),
+                GroupId = groupId,
+                PageSize = pageSize,
+                Next = next,
+                Before = before,
+                After = after,
+                SearchTerm = searchTerm,
+                ReceiverIds = receiverIds,
+                SenderIds = senderIds
+            }
+            : new GetGroupTransfersQuery
+            {
+                UserId = httpContext.GetUserId(),
+                GroupId = groupId,
+                PageSize = pageSize,
+                Next = next
+            };
 
         var result = await mediator.Send(query, ct);
 

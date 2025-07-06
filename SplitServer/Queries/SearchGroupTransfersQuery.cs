@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class SearchGroupExpensesQuery : IRequest<Result<GroupExpensesResponse>>
+public class SearchGroupTransfersQuery : IRequest<Result<GroupTransfersResponse>>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }
@@ -13,7 +13,6 @@ public class SearchGroupExpensesQuery : IRequest<Result<GroupExpensesResponse>>
     public required DateTime? Before { get; init; }
     public required DateTime? After { get; init; }
     public required string? SearchTerm { get; init; }
-    public required string[]? LabelIds { get; init; }
-    public required string[]? ParticipantIds { get; init; }
-    public required string[]? PayerIds { get; init; }
+    public required string[]? ReceiverIds { get; init; }
+    public required string[]? SenderIds { get; init; }
 }

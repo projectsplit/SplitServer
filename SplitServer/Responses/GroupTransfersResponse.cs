@@ -2,7 +2,7 @@
 
 namespace SplitServer.Responses;
 
-public class GetGroupTransfersResponse
+public class GroupTransfersResponse
 {
     public required List<Transfer> Transfers { get; init; }
     public required string? Next { get; init; }

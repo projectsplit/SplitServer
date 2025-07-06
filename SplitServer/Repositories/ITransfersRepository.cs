@@ -14,4 +14,16 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
     Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
     Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct);
+
+    Task<List<Transfer>> Search(
+        string groupId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? receiverIds,
+        string[]? senderIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
 }
