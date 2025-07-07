@@ -61,8 +61,8 @@ public class SearchGroupTransfersQueryHandler : IRequestHandler<SearchGroupTrans
         var transfers = await _transfersRepository.Search(
             query.GroupId,
             query.SearchTerm,
-            query.Before?.ToUtc(userTimeZoneId),
             query.After?.ToUtc(userTimeZoneId),
+            query.Before?.ToUtc(userTimeZoneId),
             query.ReceiverIds,
             query.SenderIds,
             query.PageSize,
