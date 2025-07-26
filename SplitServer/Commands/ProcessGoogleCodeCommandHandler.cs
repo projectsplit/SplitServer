@@ -48,7 +48,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
         var googleUserInfo = googleUserInfoResult.Value;
 
-        using var googleIdLock = _lockService.AcquireLock(googleUserInfo.Id);
+        using var _ = _lockService.AcquireLock(googleUserInfo.Id);
 
         var now = DateTime.UtcNow;
 
