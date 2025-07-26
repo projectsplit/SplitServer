@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
 using Microsoft.Extensions.Options;
+using Serilog;
 using SplitServer.Configuration;
 using SplitServer.Models;
 using SplitServer.Repositories;
@@ -36,6 +37,8 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
     public async Task<Result<AuthenticationResponse>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
     {
+        Log.Information("Consuming google auth code: {}", command.Code);
+
         var googleUserInfoResult = await _authService.GetGoogleUserInfo(command.Code, ct);
 
         if (googleUserInfoResult.IsFailure)
@@ -45,7 +48,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
         var googleUserInfo = googleUserInfoResult.Value;
 
-        using var _ = _lockService.AcquireLock(googleUserInfo.Id);
+        using var googleIdLock = _lockService.AcquireLock(googleUserInfo.Id);
 
         var now = DateTime.UtcNow;
 
