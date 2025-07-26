@@ -37,7 +37,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
 
     public async Task<Result<AuthenticationResponse>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
     {
-        Log.Information("Consuming google auth code: {}", command.Code);
+        Log.Information("Consuming google auth code: {0}", command.Code);
 
         var googleUserInfoResult = await _authService.GetGoogleUserInfo(command.Code, ct);
 
