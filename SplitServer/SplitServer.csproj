@@ -4,7 +4,7 @@
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>2507.2</Version>
+    <Version>2507.3</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="3.2.0"/>
