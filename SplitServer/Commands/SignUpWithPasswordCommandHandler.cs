@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using SplitServer.Models;
 using SplitServer.Repositories;
@@ -15,17 +16,20 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
     private readonly ISessionsRepository _sessionsRepository;
     private readonly AuthService _authService;
     private readonly LockService _lockService;
+    private readonly ValidationService _validationService;
 
     public SignUpWithPasswordCommandHandler(
         IUsersRepository usersRepository,
         ISessionsRepository sessionsRepository,
         AuthService authService,
-        LockService lockService)
+        LockService lockService,
+        ValidationService validationService)
     {
         _usersRepository = usersRepository;
         _sessionsRepository = sessionsRepository;
         _authService = authService;
         _lockService = lockService;
+        _validationService = validationService;
     }
 
     public async Task<Result<AuthenticationResponse>> Handle(SignUpWithPasswordCommand command, CancellationToken ct)
@@ -36,7 +40,13 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
         {
             return Result.Failure<AuthenticationResponse>("User with this username already exists");
         }
+        var usernameValidationResult = _validationService.ValidateUsername(command.Username);
 
+        if (usernameValidationResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(usernameValidationResult.Error);
+        }
+        
         var userId = Guid.NewGuid().ToString();
 
         var hasher = new PasswordHasher<string>();
