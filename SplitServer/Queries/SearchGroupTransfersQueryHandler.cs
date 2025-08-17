@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Queries.Models;
 using SplitServer.Repositories;
@@ -8,23 +9,26 @@ using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
-public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQuery, Result<GroupTransfersResponse>>
+public class SearchGroupTransfersQueryHandler : IRequestHandler<SearchGroupTransfersQuery, Result<GroupTransfersResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
 
-    public GetGroupTransfersQueryHandler(
+    public SearchGroupTransfersQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        IUserPreferencesRepository userPreferencesRepository)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _transfersRepository = transfersRepository;
+        _userPreferencesRepository = userPreferencesRepository;
     }
 
-    public async Task<Result<GroupTransfersResponse>> Handle(GetGroupTransfersQuery query, CancellationToken ct)
+    public async Task<Result<GroupTransfersResponse>> Handle(SearchGroupTransfersQuery query, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(query.UserId, ct);
 
@@ -32,6 +36,11 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
         {
             return Result.Failure<GroupTransfersResponse>($"User with id {query.UserId} was not found");
         }
+
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var userTimeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
 
         var groupMaybe = await _groupsRepository.GetById(query.GroupId, ct);
 
@@ -49,8 +58,13 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
 
         var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
 
-        var transfers = await _transfersRepository.GetByGroupId(
+        var transfers = await _transfersRepository.Search(
             query.GroupId,
+            query.SearchTerm,
+            query.After?.ToUtc(userTimeZoneId),
+            query.Before?.ToUtc(userTimeZoneId),
+            query.ReceiverIds,
+            query.SenderIds,
             query.PageSize,
             nextDetails?.Occurred,
             nextDetails?.Created,
@@ -63,7 +77,7 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
         };
     }
 
-    private static string? GetNext(GetGroupTransfersQuery query, List<Transfer> transfers)
+    private static string? GetNext(SearchGroupTransfersQuery query, List<Transfer> transfers)
     {
         return Next.Create(
             transfers,
