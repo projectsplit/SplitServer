@@ -51,7 +51,8 @@ public class GetUserInvitationsQueryHandler : IRequestHandler<GetUserInvitations
                     ReceiverId = x.ReceiverId,
                     GroupId = x.GroupId,
                     GroupName = groupNames[x.GroupId],
-                    GuestId = x.GuestId
+                    GuestId = x.GuestId,
+                    GuestName =x.GuestName
                 })
             .ToList();
 
