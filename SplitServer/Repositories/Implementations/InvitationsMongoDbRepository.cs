@@ -86,6 +86,17 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
     }
 
+    public async Task<Result> DeleteByGroupIdAndSenderId(string senderId, string groupId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.SenderId, senderId),
+            FilterBuilder.Eq(x => x.GroupId, groupId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
+    }
+
     public async Task<Result> DeleteByGuestId(string guestId, string groupId, CancellationToken ct)
     {
         var filter = FilterBuilder.And(
