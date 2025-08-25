@@ -19,6 +19,8 @@ public interface IInvitationsRepository : IRepositoryBase<Invitation>
 
     Task<Result> DeleteByGroupIdAndReceiverId(string receiverId, string groupId, CancellationToken ct);
 
+    Task<Result> DeleteByGroupIdAndSenderId(string senderId, string groupId, CancellationToken ct);
+
     Task<Result> DeleteByGuestId(string guestId, string groupId, CancellationToken ct);
 
     Task<long> CountByReceiverIdAndMinCreated(string receiverId, DateTime minCreatedDate, CancellationToken ct);

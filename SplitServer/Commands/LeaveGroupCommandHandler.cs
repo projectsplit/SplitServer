@@ -13,19 +13,22 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
     private readonly IUserActivityRepository _userActivityRepository;
+    private readonly IInvitationsRepository _invitationsRepository;
 
     public LeaveGroupCommandHandler(
         PermissionService permissionService,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
         ITransfersRepository transfersRepository,
-        IUserActivityRepository userActivityRepository)
+        IUserActivityRepository userActivityRepository,
+        IInvitationsRepository invitationsRepository)
     {
         _permissionService = permissionService;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
         _userActivityRepository = userActivityRepository;
+        _invitationsRepository = invitationsRepository;
     }
 
     public async Task<Result> Handle(LeaveGroupCommand command, CancellationToken ct)
@@ -61,6 +64,13 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
         if (groupUpdateResult.IsFailure)
         {
             return groupUpdateResult;
+        }
+
+        var deleteInvitationsResult = await _invitationsRepository.DeleteByGroupIdAndSenderId(memberToRemove.Id, command.GroupId, ct);
+
+        if (deleteInvitationsResult.IsFailure)
+        {
+            return deleteInvitationsResult;
         }
 
         return await _userActivityRepository.ClearRecentGroupForUser(command.UserId, command.GroupId, now, ct);

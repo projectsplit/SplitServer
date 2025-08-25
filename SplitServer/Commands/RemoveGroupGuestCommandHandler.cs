@@ -11,18 +11,21 @@ public class RemoveGroupGuestCommandHandler : IRequestHandler<RemoveGroupGuestCo
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IInvitationsRepository _invitationsRepository;
 
     public RemoveGroupGuestCommandHandler(
         PermissionService permissionService,
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        IInvitationsRepository invitationsRepository)
     {
         _permissionService = permissionService;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _invitationsRepository = invitationsRepository;
     }
 
     public async Task<Result> Handle(RemoveGroupGuestCommand command, CancellationToken ct)
@@ -57,6 +60,13 @@ public class RemoveGroupGuestCommandHandler : IRequestHandler<RemoveGroupGuestCo
             Updated = DateTime.UtcNow
         };
 
-        return await _groupsRepository.Update(editedGroup, ct);
+        var updateGroupResult = await _groupsRepository.Update(editedGroup, ct);
+
+        if (updateGroupResult.IsFailure)
+        {
+            return updateGroupResult;
+        }
+
+        return await _invitationsRepository.DeleteByGuestId(command.GuestId, group.Id, ct);
     }
 }
