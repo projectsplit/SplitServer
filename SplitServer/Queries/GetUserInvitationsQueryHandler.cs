@@ -39,21 +39,20 @@ public class GetUserInvitationsQueryHandler : IRequestHandler<GetUserInvitations
 
         var groups = await _groupsRepository.GetByIds(invitations.Select(x => x.GroupId).ToList(), ct);
 
-        var groupNames = groups.ToDictionary(x => x.Id, x => x.Name);
+        var groupsById = groups.ToDictionary(x => x.Id);
 
         var responseItems = invitations
-            .Select(
-                x => new InvitationResponseItem
-                {
-                    Id = x.Id,
-                    Created = x.Created,
-                    SenderId = x.SenderId,
-                    ReceiverId = x.ReceiverId,
-                    GroupId = x.GroupId,
-                    GroupName = groupNames[x.GroupId],
-                    GuestId = x.GuestId,
-                    GuestName =x.GuestName
-                })
+            .Select(x => new InvitationResponseItem
+            {
+                Id = x.Id,
+                Created = x.Created,
+                SenderId = x.SenderId,
+                ReceiverId = x.ReceiverId,
+                GroupId = x.GroupId,
+                GroupName = groupsById[x.GroupId].Name,
+                GuestId = x.GuestId,
+                GuestName = groupsById[x.GroupId].Guests.First(g => g.Id == x.GuestId).Name,
+            })
             .ToList();
 
         return new GetUserInvitationsResponse

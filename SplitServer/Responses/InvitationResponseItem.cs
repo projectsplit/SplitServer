@@ -10,5 +10,4 @@ public class InvitationResponseItem
     public required string GroupName { get; init; }
     public required string? GuestId { get; init; }
     public required string? GuestName { get; init; }
-
 }
