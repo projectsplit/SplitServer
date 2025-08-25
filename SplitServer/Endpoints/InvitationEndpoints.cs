@@ -30,6 +30,7 @@ public static class InvitationEndpoints
             ReceiverId = request.ReceiverId,
             GroupId = request.GroupId,
             GuestId = request.GuestId,
+            GuestName = request.GuestName
         };
 
         var result = await mediator.Send(command, ct);
