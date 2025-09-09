@@ -93,13 +93,6 @@ public class JoinWithCodeCommandHandler : IRequestHandler<JoinWithCodeCommand, R
             Updated = now
         };
 
-        var updateJoinCodeResult = await _joinCodesRepository.Update(updatedJoinCode, ct);
-
-        if (updateJoinCodeResult.IsFailure)
-        {
-            return updateJoinCodeResult;
-        }
-
-        return Result.Success();
+        return await _joinCodesRepository.Update(updatedJoinCode, ct);
     }
 }

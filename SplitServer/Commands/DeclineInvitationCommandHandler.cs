@@ -40,13 +40,6 @@ public class DeclineInvitationCommandHandler : IRequestHandler<DeclineInvitation
             return Result.Failure("You cannot decline this invitation");
         }
 
-        var deleteInvitationResult = await _invitationsRepository.Delete(command.InvitationId, ct);
-
-        if (deleteInvitationResult.IsFailure)
-        {
-            return deleteInvitationResult.ConvertFailure<Result>();
-        }
-
-        return Result.Success();
+        return await _invitationsRepository.Delete(command.InvitationId, ct);
     }
 }
