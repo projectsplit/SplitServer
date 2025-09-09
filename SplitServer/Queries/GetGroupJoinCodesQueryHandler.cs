@@ -54,9 +54,26 @@ public class GetGroupJoinCodesQueryHandler : IRequestHandler<GetGroupJoinCodesQu
             nextDetails?.Created,
             ct);
 
+        var joinCodeCreators = await _usersRepository.GetByIds(joinCodes.Select(x => x.CreatorId).ToList(), ct);
+
+        var joinCodeResponseItems = joinCodes
+            .Select(x => new JoinCodeResponseItem
+            {
+                Id = x.Id,
+                Created = x.Created,
+                Updated = x.Updated,
+                GroupId = x.GroupId,
+                CreatorId = x.CreatorId,
+                CreatorUsername = joinCodeCreators.FirstOrDefault(u => u.Id == x.CreatorId)?.Username ?? $"deleted-user-{x.CreatorId}",
+                TimesUsed = x.TimesUsed,
+                MaxUses = x.MaxUses,
+                Expires = x.Expires
+            })
+            .ToList();
+
         return new GetGroupJoinCodesResponse
         {
-            Codes = joinCodes,
+            Codes = joinCodeResponseItems,
             Next = GetNext(query.PageSize, joinCodes),
         };
     }
