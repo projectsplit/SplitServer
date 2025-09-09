@@ -82,13 +82,6 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
             Updated = now
         };
 
-        var updateGroupResult = await _groupsRepository.Update(updatedGroup, ct);
-
-        if (updateGroupResult.IsFailure)
-        {
-            return updateGroupResult.ConvertFailure<Result>();
-        }
-
-        return Result.Success();
+        return await _groupsRepository.Update(updatedGroup, ct);
     }
 }

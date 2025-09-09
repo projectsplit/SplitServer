@@ -47,20 +47,6 @@ public class RevokeJoinCodeCommandHandler : IRequestHandler<RevokeJoinCodeComman
             return Result.Failure($"Group with id {joinCode.GroupId} was not found");
         }
 
-        var group = groupMaybe.Value;
-
-        if (group.Members.Any(x => x.UserId == command.UserId))
-        {
-            return Result.Failure("You are already a group member");
-        }
-
-        var updateJoinCodeResult = await _joinCodesRepository.Delete(normalizedJoinCode, ct);
-
-        if (updateJoinCodeResult.IsFailure)
-        {
-            return updateJoinCodeResult;
-        }
-
-        return Result.Success();
+        return await _joinCodesRepository.Delete(normalizedJoinCode, ct);
     }
 }
