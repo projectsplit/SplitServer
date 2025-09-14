@@ -21,4 +21,5 @@ public class AuthSettings : ISettings
     public required string GoogleJsonWebKeySetEndpoint { get; init; }
     public required string GoogleIdTokenIssuer { get; init; }
     public required string ApiKey { get; init; }
+    public required bool AllowPasswordSignup { get; init; }
 }

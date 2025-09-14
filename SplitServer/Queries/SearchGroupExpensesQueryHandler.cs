@@ -73,8 +73,8 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
             nextDetails?.Created,
             ct);
 
-        
-        
+
+
         return new GroupExpensesResponse
         {
             Expenses = expenses.Select(x => new ExpenseResponseItem

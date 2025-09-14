@@ -164,4 +164,6 @@ public class AuthService
 
         return Result.Success();
     }
+
+    public bool AllowPasswordSignup => _authSettings.AllowPasswordSignup;
 }
