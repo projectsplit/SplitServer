@@ -3,6 +3,7 @@ using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
@@ -69,7 +70,7 @@ public class GetGroupQueryHandler : IRequestHandler<GetGroupQuery, Result<GetGro
                 {
                     Id = x.Id,
                     UserId = x.UserId,
-                    Name = usersById.GetValueOrDefault(x.UserId)?.Username ?? "deleted-user",
+                    Name = usersById.GetValueOrDefault(x.UserId)?.Username ?? DeletedUser.Username(x.UserId),
                     Joined = x.Joined
                 }).ToList(),
             Guests = await GetGuestResponseItems(

@@ -64,7 +64,7 @@ public class GetGroupJoinCodesQueryHandler : IRequestHandler<GetGroupJoinCodesQu
                 Updated = x.Updated,
                 GroupId = x.GroupId,
                 CreatorId = x.CreatorId,
-                CreatorUsername = joinCodeCreators.FirstOrDefault(u => u.Id == x.CreatorId)?.Username ?? $"deleted-user-{x.CreatorId}",
+                CreatorUsername = joinCodeCreators.FirstOrDefault(u => u.Id == x.CreatorId)?.Username ?? DeletedUser.Username(x.CreatorId),
                 TimesUsed = x.TimesUsed,
                 MaxUses = x.MaxUses,
                 Expires = x.Expires

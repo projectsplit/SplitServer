@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using SplitServer.Models;
 using SplitServer.Repositories;
@@ -34,19 +33,25 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
 
     public async Task<Result<AuthenticationResponse>> Handle(SignUpWithPasswordCommand command, CancellationToken ct)
     {
+        if (!_authService.AllowPasswordSignup)
+        {
+            return Result.Failure<AuthenticationResponse>("Password sign ups are not allowed");
+        }
+
         using var _ = _lockService.AcquireLock(command.Username);
 
         if (await _usersRepository.AnyWithUsername(command.Username, ct))
         {
             return Result.Failure<AuthenticationResponse>("User with this username already exists");
         }
+
         var usernameValidationResult = _validationService.ValidateUsername(command.Username);
 
         if (usernameValidationResult.IsFailure)
         {
             return Result.Failure<AuthenticationResponse>(usernameValidationResult.Error);
         }
-        
+
         var userId = Guid.NewGuid().ToString();
 
         var hasher = new PasswordHasher<string>();
