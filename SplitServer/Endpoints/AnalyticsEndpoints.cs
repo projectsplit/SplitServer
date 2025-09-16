@@ -15,6 +15,7 @@ public static class AnalyticsEndpoints
         string granularity,
         DateTime startDate,
         DateTime endDate,
+        string currency,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
@@ -22,6 +23,7 @@ public static class AnalyticsEndpoints
         var query = new GetSpendingsChartQuery
         {
             UserId = httpContext.GetUserId(),
+            Currency = currency,
             Granularity = granularity,
             StartDate = startDate,
             EndDate = endDate
