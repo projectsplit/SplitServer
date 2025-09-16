@@ -1,9 +1,11 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using NMoneys;
 using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services;
 using SplitServer.Services.CurrencyExchangeRate;
 
 namespace SplitServer.Queries;
@@ -14,17 +16,20 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
     private readonly IExpensesRepository _expensesRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly CurrencyExchangeRateService _currencyExchangeRateService;
+    private readonly ValidationService _validationService;
 
     public GetSpendingsChartQueryHandler(
         IUserPreferencesRepository userPreferencesRepository,
         IExpensesRepository expensesRepository,
         IGroupsRepository groupsRepository,
-        CurrencyExchangeRateService currencyExchangeRateService)
+        CurrencyExchangeRateService currencyExchangeRateService,
+        ValidationService validationService)
     {
         _userPreferencesRepository = userPreferencesRepository;
         _expensesRepository = expensesRepository;
         _groupsRepository = groupsRepository;
         _currencyExchangeRateService = currencyExchangeRateService;
+        _validationService = validationService;
     }
 
     public async Task<Result<GetSpendingsChartResponse>> Handle(GetSpendingsChartQuery query, CancellationToken ct)
@@ -40,9 +45,14 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
 
-        var userCurrency = userPreferencesMaybe.HasValue
-            ? userPreferencesMaybe.Value.Currency ?? DefaultValues.Currency
-            : DefaultValues.Currency;
+        var currencyResult = _validationService.ValidateCurrency(query.Currency);
+
+        if (currencyResult.IsFailure)
+        {
+            return currencyResult.ConvertFailure<GetSpendingsChartResponse>();
+        }
+
+        var currency = currencyResult.Value;
 
         var currencyRatesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
         if (currencyRatesResult.IsFailure)
@@ -78,7 +88,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                 .Sum(x =>
                 {
                     var shareAmount = x.Shares.FirstOrDefault(s => memberIds.Contains(s.MemberId))?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, userCurrency);
+                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, query.Currency);
                 });
 
             var paymentSum = expenses
@@ -86,7 +96,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                 .Sum(x =>
                 {
                     var paymentAmount = x.Payments.FirstOrDefault(s => memberIds.Contains(s.MemberId))?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, userCurrency);
+                    return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
                 });
 
             shareSumSoFar += shareSum;
@@ -94,10 +104,10 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
 
             var responseItem = new GetSpendingsChartResponseItem
             {
-                ShareAmount = shareSum,
-                AccumulativeShareAmount = shareSumSoFar,
-                PaymentAmount = paymentSum,
-                AccumulativePaymentAmount = paymentSumSoFar,
+                ShareAmount = Math.Round(shareSum, currency.SignificantDecimalDigits),
+                AccumulativeShareAmount = Math.Round(shareSumSoFar, currency.SignificantDecimalDigits),
+                PaymentAmount = Math.Round(paymentSum, currency.SignificantDecimalDigits),
+                AccumulativePaymentAmount = Math.Round(paymentSumSoFar, currency.SignificantDecimalDigits),
                 From = currentUserDate,
                 To = currentUserDate + timeIncrement - TimeSpan.FromTicks(1)
             };
