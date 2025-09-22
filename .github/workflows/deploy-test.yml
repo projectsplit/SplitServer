@@ -1,18 +1,18 @@
-name: Deploy Production
+name: Deploy Test
 
 on:
   workflow_dispatch:
 
-run-name: Deploy Production ${{ github.ref_name }}
+run-name: Deploy Test ${{ github.ref_name }}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      SERVER_APP_DIR: /home/user/buqs/production/api
-      APP_PORT: 5097
+      SERVER_APP_DIR: /home/user/buqs/test/api
+      APP_PORT: 5098
       DOCKER_REPO: ghcr.io/projectsplit/splitserver
-      CONTAINER_NAME: splitserver
+      CONTAINER_NAME: test-splitserver
 
     steps:
       - name: Checkout code
@@ -37,9 +37,9 @@ jobs:
               --name ${{ env.CONTAINER_NAME }} \
               --network host \
               -p ${{ env.APP_PORT }}:${{ env.APP_PORT }} \
-              -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
+              -v $(pwd)/appsettings.Test.json:/app/appsettings.Test.json \
               -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
-              -e ASPNETCORE_ENVIRONMENT=Production \
+              -e ASPNETCORE_ENVIRONMENT=Test \
               --restart always \
               ${{ env.DOCKER_REPO }}:$TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi
