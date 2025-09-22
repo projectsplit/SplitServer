@@ -43,4 +43,4 @@ msbuild.err
 msbuild.wrn
 
 SplitServer.sln.DotSettings.user
-SplitServer/appsettings.Development.json
+SplitServer/appsettings.*.json
