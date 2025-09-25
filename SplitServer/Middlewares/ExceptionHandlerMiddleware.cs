@@ -88,7 +88,12 @@ public class ExceptionHandlerMiddleware : IMiddleware
         var ip = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress?.ToString() ?? "";
 
         _diagnosticContext.Set("RequestId", context.TraceIdentifier);
-        _diagnosticContext.Set("UserId", context.GetNullableUserId() ?? "");
+
+        if (context.GetNullableUserId() is not null)
+        {
+            _diagnosticContext.Set("UserId", context.GetNullableUserId() ?? "");
+        }
+
         _diagnosticContext.Set("Protocol", context.Request.Protocol);
         _diagnosticContext.Set("Ip", ip);
     }
