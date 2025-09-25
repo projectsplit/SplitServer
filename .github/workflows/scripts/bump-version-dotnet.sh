@@ -1,3 +1,5 @@
+echo "set man-db/auto-update false" | debconf-communicate
+dpkg-reconfigure man-db
 sudo apt-get install xmlstarlet -y
 
 CSPROJ_FILE=$1
