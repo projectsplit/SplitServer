@@ -51,7 +51,7 @@ public class GetUserInvitationsQueryHandler : IRequestHandler<GetUserInvitations
                 GroupId = x.GroupId,
                 GroupName = groupsById[x.GroupId].Name,
                 GuestId = x.GuestId,
-                GuestName = groupsById[x.GroupId].Guests.First(g => g.Id == x.GuestId).Name,
+                GuestName = groupsById[x.GroupId].Guests.FirstOrDefault(g => g.Id == x.GuestId)?.Name,
             })
             .ToList();
 
