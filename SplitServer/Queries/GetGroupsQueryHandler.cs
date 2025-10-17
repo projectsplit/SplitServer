@@ -44,7 +44,16 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
                 x => new GetGroupsResponseItem
                 {
                     Id = x.Id,
-                    Name = x.Name
+                    Name = x.Name,
+                    OwnerId=x.OwnerId,
+                    Currency = x.Currency,
+                    IsArchived = x.IsArchived,
+                    Guests = x.Guests,
+                    Labels = x.Labels,
+                    Members = x.Members,
+                    Created = x.Created,
+                    Updated = x.Updated
+                    
                 }).ToList(),
             Next = GetNext(query, groups)
         };
