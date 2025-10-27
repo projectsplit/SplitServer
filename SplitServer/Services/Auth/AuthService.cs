@@ -96,12 +96,12 @@ public class AuthService
 
     public async Task<Result<GoogleUserInfo>> GetGoogleUserInfo(string code, CancellationToken ct)
     {
-        var client = _httpClientFactory.CreateClient();
+        using var client = _httpClientFactory.CreateClient();
         var request = new HttpRequestMessage(HttpMethod.Post, _authSettings.GoogleTokenEndpoint);
         request.Content = new FormUrlEncodedContent(
             new Dictionary<string, string>
             {
-                { "code", code },
+                { "code", Uri.UnescapeDataString(code) },
                 { "client_id", _authSettings.GoogleClientId },
                 { "client_secret", _authSettings.GoogleClientSecret },
                 { "redirect_uri", $"{_authSettings.ClientUrl}{_authSettings.ClientGoogleRedirectUri}" },
