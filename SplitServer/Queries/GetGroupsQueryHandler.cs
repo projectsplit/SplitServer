@@ -40,12 +40,12 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
 
         return new GetGroupsResponse
         {
-            Groups = groups.Select(
-                x => new GetGroupsResponseItem
+            Groups = groups
+                .Select(x => new GetGroupsResponseItem
                 {
                     Id = x.Id,
                     Name = x.Name,
-                    OwnerId=x.OwnerId,
+                    OwnerId = x.OwnerId,
                     Currency = x.Currency,
                     IsArchived = x.IsArchived,
                     Guests = x.Guests,
@@ -53,8 +53,8 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
                     Members = x.Members,
                     Created = x.Created,
                     Updated = x.Updated
-                    
-                }).ToList(),
+                })
+                .ToList(),
             Next = GetNext(query, groups)
         };
     }

@@ -1,6 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using NMoneys;
 using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
