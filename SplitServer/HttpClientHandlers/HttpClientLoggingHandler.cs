@@ -32,7 +32,7 @@ public class HttpClientLoggingHandler : DelegatingHandler
             Log
                 .ForContext(logEventEnrichers)
                 .Error(
-                    "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase} in {} ms",
+                    "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase} in {Elapsed} ms",
                     request.Method,
                     request.RequestUri,
                     (int)response.StatusCode,
@@ -43,7 +43,7 @@ public class HttpClientLoggingHandler : DelegatingHandler
         {
             Log
                 .Information(
-                    "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase} in {} ms",
+                    "HTTP CLIENT {Method} {Uri} {StatusCode} {ReasonPhrase} in {Elapsed} ms",
                     request.Method,
                     request.RequestUri,
                     (int)response.StatusCode,
