@@ -28,8 +28,7 @@ public class SearchByGroupNameQueryHandler : IRequestHandler<SearchByGroupNameQu
         }
 
         var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
-
-        // var groups = await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct);
+        
         var skip = Next.Parse<SkipNext>(query.Next)?.Skip ?? 0;
         var groups = query.Keyword is null || query.Keyword.Length < 2
             ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct)

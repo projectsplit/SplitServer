@@ -25,7 +25,7 @@ public static class GroupEndpoints
         app.MapGet("/{groupId}/details", GetGroupDetailsHandler);
         app.MapGet("/all-balances", GetAllGroupsBalancesHandler);
         app.MapPost("/{groupId}/remove-label", RemoveLabelHandler);
-        app.MapGet("/search-groups", SearchGroupsHandler);
+        app.MapGet("/search", SearchGroupsHandler);
     }
 
     private static async Task<IResult> CreateGroupHandler(
