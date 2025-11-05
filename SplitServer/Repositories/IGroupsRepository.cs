@@ -7,4 +7,7 @@ public interface IGroupsRepository : IRepositoryBase<Group>
     Task<List<Group>> GetByUserId(string userId, bool? isArchived, int pageSize, DateTime? maxCreated, CancellationToken ct);
 
     Task<List<Group>> GetAllByUserId(string userId, CancellationToken ct);
+    
+    Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct);
+    
 }

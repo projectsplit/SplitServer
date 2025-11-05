@@ -1,4 +1,5 @@
 ﻿using MongoDB.Driver;
+using MongoDB.Driver.Search;
 using SplitServer.Models;
 using SplitServer.Repositories.Mappers;
 
@@ -44,6 +45,28 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
 
         return await Collection
             .Find(filter)
+            .ToListAsync(ct);
+    }
+    
+    public async Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct)
+    {
+        var search = SearchBuilder.Autocomplete(
+            x => x.Name,
+            new SingleSearchQueryDefinition(keyword),
+            fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 });
+
+        var filter = FilterBuilder.And(
+            FilterBuilder.ElemMatch(x => x.Members, x => x.UserId == userId),
+            FilterBuilder.Eq(x => x.IsArchived, false));
+
+        var pipelineDefinition = PipelineBuilder
+            .Search(search)
+            .Match(filter)
+            .Skip(skip)
+            .Limit(pageSize);
+
+        return await Collection
+            .Aggregate(pipelineDefinition, cancellationToken: ct)
             .ToListAsync(ct);
     }
 }

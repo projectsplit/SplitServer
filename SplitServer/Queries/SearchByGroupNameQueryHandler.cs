@@ -7,12 +7,12 @@ using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
-public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetGroupsResponse>>
+public class SearchByGroupNameQueryHandler : IRequestHandler<SearchByGroupNameQuery, Result<GetGroupsResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
 
-    public GetGroupsQueryHandler(
+    public SearchByGroupNameQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository)
     {
@@ -20,23 +20,19 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
         _groupsRepository = groupsRepository;
     }
 
-    public async Task<Result<GetGroupsResponse>> Handle(GetGroupsQuery query, CancellationToken ct)
+    public async Task<Result<GetGroupsResponse>> Handle(SearchByGroupNameQuery query, CancellationToken ct)
     {
         if (query.PageSize < 1)
         {
             return Result.Failure<GetGroupsResponse>("Page size must be greater than 0");
         }
 
-        var userMaybe = await _usersRepository.GetById(query.UserId, ct);
-
-        if (userMaybe.HasNoValue)
-        {
-            return Result.Failure<GetGroupsResponse>($"User with id {query.UserId} was not found");
-        }
-
         var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
-
-        var groups = await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct);
+        
+        var skip = Next.Parse<SkipNext>(query.Next)?.Skip ?? 0;
+        var groups = query.Keyword is null || query.Keyword.Length < 2
+            ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct)
+            : await _groupsRepository.SearchByGroupName(query.UserId,query.Keyword, skip, query.PageSize, ct);
 
         var allMemberUserIds = groups.SelectMany(g => g.Members.Select(m => m.UserId)).Distinct().ToList();
         var users = await _usersRepository.GetByIds(allMemberUserIds, ct);
@@ -44,12 +40,12 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
         
         return new GetGroupsResponse
         {
-            Groups = groups
-                .Select(x => new GetGroupsResponseItem
+            Groups = groups.Select(
+                x => new GetGroupsResponseItem
                 {
                     Id = x.Id,
                     Name = x.Name,
-                    OwnerId = x.OwnerId,
+                    OwnerId=x.OwnerId,
                     Currency = x.Currency,
                     IsArchived = x.IsArchived,
                     Guests = x.Guests,
@@ -64,19 +60,19 @@ public class GetGroupsQueryHandler : IRequestHandler<GetGroupsQuery, Result<GetG
                         }).ToList(),
                     Created = x.Created,
                     Updated = x.Updated
-                })
-                .ToList(),
-            Next = GetNext(query, groups)
+                    
+                }).ToList(),
+            Next = Next.Create(groups, query.PageSize, _ => new SkipNext { Skip = skip + query.PageSize })
         };
-    }
-
-    private static string? GetNext(GetGroupsQuery query, List<Group> groups)
-    {
-        return Next.Create(groups, query.PageSize, x => new NextGroupPageDetails { Created = x.Last().Created });
     }
 }
 
 file class NextGroupPageDetails
 {
     public required DateTime Created { get; init; }
+}
+
+file class SkipNext
+{
+    public int Skip { get; init; }
 }

@@ -25,6 +25,7 @@ public static class GroupEndpoints
         app.MapGet("/{groupId}/details", GetGroupDetailsHandler);
         app.MapGet("/all-balances", GetAllGroupsBalancesHandler);
         app.MapPost("/{groupId}/remove-label", RemoveLabelHandler);
+        app.MapGet("/search", SearchGroupsHandler);
     }
 
     private static async Task<IResult> CreateGroupHandler(
@@ -298,5 +299,26 @@ public static class GroupEndpoints
         var result = await mediator.Send(command, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+    
+    private static async Task<IResult> SearchGroupsHandler(
+        string? keyword,
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchByGroupNameQuery
+        {
+            UserId = httpContext.GetUserId(),
+            PageSize = pageSize,
+            Keyword = keyword,
+            Next = next
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }
