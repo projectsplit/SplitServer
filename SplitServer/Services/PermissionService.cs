@@ -79,11 +79,16 @@ public class PermissionService
 
         var expense = expenseMaybe.Value;
 
-        var groupMaybe = await _groupsRepository.GetById(expense.GroupId, ct);
+        if (expense is not GroupExpense groupExpense)
+        {
+            return Result.Failure<(User user, Group group, Expense expense, string memberId)>($"Expense with id {expenseId} was not found");
+        }
+
+        var groupMaybe = await _groupsRepository.GetById(groupExpense.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Expense expense, string memberId)>($"Group with id {expense.GroupId} was not found");
+            return Result.Failure<(User user, Group group, Expense expense, string memberId)>($"Group with id {groupExpense.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -116,7 +121,8 @@ public class PermissionService
 
         if (transferMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Transfer with id {transferId} was not found");
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
+                $"Transfer with id {transferId} was not found");
         }
 
         var transfer = transferMaybe.Value;
@@ -125,7 +131,8 @@ public class PermissionService
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Group with id {transfer.GroupId} was not found");
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
+                $"Group with id {transfer.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;

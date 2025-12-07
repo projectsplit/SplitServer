@@ -81,7 +81,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
         };
     }
 
-    private static string? GetNext(GetGroupExpensesQuery query, List<Expense> expenses)
+    private static string? GetNext(GetGroupExpensesQuery query, List<GroupExpense> expenses)
     {
         return Next.Create(
             expenses,

@@ -14,14 +14,14 @@ public class GroupService
         _groupsRepository = groupsRepository;
     }
 
-    public static List<Debt> GetDebts(Group group, List<Expense> expenses, List<Transfer> transfers)
+    public static List<Debt> GetDebts(Group group, List<GroupExpense> expenses, List<Transfer> transfers)
     {
         var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
 
         return currencies.SelectMany(c => GetDebtsForCurrency(c, expenses, transfers)).ToList();
     }
 
-    public static Dictionary<string, Dictionary<string, decimal>> GetTotalSpent(Group group, List<Expense> expenses)
+    public static Dictionary<string, Dictionary<string, decimal>> GetTotalSpent(Group group, List<GroupExpense> expenses)
     {
         var totalSpentByMember = new Dictionary<string, Dictionary<string, decimal>>();
         var expensesByCurrency = expenses.GroupBy(x => x.Currency).ToList();
@@ -73,7 +73,7 @@ public class GroupService
         return totalSentByMember;
     }
 
-    private static List<Debt> GetDebtsForCurrency(string currency, List<Expense> expenses, List<Transfer> transfers)
+    private static List<Debt> GetDebtsForCurrency(string currency, List<GroupExpense> expenses, List<Transfer> transfers)
     {
         var balances = new Dictionary<string, decimal>();
 

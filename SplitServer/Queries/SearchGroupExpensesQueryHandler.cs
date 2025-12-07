@@ -73,8 +73,6 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
             nextDetails?.Created,
             ct);
 
-
-
         return new GroupExpensesResponse
         {
             Expenses = expenses.Select(x => new ExpenseResponseItem
@@ -97,7 +95,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
         };
     }
 
-    private static string? GetNext(SearchGroupExpensesQuery query, List<Expense> expenses)
+    private static string? GetNext(SearchGroupExpensesQuery query, List<GroupExpense> expenses)
     {
         return Next.Create(
             expenses,

@@ -89,7 +89,7 @@ public class ValidationService
         return parsedCurrency!;
     }
 
-    public Result ValidateExpense(Group group, List<Payment> payments, List<Share> shares, decimal amount, string currency)
+    public Result ValidateExpense(Group group, List<GroupPayment> payments, List<GroupShare> shares, decimal amount, string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 

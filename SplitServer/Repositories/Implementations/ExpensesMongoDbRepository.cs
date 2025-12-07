@@ -18,52 +18,68 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
     {
     }
 
-    public async Task<List<Expense>> GetByGroupId(
+    public async Task<List<GroupExpense>> GetByGroupId(
         string groupId,
         int pageSize,
         DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct)
     {
-        var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? FilterBuilder.Or(
-                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
-                FilterBuilder.And(
-                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    FilterBuilder.Lt(x => x.Created, maxCreated)))
-            : FilterBuilder.Empty;
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<GroupExpenseMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
             paginationFilter);
 
-        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        var documents = await Collection
+        var documents = await groupExpensesCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<Expense>> GetAllByGroupId(string groupId, CancellationToken ct)
+    public async Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        var documents = await Collection
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.Eq(x => x.GroupId, groupId);
+
+        var documents = await groupExpensesCollection
             .Find(filter)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        var result = await Collection
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.Eq(x => x.GroupId, groupId);
+
+        var result = await groupExpensesCollection
             .Aggregate()
             .Match(filter)
             .Unwind(x => x.Labels)
@@ -83,28 +99,42 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        var result = await Collection.DeleteManyAsync(filter, null, ct);
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.Eq(x => x.GroupId, groupId);
+
+        var result = await groupExpensesCollection.DeleteManyAsync(filter, null, ct);
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
     }
 
-    public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
+    public async Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
-        var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
-        var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        var filter = FilterBuilder.Or(sharesFilter, paymentsFilter);
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
-        var documents = await Collection
+        var sharesFilter = filterBuilder.In("Shares.MemberId", memberIds);
+        var paymentsFilter = filterBuilder.In("Payments.MemberId", memberIds);
+
+        var filter = filterBuilder.Or(sharesFilter, paymentsFilter);
+
+        var documents = await groupExpensesCollection
             .Find(filter)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<Expense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct)
+    public async Task<List<GroupExpense>> GetAllByMemberIds(
+        List<string> memberIds,
+        DateTime startDate,
+        DateTime endDate,
+        CancellationToken ct)
     {
         var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
         var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
@@ -121,30 +151,40 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             .SortBy(x => x.Occurred)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Or(
-                FilterBuilder.Eq("Shares.MemberId", memberId),
-                FilterBuilder.Eq("Payments.MemberId", memberId)));
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        return await Collection.Find(filter).AnyAsync(ct);
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.Or(
+                filterBuilder.Eq("Shares.MemberId", memberId),
+                filterBuilder.Eq("Payments.MemberId", memberId)));
+
+        return await groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
     public async Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.AnyEq(x => x.Labels, labelId));
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
 
-        return await Collection.Find(filter).AnyAsync(ct);
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.AnyEq(x => x.Labels, labelId));
+
+        return await groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
-    public async Task<List<Expense>> Search(
+    public async Task<List<GroupExpense>> Search(
         string groupId,
         string? searchTerm,
         DateTime? minTime,
@@ -157,40 +197,46 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         DateTime? maxCreated,
         CancellationToken ct)
     {
+        var groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
+
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<GroupExpenseMongoDbDocument>.Sort;
+
         var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? FilterBuilder.Or(
-                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
-                FilterBuilder.And(
-                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    FilterBuilder.Lt(x => x.Created, maxCreated)))
-            : FilterBuilder.Empty;
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
 
         var participantsFilter = !participantIds.IsNullOrEmpty()
-            ? FilterBuilder.In("Shares.MemberId", participantIds)
-            : FilterBuilder.Empty;
+            ? filterBuilder.In("Shares.MemberId", participantIds)
+            : filterBuilder.Empty;
 
         var payersFilter = !payerIds.IsNullOrEmpty()
-            ? FilterBuilder.In("Payments.MemberId", payerIds)
-            : FilterBuilder.Empty;
+            ? filterBuilder.In("Payments.MemberId", payerIds)
+            : filterBuilder.Empty;
 
         var labelsFilter = !labelIds.IsNullOrEmpty()
-            ? FilterBuilder.AnyIn(x => x.Labels, labelIds)
-            : FilterBuilder.Empty;
+            ? filterBuilder.AnyIn(x => x.Labels, labelIds)
+            : filterBuilder.Empty;
 
         var minTimeFilter = minTime is not null
-            ? FilterBuilder.Gte(x => x.Occurred, minTime)
-            : FilterBuilder.Empty;
+            ? filterBuilder.Gte(x => x.Occurred, minTime)
+            : filterBuilder.Empty;
 
         var maxTimeFilter = maxTime is not null
-            ? FilterBuilder.Lte(x => x.Occurred, maxTime)
-            : FilterBuilder.Empty;
+            ? filterBuilder.Lte(x => x.Occurred, maxTime)
+            : filterBuilder.Empty;
 
         var descriptionFilter = searchTerm is not null
-            ? FilterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
-            : FilterBuilder.Empty;
+            ? filterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : filterBuilder.Empty;
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
             participantsFilter,
             payersFilter,
             descriptionFilter,
@@ -199,14 +245,14 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             maxTimeFilter,
             paginationFilter);
 
-        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        var documents = await Collection
+        var documents = await groupExpensesCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 }
