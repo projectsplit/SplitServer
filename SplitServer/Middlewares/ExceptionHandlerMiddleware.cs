@@ -96,6 +96,7 @@ public class ExceptionHandlerMiddleware : IMiddleware
 
         _diagnosticContext.Set("Protocol", context.Request.Protocol);
         _diagnosticContext.Set("Ip", ip);
+        _diagnosticContext.Set("RequestAborted", context.RequestAborted.IsCancellationRequested);
     }
 
     private async Task SetDetailedDiagnosticContextProperties(HttpContext context)
