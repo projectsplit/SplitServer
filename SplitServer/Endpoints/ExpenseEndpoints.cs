@@ -16,6 +16,7 @@ public static class ExpenseEndpoints
         app.MapGet("/search", SearchExpensesHandler);
         app.MapGet("/labels", GetLabelsHandler);
         app.MapPost("/create", CreateExpenseHandler);
+        app.MapPost("/create-non-group", CreateNonGroupExpenseHandler);
         app.MapPost("/delete", DeleteExpenseHandler);
         app.MapPost("/edit", EditExpenseHandler);
     }
@@ -45,6 +46,29 @@ public static class ExpenseEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
+    private static async Task<IResult> CreateNonGroupExpenseHandler(
+           CreateNonGroupExpenseRequest request,
+           IMediator mediator,
+           HttpContext httpContext,
+           CancellationToken ct)
+    {
+        var command = new CreateNonGroupExpenseCommand
+        {
+            UserId = httpContext.GetUserId(),
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occurred = request.Occurred,
+            Payments = request.Payments,
+            Shares = request.Shares,
+            Labels = request.Labels,
+            Location = request.Location
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
     private static async Task<IResult> DeleteExpenseHandler(
         DeleteExpenseRequest request,
         IMediator mediator,

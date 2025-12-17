@@ -32,6 +32,7 @@ builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
+builder.Services.AddSingleton<NonGroupService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();

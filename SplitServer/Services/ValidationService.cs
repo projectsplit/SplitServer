@@ -160,6 +160,70 @@ public class ValidationService
         return Result.Success();
     }
 
+    public Result ValidateNonGroupExpense(List<Payment> payments, List<Share> shares, decimal amount, string currency)
+    {
+        var amountValidationResult = ValidateAmount(amount, currency);
+
+        if (amountValidationResult.IsFailure)
+        {
+            return amountValidationResult;
+        }
+
+        foreach (var payment in payments)
+        {
+            var paymentValidationResult = ValidateAmount(payment.Amount, currency);
+
+            if (paymentValidationResult.IsFailure)
+            {
+                return paymentValidationResult;
+            }
+        }
+
+        foreach (var share in shares)
+        {
+            var shareValidationResult = ValidateAmount(share.Amount, currency);
+
+            if (shareValidationResult.IsFailure)
+            {
+                return shareValidationResult;
+            }
+        }
+        var payers = payments.Select(x => x.UserId).ToList();
+        var participants = shares.Select(x => x.UserId).ToList();
+
+        if (payers.GroupBy(x => x).Any(g => g.Count() > 1) || participants.GroupBy(x => x).Any(g => g.Count() > 1))
+        {
+            return Result.Failure("Duplicate members not allowed");
+        }
+
+
+
+        if (payments.Any(x => x.Amount <= 0))
+        {
+            return Result.Failure("Each payment amount must be greater than 0");
+        }
+
+        if (shares.Any(x => x.Amount <= 0))
+        {
+            return Result.Failure("Each share amount must be greater than 0");
+        }
+
+        var totalShareAmount = shares.Sum(x => x.Amount);
+        var totalPaymentAmount = payments.Sum(x => x.Amount);
+
+        if (totalShareAmount != amount)
+        {
+            return Result.Failure("Share amount sum must be equal to expense amount");
+        }
+
+        if (totalPaymentAmount != amount)
+        {
+            return Result.Failure("Payment amount sum must be equal to expense amount");
+        }
+
+        return Result.Success();
+    }
+
     public Result ValidateTransfer(Group group, string senderId, string receiverId, decimal amount, string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);

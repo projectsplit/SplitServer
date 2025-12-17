@@ -68,7 +68,8 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             Email = null,
             HashedPassword = hashedPassword,
             Username = command.Username,
-            GoogleId = null
+            GoogleId = null,
+            Labels = []
         };
 
         var writeUserResult = await _usersRepository.Insert(newUser, ct);
