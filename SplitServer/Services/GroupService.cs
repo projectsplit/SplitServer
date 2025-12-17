@@ -127,10 +127,9 @@ public class GroupService
     public static List<Label> CreateLabelsWithIds(List<LabelRequestItem> labelItems, List<Label> groupLabels)
     {
         return labelItems
-            .Select(
-                x =>
-                    groupLabels.SingleOrDefault(xx => xx.Text == x.Text) ??
-                    new Label { Id = Guid.NewGuid().ToString(), Text = x.Text, Color = x.Color })
+            .Select(x =>
+                groupLabels.SingleOrDefault(xx => xx.Text == x.Text) ??
+                new Label { Id = Guid.NewGuid().ToString(), Text = x.Text, Color = x.Color })
             .ToList();
     }
 

@@ -11,28 +11,26 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
 {
     private readonly IExpensesRepository _expensesRepository;
     private readonly ValidationService _validationService;
-    private readonly NonGroupService _nonGroupService;
-    private readonly IUsersRepository _usersRepository;
+    private readonly UserLabelService _userLabelService;
 
     public CreateNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        NonGroupService nonGroupService,
-        IUsersRepository usersRepository)
+        UserLabelService userLabelService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
-        _nonGroupService = nonGroupService;
-
-        _usersRepository = usersRepository;
+        _userLabelService = userLabelService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateNonGroupExpenseCommand command, CancellationToken ct)
     {
-
-        var expenseValidationResult =
-            _validationService.ValidateNonGroupExpense(command.Payments, command.Shares, command.Amount, command.Currency);
+        var expenseValidationResult = _validationService.ValidateNonGroupExpense(
+            command.Payments,
+            command.Shares,
+            command.Amount,
+            command.Currency);
 
         if (expenseValidationResult.IsFailure)
         {
@@ -40,16 +38,8 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         }
 
         var now = DateTime.UtcNow;
-        var user = await _usersRepository.GetById(command.UserId, ct);
-        if (user.HasNoValue)
-        {
-            return Result.Failure<CreateExpenseResponse>("User not found");
-        }
-        var userResult = user.Value;
 
-        var labelsWithIds = NonGroupService.CreateLabelsWithIds(command.Labels, userResult.Labels);
-
-        var addLabelsToGroupResult = await _nonGroupService.AddLabelsToUserIfMissing(userResult, labelsWithIds, now, ct);
+        var addLabelsToGroupResult = await _userLabelService.AddUserLabelsIfMissing(command.UserId, command.Labels, now, ct);
 
         if (addLabelsToGroupResult.IsFailure)
         {
@@ -70,7 +60,7 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             Currency = command.Currency,
             Payments = command.Payments,
             Shares = command.Shares,
-            Labels = labelsWithIds.Select(x => x.Id).ToList(),
+            Labels = command.Labels.Select(x => x.Text).ToList(),
             Location = command.Location
         };
 

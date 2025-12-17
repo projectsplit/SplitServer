@@ -1,6 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using NMoneys;
 using SplitServer.Models;
+
 // ReSharper disable ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
 
 namespace SplitServer.Services;
@@ -188,6 +189,7 @@ public class ValidationService
                 return shareValidationResult;
             }
         }
+
         var payers = payments.Select(x => x.UserId).ToList();
         var participants = shares.Select(x => x.UserId).ToList();
 
@@ -195,8 +197,6 @@ public class ValidationService
         {
             return Result.Failure("Duplicate members not allowed");
         }
-
-
 
         if (payments.Any(x => x.Amount <= 0))
         {

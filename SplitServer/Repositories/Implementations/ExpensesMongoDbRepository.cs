@@ -84,7 +84,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             .Match(filter)
             .Unwind(x => x.Labels)
             .Group(
-                x => x[nameof(Expense.Labels)],
+                x => x[nameof(GroupExpense.Labels)],
                 g => new
                 {
                     LabelId = g.Key.ToString()!,
