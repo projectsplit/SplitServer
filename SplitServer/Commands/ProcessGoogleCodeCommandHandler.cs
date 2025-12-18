@@ -107,7 +107,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
             Email = googleUserInfo.Email,
             HashedPassword = null,
             Username = generatedUsername,
-            GoogleId = googleUserInfo.Id
+            GoogleId = googleUserInfo.Id,
         };
 
         var writeResult = await _usersRepository.Insert(newUser, ct);

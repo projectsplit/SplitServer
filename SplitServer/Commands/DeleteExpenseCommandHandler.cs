@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
@@ -38,11 +39,16 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
 
         var expense = expenseMaybe.Value;
 
-        var groupMaybe = await _groupsRepository.GetById(expense.GroupId, ct);
+        if (expense is not GroupExpense groupExpense)
+        {
+            return Result.Failure($"Expense with id {command.ExpenseId} was not found");
+        }
+
+        var groupMaybe = await _groupsRepository.GetById(groupExpense.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure($"Group with id {expense.GroupId} was not found");
+            return Result.Failure($"Group with id {groupExpense.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;

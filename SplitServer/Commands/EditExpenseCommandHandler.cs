@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
 
@@ -35,6 +36,11 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
 
         var (_, group, expense, _) = permissionResult.Value;
 
+        if (expense is not GroupExpense groupExpense)
+        {
+            return Result.Failure($"Expense with id {expense.Id} was not found");
+        }
+
         var expenseValidationResult =
             _validationService.ValidateExpense(group, command.Payments, command.Shares, command.Amount, command.Currency);
 
@@ -54,7 +60,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             return addLabelsToGroupResult;
         }
 
-        var editedExpense = expense with
+        var editedExpense = groupExpense with
         {
             Updated = now,
             Amount = command.Amount,

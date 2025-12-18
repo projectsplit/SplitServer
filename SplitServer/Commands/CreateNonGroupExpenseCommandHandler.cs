@@ -7,38 +7,30 @@ using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand, Result<CreateExpenseResponse>>
+public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGroupExpenseCommand, Result<CreateExpenseResponse>>
 {
     private readonly IExpensesRepository _expensesRepository;
-    private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
-    private readonly GroupService _groupService;
+    private readonly UserLabelService _userLabelService;
 
-    public CreateExpenseCommandHandler(
+    public CreateNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        GroupService groupService)
+        UserLabelService userLabelService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
-        _groupService = groupService;
-        _permissionService = permissionService;
+        _userLabelService = userLabelService;
     }
 
-    public async Task<Result<CreateExpenseResponse>> Handle(CreateExpenseCommand command, CancellationToken ct)
+    public async Task<Result<CreateExpenseResponse>> Handle(CreateNonGroupExpenseCommand command, CancellationToken ct)
     {
-        var permissionResult = await _permissionService.VerifyGroupAction(command.UserId, command.GroupId, ct);
-
-        if (permissionResult.IsFailure)
-        {
-            return permissionResult.ConvertFailure<CreateExpenseResponse>();
-        }
-
-        var (_, group, memberId) = permissionResult.Value;
-
-        var expenseValidationResult =
-            _validationService.ValidateExpense(group, command.Payments, command.Shares, command.Amount, command.Currency);
+        var expenseValidationResult = _validationService.ValidateNonGroupExpense(
+            command.Payments,
+            command.Shares,
+            command.Amount,
+            command.Currency);
 
         if (expenseValidationResult.IsFailure)
         {
@@ -47,9 +39,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
 
         var now = DateTime.UtcNow;
 
-        var labelsWithIds = GroupService.CreateLabelsWithIds(command.Labels, group.Labels);
-
-        var addLabelsToGroupResult = await _groupService.AddLabelsToGroupIfMissing(group, labelsWithIds, now, ct);
+        var addLabelsToGroupResult = await _userLabelService.AddUserLabelsIfMissing(command.UserId, command.Labels, now, ct);
 
         if (addLabelsToGroupResult.IsFailure)
         {
@@ -58,24 +48,23 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
 
         var expenseId = Guid.NewGuid().ToString();
 
-        var newExpense = new GroupExpense
+        var newNonGroupExpense = new NonGroupExpense
         {
             Id = expenseId,
             Created = now,
             Updated = now,
-            GroupId = command.GroupId,
-            CreatorId = memberId,
+            CreatorId = command.UserId,
             Amount = command.Amount,
             Occurred = command.Occurred ?? now,
             Description = command.Description,
             Currency = command.Currency,
             Payments = command.Payments,
             Shares = command.Shares,
-            Labels = labelsWithIds.Select(x => x.Id).ToList(),
+            Labels = command.Labels.Select(x => x.Text).ToList(),
             Location = command.Location
         };
 
-        var writeResult = await _expensesRepository.Insert(newExpense, ct);
+        var writeResult = await _expensesRepository.Insert(newNonGroupExpense, ct);
 
         if (writeResult.IsFailure)
         {
