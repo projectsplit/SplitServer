@@ -28,11 +28,17 @@ jobs:
           script: |
             TAG=${{ github.ref_name }}
             echo $TAG
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            DOCKER_TAG=$(echo "$TAG" | tr '/' '-')
+            echo $DOCKER_TAG
             cd ${{ env.SERVER_APP_DIR }}
             docker stop ${{ env.CONTAINER_NAME }} || true
             docker rm ${{ env.CONTAINER_NAME }} || true
-            docker pull ${{ env.DOCKER_REPO }}:$TAG
+
+            rm -rf src_temp || true
+            git clone -b $TAG --depth 1 https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git src_temp
+            docker build -t ${{ env.DOCKER_REPO }}:$DOCKER_TAG src_temp
+            rm -rf src_temp
+
             docker run -d \
               --name ${{ env.CONTAINER_NAME }} \
               --network host \
@@ -41,5 +47,5 @@ jobs:
               -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
               -e ASPNETCORE_ENVIRONMENT=Test \
               --restart always \
-              ${{ env.DOCKER_REPO }}:$TAG
+              ${{ env.DOCKER_REPO }}:$DOCKER_TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi
