@@ -9,32 +9,32 @@ using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
-public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpensesQuery, Result<GroupExpensesResponse>>
+public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroupExpensesQuery, Result<NonGroupExpensesResponse>>
 {
     private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
+    private readonly IUserLabelsRepository _userLabelsRepository;
 
-    public SearchGroupExpensesQueryHandler(
+    public SearchNonGroupExpensesQueryHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
-        IUserPreferencesRepository userPreferencesRepository)
+        IUserPreferencesRepository userPreferencesRepository,
+        IUserLabelsRepository userLabelsRepository)
     {
         _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
         _userPreferencesRepository = userPreferencesRepository;
+        _userLabelsRepository = userLabelsRepository;
     }
 
-    public async Task<Result<GroupExpensesResponse>> Handle(SearchGroupExpensesQuery query, CancellationToken ct)
+    public async Task<Result<NonGroupExpensesResponse>> Handle(SearchNonGroupExpensesQuery query, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(query.UserId, ct);
 
         if (userMaybe.HasNoValue)
         {
-            return Result.Failure<GroupExpensesResponse>($"User with id {query.UserId} was not found");
+            return Result.Failure<NonGroupExpensesResponse>($"User with id {query.UserId} was not found");
         }
 
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
@@ -42,46 +42,31 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
 
-        var groupMaybe = await _groupsRepository.GetById(query.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
-        {
-            return Result.Failure<GroupExpensesResponse>($"Group with id {query.GroupId} was not found");
-        }
-
-        var group = groupMaybe.Value;
-
-        if (group.Members.All(x => x.UserId != query.UserId))
-        {
-            return Result.Failure<GroupExpensesResponse>("User must be a group member");
-        }
-
-        var groupLabels = group.Labels.ToDictionary(x => x.Id);
-
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var expenses = await _expensesRepository.Search(
-            query.GroupId,
+        var expenses = await _expensesRepository.SearchNonGroup(
+            query.UserId,
             query.SearchTerm,
             query.After?.ToUtc(userTimeZoneId),
             query.Before?.ToUtc(userTimeZoneId),
             query.ParticipantIds,
             query.PayerIds,
-            query.LabelIds,
+            query.Labels,
             query.PageSize,
             nextDetails?.Occurred,
             nextDetails?.Created,
             ct);
 
-        return new GroupExpensesResponse
+        var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
+
+        return new NonGroupExpensesResponse
         {
             Expenses = expenses
-                .Select(x => new GroupExpenseResponseItem
+                .Select(x => new NonGroupExpenseResponseItem
                 {
                     Id = x.Id,
                     Created = x.Created,
                     Updated = x.Updated,
-                    GroupId = x.GroupId,
                     CreatorId = x.CreatorId,
                     Amount = x.Amount,
                     Occurred = x.Occurred,
@@ -89,7 +74,19 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                     Currency = x.Currency,
                     Payments = x.Payments,
                     Shares = x.Shares,
-                    Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
+                    Labels = x.Labels
+                        .Select(text =>
+                        {
+                            var userLabel = userLabels.FirstOrDefault(l => l.Text == text);
+
+                            return new Label
+                            {
+                                Id = text,
+                                Text = userLabel?.Text ?? text,
+                                Color = userLabel?.Color ?? ""
+                            };
+                        })
+                        .ToList(),
                     Location = x.Location,
                 })
                 .ToList(),
@@ -97,7 +94,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
         };
     }
 
-    private static string? GetNext(SearchGroupExpensesQuery query, List<GroupExpense> expenses)
+    private static string? GetNext(SearchNonGroupExpensesQuery query, List<NonGroupExpense> expenses)
     {
         return Next.Create(
             expenses,

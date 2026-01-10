@@ -33,4 +33,24 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct);
+
+    Task<List<NonGroupExpense>> GetNonGroupByUserId(
+        string userId,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
+
+    Task<List<NonGroupExpense>> SearchNonGroup(
+        string userId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? participantIds,
+        string[]? payerIds,
+        string[]? labelIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
 }

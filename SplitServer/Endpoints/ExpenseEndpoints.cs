@@ -13,7 +13,7 @@ public static class ExpenseEndpoints
     public static void MapExpenseEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/", GetGroupExpensesHandler);
-        app.MapGet("/search", SearchExpensesHandler);
+        app.MapGet("/non-group", GetNonGroupExpensesHandler);
         app.MapGet("/labels", GetLabelsHandler);
         app.MapPost("/create", CreateExpenseHandler);
         app.MapPost("/create-non-group", CreateNonGroupExpenseHandler);
@@ -47,10 +47,10 @@ public static class ExpenseEndpoints
     }
 
     private static async Task<IResult> CreateNonGroupExpenseHandler(
-           CreateNonGroupExpenseRequest request,
-           IMediator mediator,
-           HttpContext httpContext,
-           CancellationToken ct)
+        CreateNonGroupExpenseRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
     {
         var command = new CreateNonGroupExpenseCommand
         {
@@ -69,6 +69,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
+
     private static async Task<IResult> DeleteExpenseHandler(
         DeleteExpenseRequest request,
         IMediator mediator,
@@ -134,33 +135,45 @@ public static class ExpenseEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
-    private static async Task<IResult> SearchExpensesHandler(
-        string groupId,
+    private static async Task<IResult> GetNonGroupExpensesHandler(
+        HttpContext httpContext,
+        IMediator mediator,
+        int pageSize,
+        string? next,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
-        string[]? labelIds,
+        string[]? labels,
         string[]? participantIds,
         string[]? payerIds,
-        int pageSize,
-        string? next,
-        IMediator mediator,
-        HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = new SearchGroupExpensesQuery
-        {
-            UserId = httpContext.GetUserId(),
-            GroupId = groupId,
-            Before = before,
-            After = after,
-            SearchTerm = searchTerm,
-            LabelIds = labelIds,
-            ParticipantIds = participantIds,
-            PayerIds = payerIds,
-            PageSize = pageSize,
-            Next = next,
-        };
+        var hasAnySearchParams = before is not null ||
+                                 after is not null ||
+                                 searchTerm is not null ||
+                                 !labels.IsNullOrEmpty() ||
+                                 !participantIds.IsNullOrEmpty() ||
+                                 !payerIds.IsNullOrEmpty();
+
+        IRequest<CSharpFunctionalExtensions.Result<NonGroupExpensesResponse>> query = hasAnySearchParams
+            ? new SearchNonGroupExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                Before = before,
+                After = after,
+                SearchTerm = searchTerm,
+                Labels = labels,
+                ParticipantIds = participantIds,
+                PayerIds = payerIds,
+                PageSize = pageSize,
+                Next = next,
+            }
+            : new GetNonGroupExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                PageSize = pageSize,
+                Next = next
+            };
 
         var result = await mediator.Send(query, ct);
 

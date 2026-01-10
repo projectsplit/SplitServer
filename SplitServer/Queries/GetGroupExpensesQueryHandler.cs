@@ -61,7 +61,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
         return new GroupExpensesResponse
         {
             Expenses = expenses.Select(
-                x => new ExpenseResponseItem
+                x => new GroupExpenseResponseItem
                 {
                     Id = x.Id,
                     Created = x.Created,

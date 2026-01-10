@@ -10,12 +10,20 @@ namespace SplitServer.Repositories.Implementations;
 
 public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseMongoDbDocument>, IExpensesRepository
 {
+    private readonly IMongoCollection<GroupExpenseMongoDbDocument> _groupExpensesCollection;
+    private readonly IMongoCollection<NonGroupExpenseMongoDbDocument> _nonGroupExpensesCollection;
+
     public ExpensesMongoDbRepository(IMongoConnection mongoConnection) :
         base(
             mongoConnection,
             "Expenses",
             new ExpenseMapper())
     {
+        _groupExpensesCollection = Collection.Database
+            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
+
+        _nonGroupExpensesCollection = Collection.Database
+            .GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
     }
 
     public async Task<List<GroupExpense>> GetByGroupId(
@@ -25,9 +33,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         DateTime? maxCreated,
         CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
         var sortBuilder = Builders<GroupExpenseMongoDbDocument>.Sort;
 
@@ -45,7 +50,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        var documents = await groupExpensesCollection
+        var documents = await _groupExpensesCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
@@ -72,14 +77,11 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var filter = filterBuilder.Eq(x => x.GroupId, groupId);
 
-        var result = await groupExpensesCollection
+        var result = await _groupExpensesCollection
             .Aggregate()
             .Match(filter)
             .Unwind(x => x.Labels)
@@ -99,23 +101,17 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var filter = filterBuilder.Eq(x => x.GroupId, groupId);
 
-        var result = await groupExpensesCollection.DeleteManyAsync(filter, null, ct);
+        var result = await _groupExpensesCollection.DeleteManyAsync(filter, null, ct);
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
     }
 
     public async Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var sharesFilter = filterBuilder.In("Shares.MemberId", memberIds);
@@ -123,7 +119,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var filter = filterBuilder.Or(sharesFilter, paymentsFilter);
 
-        var documents = await groupExpensesCollection
+        var documents = await _groupExpensesCollection
             .Find(filter)
             .ToListAsync(ct);
 
@@ -156,9 +152,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
     public async Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var filter = filterBuilder.And(
@@ -167,21 +160,18 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
                 filterBuilder.Eq("Shares.MemberId", memberId),
                 filterBuilder.Eq("Payments.MemberId", memberId)));
 
-        return await groupExpensesCollection.Find(filter).AnyAsync(ct);
+        return await _groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
     public async Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var filter = filterBuilder.And(
             filterBuilder.Eq(x => x.GroupId, groupId),
             filterBuilder.AnyEq(x => x.Labels, labelId));
 
-        return await groupExpensesCollection.Find(filter).AnyAsync(ct);
+        return await _groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
     public async Task<List<GroupExpense>> Search(
@@ -197,9 +187,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         DateTime? maxCreated,
         CancellationToken ct)
     {
-        var groupExpensesCollection = Collection.Database
-            .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
         var sortBuilder = Builders<GroupExpenseMongoDbDocument>.Sort;
 
@@ -247,12 +234,122 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        var documents = await groupExpensesCollection
+        var documents = await _groupExpensesCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
 
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<NonGroupExpense>> GetNonGroupByUserId(
+        string userId,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupExpenseMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var userFilter = filterBuilder.Or(
+            filterBuilder.In("Shares.UserId", userId),
+            filterBuilder.In("Payments.UserId", userId));
+
+        var filter = filterBuilder.And(
+            userFilter,
+            paginationFilter);
+
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await _nonGroupExpensesCollection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<NonGroupExpense>> SearchNonGroup(
+        string userId,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? participantIds,
+        string[]? payerIds,
+        string[]? labels,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupExpenseMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var participantsFilter = !participantIds.IsNullOrEmpty()
+            ? filterBuilder.In("Shares.UserId", participantIds)
+            : filterBuilder.Empty;
+
+        var payersFilter = !payerIds.IsNullOrEmpty()
+            ? filterBuilder.In("Payments.UserId", payerIds)
+            : filterBuilder.Empty;
+
+        var labelsFilter = !labels.IsNullOrEmpty()
+            ? filterBuilder.AnyIn(x => x.Labels, labels)
+            : filterBuilder.Empty;
+
+        var minTimeFilter = minTime is not null
+            ? filterBuilder.Gte(x => x.Occurred, minTime)
+            : filterBuilder.Empty;
+
+        var maxTimeFilter = maxTime is not null
+            ? filterBuilder.Lte(x => x.Occurred, maxTime)
+            : filterBuilder.Empty;
+
+        var descriptionFilter = searchTerm is not null
+            ? filterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : filterBuilder.Empty;
+
+        var userFilter = filterBuilder.Or(
+            filterBuilder.In("Shares.UserId", userId),
+            filterBuilder.In("Payments.UserId", userId));
+
+        var filter = filterBuilder.And(
+            userFilter,
+            participantsFilter,
+            payersFilter,
+            descriptionFilter,
+            labelsFilter,
+            minTimeFilter,
+            maxTimeFilter,
+            paginationFilter);
+
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await _nonGroupExpensesCollection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
 }
