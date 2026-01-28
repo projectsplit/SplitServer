@@ -41,7 +41,11 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
             nextDetails?.Occurred,
             nextDetails?.Created,
             ct);
-
+        
+        var uniqueUserIds = nonGroupExpenses.SelectMany(e => e.Payments.Select(p => p.UserId).Concat(e.Shares.Select(s => s.UserId))).ToHashSet();
+        var users = await _usersRepository.GetByIds(uniqueUserIds.ToList(), ct);
+        var usersById = users.ToDictionary(u => u.Id);
+        
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
 
         return new NonGroupExpensesResponse
@@ -57,8 +61,20 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
-                    Payments = x.Payments,
-                    Shares = x.Shares,
+                    Payments = x.Payments.Select(
+                        p => new GetNonGroupPaymentItem
+                    {
+                        Amount = p.Amount,
+                        UserId = p.UserId,
+                        UserName = usersById.GetValueOrDefault(p.UserId)?.Username ?? DeletedUser.Username(p.UserId)
+                    }).ToList(),
+                    Shares = x.Shares.Select(
+                        s => new GetNonGroupShareItem
+                    {
+                        Amount = s.Amount,
+                        UserId = s.UserId,
+                        UserName = usersById.GetValueOrDefault(s.UserId)?.Username ?? DeletedUser.Username(s.UserId)
+                    }).ToList(),
                     Labels = x.Labels
                         .Select(text =>
                         {

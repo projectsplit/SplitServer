@@ -262,8 +262,8 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             : filterBuilder.Empty;
 
         var userFilter = filterBuilder.Or(
-            filterBuilder.In("Shares.UserId", userId),
-            filterBuilder.In("Payments.UserId", userId));
+            filterBuilder.ElemMatch(x => x.Shares, share => share.UserId == userId),
+            filterBuilder.ElemMatch(x => x.Payments, payment => payment.UserId == userId));
 
         var filter = filterBuilder.And(
             userFilter,

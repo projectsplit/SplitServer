@@ -12,8 +12,8 @@ public record NonGroupExpenseResponseItem
     public required DateTime Occurred { get; init; }
     public required string Description { get; init; }
     public required string Currency { get; init; }
-    public required List<Payment> Payments { get; init; }
-    public required List<Share> Shares { get; init; }
+    public required List<GetNonGroupPaymentItem> Payments { get; init; }
+    public required List<GetNonGroupShareItem> Shares { get; init; }
     public required List<Label> Labels { get; init; }
     public required Location? Location { get; init; }
 }
