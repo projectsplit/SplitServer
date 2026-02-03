@@ -352,4 +352,26 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
+
+    public async Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupExpenseMongoDbDocument>.Sort;
+
+        var filter = filterBuilder.Or(
+            filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId),
+            filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId));
+
+        var sort = sortBuilder.Descending(x => x.Created);
+
+        var documents = await _nonGroupExpensesCollection
+            .Find(filter)
+            .Sort(sort)
+            .ToListAsync(ct);
+
+        var payerIds = documents.SelectMany(x => x.Payments.Select(p => p.UserId));
+        var participantIds = documents.SelectMany(x => x.Shares.Select(s => s.UserId));
+
+        return payerIds.Concat(participantIds).Where(x => x != userId).ToList();
+    }
 }

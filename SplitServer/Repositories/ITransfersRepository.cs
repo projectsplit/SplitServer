@@ -26,4 +26,6 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
         DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct);
+
+    Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct);
 }

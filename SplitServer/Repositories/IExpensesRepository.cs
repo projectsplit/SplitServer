@@ -53,4 +53,6 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct);
+
+    Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct);
 }

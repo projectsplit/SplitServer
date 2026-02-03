@@ -117,7 +117,7 @@ public static class InvitationEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = new SearchUserToInviteQuery
+        var query = new SearchUsersToInviteQuery
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId,

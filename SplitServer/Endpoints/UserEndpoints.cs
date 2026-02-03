@@ -17,6 +17,9 @@ public static class UserEndpoints
         app.MapPut("/preferences/currency", SetCurrencyHandler);
         app.MapGet("/username/{username}", GetUsernameStatusHandler);
         app.MapPut("/username", EditUsernameHandler);
+        app.MapGet("/search-non-group-expense-users", SearchNonGroupExpenseUsersHandler);
+        app.MapGet("/search-non-group-transfer-users", SearchNonGroupTransferUsersHandler);
+        app.MapGet("/search-all-users", SearchAllUsersHandler);
     }
 
     private static async Task<IResult> GetAuthenticatedUserHandler(
@@ -132,6 +135,59 @@ public static class UserEndpoints
         };
 
         var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchNonGroupExpenseUsersHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchNonGroupExpenseUsersQuery
+        {
+            UserId = httpContext.GetUserId(),
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchNonGroupTransferUsersHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchNonGroupTransferUsersQuery
+        {
+            UserId = httpContext.GetUserId(),
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchAllUsersHandler(
+        string groupId,
+        string? keyword,
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchUsersToInviteQuery
+        {
+            UserId = httpContext.GetUserId(),
+            GroupId = groupId,
+            PageSize = pageSize,
+            Keyword = keyword,
+            Next = next
+        };
+
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }

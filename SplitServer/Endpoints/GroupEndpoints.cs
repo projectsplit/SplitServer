@@ -300,7 +300,7 @@ public static class GroupEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
+
     private static async Task<IResult> SearchGroupsHandler(
         string? keyword,
         int pageSize,

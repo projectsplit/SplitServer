@@ -146,4 +146,9 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .Limit(pageSize)
             .ToListAsync(ct);
     }
+
+    public Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct)
+    {
+        throw new NotImplementedException();
+    }
 }
