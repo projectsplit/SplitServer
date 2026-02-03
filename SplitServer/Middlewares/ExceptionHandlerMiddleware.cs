@@ -89,9 +89,11 @@ public class ExceptionHandlerMiddleware : IMiddleware
 
         _diagnosticContext.Set("RequestId", context.TraceIdentifier);
 
-        if (context.GetNullableUserId() is not null)
+        var userId = context.GetNullableUserId();
+
+        if (userId is not null)
         {
-            _diagnosticContext.Set("UserId", context.GetNullableUserId() ?? "");
+            _diagnosticContext.Set("UserId", userId);
         }
 
         _diagnosticContext.Set("Protocol", context.Request.Protocol);

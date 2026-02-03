@@ -1,27 +1,25 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
+
+namespace SplitServer.Commands;
 
 public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExpenseCommand, Result>
 {
     private readonly IExpensesRepository _expensesRepository;
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
-    private readonly GroupService _groupService;
     private readonly UserLabelService _userLabelService;
-    
+
     public EditNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        GroupService groupService,
         UserLabelService userLabelService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
-        _groupService = groupService;
         _permissionService = permissionService;
         _userLabelService = userLabelService;
     }
@@ -35,12 +33,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
             return permissionResult;
         }
 
-        var (_,expense) = permissionResult.Value;
-
-        if (expense is not NonGroupExpense nonGroupExpense)
-        {
-            return Result.Failure($"Expense with id {expense.Id} was not found");
-        }
+        var (_, nonGroupExpense) = permissionResult.Value;
 
         var expenseValidationResult = _validationService.ValidateNonGroupExpense(
             command.Payments,

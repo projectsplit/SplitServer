@@ -88,7 +88,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
+
     private static async Task<IResult> DeleteNonGroupExpenseHandler(
         DeleteExpenseRequest request,
         IMediator mediator,
@@ -240,6 +240,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
+
     private static async Task<IResult> EditNonGroupExpenseHandler(
         EditNonGroupExpenseRequest request,
         IMediator mediator,
@@ -264,5 +265,4 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
 }

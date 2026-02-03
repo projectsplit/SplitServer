@@ -3,7 +3,9 @@ using MediatR;
 using SplitServer.Models;
 using SplitServer.Requests;
 
-public class EditNonGroupExpenseCommand: IRequest<Result>
+namespace SplitServer.Commands;
+
+public class EditNonGroupExpenseCommand : IRequest<Result>
 {
     public required string ExpenseId { get; init; }
     public required string UserId { get; init; }
@@ -14,5 +16,5 @@ public class EditNonGroupExpenseCommand: IRequest<Result>
     public required List<Payment> Payments { get; init; }
     public required List<Share> Shares { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
-    public required Location? Location { get; init; } 
+    public required Location? Location { get; init; }
 }

@@ -88,7 +88,8 @@ public class PermissionService
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Expense expense, string memberId)>($"Group with id {groupExpense.GroupId} was not found");
+            return Result.Failure<(User user, Group group, Expense expense, string memberId)>(
+                $"Group with id {groupExpense.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -102,8 +103,8 @@ public class PermissionService
 
         return (user, group, expense, memberId);
     }
-    
-    public async Task<Result<(User user, Expense expense)>> VerifyNonGroupExpenseAction(
+
+    public async Task<Result<(User user, NonGroupExpense expense)>> VerifyNonGroupExpenseAction(
         string userId,
         string expenseId,
         CancellationToken ct)
@@ -112,7 +113,7 @@ public class PermissionService
 
         if (userMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Expense expense)>($"User with id {userId} was not found");
+            return Result.Failure<(User user, NonGroupExpense expense)>($"User with id {userId} was not found");
         }
 
         var user = userMaybe.Value;
@@ -121,24 +122,25 @@ public class PermissionService
 
         if (expenseMaybe.HasNoValue)
         {
-            return Result.Failure<(User user,  Expense expense)>($"Expense with id {expenseId} was not found");
+            return Result.Failure<(User user, NonGroupExpense expense)>($"Expense with id {expenseId} was not found");
         }
 
         var expense = expenseMaybe.Value;
 
         if (expense is not NonGroupExpense nonGroupExpense)
         {
-            return Result.Failure<(User user,  Expense expense)>($"Expense with id {expenseId} was not found");
+            return Result.Failure<(User user, NonGroupExpense expense)>($"Expense with id {expenseId} was not found");
         }
 
-        var userExists = nonGroupExpense.Payments.Any(p => p.UserId == userId) ||
-                         nonGroupExpense.Shares.Any(s => s.UserId == userId);
-        if (!userExists)
+        var userFoundInExpense = nonGroupExpense.Payments.Any(p => p.UserId == userId) ||
+                                 nonGroupExpense.Shares.Any(s => s.UserId == userId);
+
+        if (!userFoundInExpense)
         {
-            return Result.Failure<(User user,  Expense expense)>($"User with id {userId} was not found in expense with id {expenseId}");
+            return Result.Failure<(User user, NonGroupExpense expense)>($"User with id {userId} was not found in expense with id {expenseId}");
         }
-       
-        return (user, expense);
+
+        return (user, nonGroupExpense);
     }
 
     public async Task<Result<(User user, Group group, Transfer transfer, string memberId)>> VerifyTransferAction(
