@@ -170,7 +170,6 @@ public static class UserEndpoints
     }
 
     private static async Task<IResult> SearchAllUsersHandler(
-        string groupId,
         string? keyword,
         int pageSize,
         string? next,
@@ -178,10 +177,9 @@ public static class UserEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var query = new SearchUsersToInviteQuery
+        var query = new SearchAllUsersQuery
         {
             UserId = httpContext.GetUserId(),
-            GroupId = groupId,
             PageSize = pageSize,
             Keyword = keyword,
             Next = next
