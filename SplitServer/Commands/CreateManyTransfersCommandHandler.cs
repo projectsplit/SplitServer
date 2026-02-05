@@ -47,7 +47,7 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
 
         var transfers = command.Transfers
             .Select(
-                x => new Transfer
+                x => new GroupTransfer()
                 {
                     Id = Guid.NewGuid().ToString(),
                     Created = now,

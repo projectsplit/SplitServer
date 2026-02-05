@@ -164,15 +164,20 @@ public class PermissionService
             return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
                 $"Transfer with id {transferId} was not found");
         }
-
+        
         var transfer = transferMaybe.Value;
+        
+        if (transfer is not GroupTransfer groupTransfer)
+        {
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Expense with id {transferId} was not found");
+        }
 
-        var groupMaybe = await _groupsRepository.GetById(transfer.GroupId, ct);
+        var groupMaybe = await _groupsRepository.GetById(groupTransfer.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
             return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
-                $"Group with id {transfer.GroupId} was not found");
+                $"Group with id {groupTransfer.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;

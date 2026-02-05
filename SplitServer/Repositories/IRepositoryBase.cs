@@ -11,7 +11,7 @@ public interface IRepositoryBase<TEntity> where TEntity : EntityBase
 
     Task<Result> Insert(TEntity entity, CancellationToken ct);
 
-    Task<Result> InsertMany(IList<TEntity> entities, CancellationToken ct);
+    Task<Result> InsertMany(IEnumerable<TEntity> entities, CancellationToken ct);
 
     Task<Result> Upsert(TEntity entity, CancellationToken ct);
 

@@ -1,8 +1,7 @@
 ﻿namespace SplitServer.Models;
 
-public record Transfer : EntityBase
+public abstract record Transfer : EntityBase
 {
-    public required string GroupId { get; init; }
     public required string CreatorId { get; init; }
     public required string SenderId { get; init; }
     public required string ReceiverId { get; init; }
@@ -10,4 +9,13 @@ public record Transfer : EntityBase
     public required string Currency { get; init; }
     public required string Description { get; init; }
     public required DateTime Occurred { get; init; }
+}
+
+public record GroupTransfer : Transfer
+{
+    public required string GroupId { get; init; }
+}
+
+public record NonGroupTransfer : Transfer
+{
 }

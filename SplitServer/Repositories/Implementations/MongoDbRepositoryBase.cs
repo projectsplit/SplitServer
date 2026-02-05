@@ -88,7 +88,7 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
             ex => $"Insert failed {ex.Message}");
     }
 
-    public async Task<Result> InsertMany(IList<TEntity> entities, CancellationToken ct)
+    public async Task<Result> InsertMany(IEnumerable<TEntity> entities, CancellationToken ct)
     {
         var documents = entities.Select(Mapper.ToDocument).ToList();
 

@@ -48,7 +48,7 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
         var transfers = debts
             .Where(x => x.Debtor == command.GuestId)
             .Select(
-                x => new Transfer
+                x => new GroupTransfer
                 {
                     Id = Guid.NewGuid().ToString(),
                     Created = now,
