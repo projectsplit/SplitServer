@@ -58,8 +58,8 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
 
         return new GroupTransfersResponse
         {
-            Transfers = transfers.Select(
-                x => new GroupTransferResponseItem
+            Transfers = transfers
+                .Select(x => new GroupTransferResponseItem
                 {
                     Id = x.Id,
                     Created = x.Created,
@@ -72,7 +72,8 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
                     Currency = x.Currency,
                     ReceiverId = x.ReceiverId,
                     SenderId = x.SenderId,
-                }).ToList(),
+                })
+                .ToList(),
             Next = GetNext(query, transfers)
         };
     }

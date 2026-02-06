@@ -1,5 +1,4 @@
 using SplitServer.Models;
-using SplitServer.Repositories.Implementations.Extensions;
 using SplitServer.Repositories.Implementations.Models;
 
 namespace SplitServer.Repositories.Mappers;
@@ -23,7 +22,6 @@ public class TransferMapper : IMapper<Transfer, TransferMongoDbDocument>
                 ReceiverId = d.ReceiverId,
                 SenderId = d.SenderId,
                 GroupId = d.GroupId,
-
             },
             NonGroupTransferMongoDbDocument d => new NonGroupTransfer
             {
@@ -72,7 +70,6 @@ public class TransferMapper : IMapper<Transfer, TransferMongoDbDocument>
                 Currency = e.Currency,
                 ReceiverId = e.ReceiverId,
                 SenderId = e.SenderId,
-
             },
             _ => throw new NotSupportedException($"Mapping for entity type '{entity.GetType().Name}' is not implemented.")
         };

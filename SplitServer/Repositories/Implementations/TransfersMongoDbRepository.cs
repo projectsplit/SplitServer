@@ -67,7 +67,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         var documents = await _groupTransfersCollection
             .Find(filter)
             .ToListAsync(ct);
-        
+
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
 
@@ -95,13 +95,13 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .Find(filter)
             .ToListAsync(ct);
 
-        return  documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct)
     {
         var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
-        
+
         var filter = filterBuilder.And(
             filterBuilder.Eq(x => x.GroupId, groupId),
             filterBuilder.Or(
@@ -125,7 +125,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
     {
         var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
         var sortBuilder = Builders<GroupTransferMongoDbDocument>.Sort;
-        
+
         var paginationFilter = maxOccurred is not null && maxCreated is not null
             ? filterBuilder.Or(
                 filterBuilder.Lt(x => x.Occurred, maxOccurred),
@@ -170,7 +170,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
-        
+
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
 

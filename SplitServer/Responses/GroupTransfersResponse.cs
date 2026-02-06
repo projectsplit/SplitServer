@@ -1,5 +1,4 @@
-﻿
-namespace SplitServer.Responses;
+﻿namespace SplitServer.Responses;
 
 public class GroupTransfersResponse
 {

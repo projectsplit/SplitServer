@@ -41,27 +41,26 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
         var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
         var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
 
-        var debts = GroupService.GetDebts(group, groupExpenses, groupTransfers);
+        var debts = GroupService.GetDebts(groupExpenses, groupTransfers);
 
         var now = DateTime.UtcNow;
 
         var transfers = debts
             .Where(x => x.Debtor == command.GuestId)
-            .Select(
-                x => new GroupTransfer
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    Created = now,
-                    Updated = now,
-                    GroupId = command.GroupId,
-                    CreatorId = group.Members.Single(m => m.UserId == command.UserId).Id,
-                    SenderId = x.Debtor,
-                    ReceiverId = x.Creditor,
-                    Amount = x.Amount,
-                    Currency = x.Currency,
-                    Description = "Guest settle",
-                    Occurred = now
-                })
+            .Select(x => new GroupTransfer
+            {
+                Id = Guid.NewGuid().ToString(),
+                Created = now,
+                Updated = now,
+                GroupId = command.GroupId,
+                CreatorId = group.Members.Single(m => m.UserId == command.UserId).Id,
+                SenderId = x.Debtor,
+                ReceiverId = x.Creditor,
+                Amount = x.Amount,
+                Currency = x.Currency,
+                Description = "Guest settle",
+                Occurred = now
+            })
             .ToList();
 
         return await _transfersRepository.InsertMany(transfers, ct);

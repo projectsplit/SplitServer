@@ -6,7 +6,6 @@ namespace SplitServer.Repositories.Implementations.Models;
 [BsonDiscriminator(Required = true)]
 [BsonKnownTypes(typeof(GroupTransferMongoDbDocument))]
 [BsonKnownTypes(typeof(NonGroupTransferMongoDbDocument))]
-
 public record TransferMongoDbDocument : EntityBase
 {
     public required string CreatorId { get; init; }
@@ -19,15 +18,12 @@ public record TransferMongoDbDocument : EntityBase
 }
 
 [BsonDiscriminator("group")]
-
 public record GroupTransferMongoDbDocument : TransferMongoDbDocument
 {
     public required string GroupId { get; init; }
-
 }
 
 [BsonDiscriminator("non_group")]
 public record NonGroupTransferMongoDbDocument : TransferMongoDbDocument
 {
-
 }

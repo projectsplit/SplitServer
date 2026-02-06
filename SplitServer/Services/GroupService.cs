@@ -14,7 +14,7 @@ public class GroupService
         _groupsRepository = groupsRepository;
     }
 
-    public static List<Debt> GetDebts(Group group, List<GroupExpense> expenses, List<GroupTransfer> transfers)
+    public static List<Debt> GetDebts(List<GroupExpense> expenses, List<GroupTransfer> transfers)
     {
         var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
 

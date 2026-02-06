@@ -38,7 +38,7 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
         }
 
         var transfer = transferMaybe.Value;
-        
+
         if (transfer is not GroupTransfer groupTransfer)
         {
             return Result.Failure($"Expense with id {command.TransferId} was not found");

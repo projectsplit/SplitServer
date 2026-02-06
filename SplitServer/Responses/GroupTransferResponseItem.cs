@@ -1,7 +1,8 @@
 namespace SplitServer.Responses;
 
 public class GroupTransferResponseItem
-{ public required string Id { get; init; }
+{
+    public required string Id { get; init; }
     public required DateTime Created { get; init; }
     public required DateTime Updated { get; init; }
     public required string GroupId { get; init; }
