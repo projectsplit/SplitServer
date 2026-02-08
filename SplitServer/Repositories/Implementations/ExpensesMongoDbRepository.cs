@@ -372,6 +372,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         var payerIds = documents.SelectMany(x => x.Payments.Select(p => p.UserId));
         var participantIds = documents.SelectMany(x => x.Shares.Select(s => s.UserId));
 
-        return payerIds.Concat(participantIds).Distinct().Where(x => x != userId).ToList();
+        return payerIds.Concat(participantIds).Distinct().ToList();
     }
 }

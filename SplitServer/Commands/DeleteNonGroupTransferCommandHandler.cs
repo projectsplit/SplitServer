@@ -1,27 +1,23 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
-
 namespace SplitServer.Commands;
 
-public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferCommand, Result>
+public class DeleteNonGroupTransferCommandHandler: IRequestHandler<DeleteNonGroupTransferCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
-    private readonly IGroupsRepository _groupsRepository;
     private readonly ITransfersRepository _transfersRepository;
 
-    public DeleteTransferCommandHandler(
+    public DeleteNonGroupTransferCommandHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         ITransfersRepository transfersRepository)
     {
         _usersRepository = usersRepository;
-        _groupsRepository = groupsRepository;
         _transfersRepository = transfersRepository;
     }
 
-    public async Task<Result> Handle(DeleteTransferCommand command, CancellationToken ct)
+    public async Task<Result> Handle(DeleteNonGroupTransferCommand command, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
@@ -39,25 +35,16 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
 
         var transfer = transferMaybe.Value;
 
-        if (transfer is not GroupTransfer groupTransfer)
+        if (transfer is not NonGroupTransfer )
         {
             return Result.Failure($"Transfer with id {command.TransferId} was not found");
         }
 
-        var groupMaybe = await _groupsRepository.GetById(groupTransfer.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
+        if (command.UserId != transfer.ReceiverId && command.UserId != transfer.SenderId)
         {
-            return Result.Failure($"Group with id {groupTransfer.GroupId} was not found");
+            return Result.Failure($"User {command.UserId} must be part of the non-group transfer");
         }
-
-        var group = groupMaybe.Value;
-
-        if (group.Members.All(x => x.UserId != command.UserId))
-        {
-            return Result.Failure("User must be a group member");
-        }
-
+        
         return await _transfersRepository.Delete(command.TransferId, ct);
-    }
+    } 
 }
