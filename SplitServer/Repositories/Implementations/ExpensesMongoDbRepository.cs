@@ -150,6 +150,30 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
+    public async Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId,  DateTime startDate,
+        DateTime endDate,CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
+        
+        var involvedFilter = filterBuilder.Or(
+            filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
+            filterBuilder.ElemMatch(x => x.Shares,   s => s.UserId == userId)
+        );
+        
+        var occurredFilter = filterBuilder.And(
+            filterBuilder.Gte(x => x.Occurred, startDate),
+            filterBuilder.Lte(x => x.Occurred, endDate));
+
+       var filter = filterBuilder.And(involvedFilter, occurredFilter);
+
+        var documents = await _nonGroupExpensesCollection
+            .Find(filter)
+            .SortBy(x => x.Occurred)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
     public async Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct)
     {
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;

@@ -16,6 +16,8 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
     Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct);
+    
+    Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate, DateTime endDate, CancellationToken ct);
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
