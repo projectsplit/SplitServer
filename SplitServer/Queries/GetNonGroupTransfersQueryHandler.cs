@@ -5,16 +5,16 @@ using SplitServer.Queries.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
+
 namespace SplitServer.Queries;
 
-public class GetNonGroupTransfersQueryHandler: IRequestHandler<GetNonGroupTransfersQuery, Result<NonGroupTransfersResponse>>
+public class GetNonGroupTransfersQueryHandler : IRequestHandler<GetNonGroupTransfersQuery, Result<NonGroupTransfersResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly ITransfersRepository _transfersRepository;
 
     public GetNonGroupTransfersQueryHandler(
         IUsersRepository usersRepository,
-        IGroupsRepository groupsRepository,
         ITransfersRepository transfersRepository)
     {
         _usersRepository = usersRepository;
@@ -29,7 +29,7 @@ public class GetNonGroupTransfersQueryHandler: IRequestHandler<GetNonGroupTransf
         {
             return Result.Failure<NonGroupTransfersResponse>($"User with id {query.UserId} was not found");
         }
-        
+
         var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
 
         var transfers = await _transfersRepository.GetByUserId(

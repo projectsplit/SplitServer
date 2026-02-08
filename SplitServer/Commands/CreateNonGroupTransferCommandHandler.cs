@@ -14,8 +14,7 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
 
     public CreateNonGroupTransferCommandHandler(
         ITransfersRepository transfersRepository,
-        ValidationService validationService
-        )
+        ValidationService validationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
@@ -24,7 +23,12 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
     public async Task<Result<CreateTransferResponse>> Handle(CreateNonGroupTransferCommand command, CancellationToken ct)
     {
         var transferValidationResult =
-            _validationService.ValidateNonGroupTransfer( command.SenderId, command.ReceiverId,command.UserId, command.Amount, command.Currency);
+            _validationService.ValidateNonGroupTransfer(
+                command.SenderId,
+                command.ReceiverId,
+                command.UserId,
+                command.Amount,
+                command.Currency);
 
         if (transferValidationResult.IsFailure)
         {
@@ -59,5 +63,5 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
         {
             TransferId = transferId
         };
-    } 
+    }
 }

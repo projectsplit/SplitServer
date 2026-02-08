@@ -6,6 +6,7 @@ using SplitServer.Queries.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
+
 namespace SplitServer.Queries;
 
 public class SearchNonGroupTransfersQueryHandler : IRequestHandler<SearchNonGroupTransfersQuery, Result<NonGroupTransfersResponse>>
@@ -37,20 +38,6 @@ public class SearchNonGroupTransfersQueryHandler : IRequestHandler<SearchNonGrou
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
-
-        // var groupMaybe = await _groupsRepository.GetById(query.GroupId, ct);
-        //
-        // if (groupMaybe.HasNoValue)
-        // {
-        //     return Result.Failure<GroupTransfersResponse>($"Group with id {query.GroupId} was not found");
-        // }
-        //
-        // var group = groupMaybe.Value;
-        //
-        // if (group.Members.All(x => x.UserId != query.UserId))
-        // {
-        //     return Result.Failure<GroupTransfersResponse>("User must be a group member");
-        // }
 
         var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
 

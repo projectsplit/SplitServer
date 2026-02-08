@@ -1,4 +1,5 @@
 using SplitServer.Commands;
+
 namespace SplitServer.Requests;
 
 public class CreateManyNonGroupTransfersRequest

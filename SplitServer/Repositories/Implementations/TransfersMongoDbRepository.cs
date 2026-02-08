@@ -58,7 +58,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
-    
+
     public async Task<List<NonGroupTransfer>> GetByUserId(
         string userId,
         int pageSize,
@@ -79,7 +79,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
         var filter = filterBuilder.And(
             filterBuilder.Or(
-                filterBuilder.Eq(x => x.SenderId,   userId),
+                filterBuilder.Eq(x => x.SenderId, userId),
                 filterBuilder.Eq(x => x.ReceiverId, userId)
             ),
             paginationFilter);
@@ -209,6 +209,7 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
+
     public async Task<List<NonGroupTransfer>> SearchNonGroup(
         string? searchTerm,
         DateTime? minTime,

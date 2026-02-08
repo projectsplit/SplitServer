@@ -252,8 +252,8 @@ public class ValidationService
 
         return Result.Success();
     }
-    
-    public Result ValidateNonGroupTransfer( string senderId, string receiverId,string userId, decimal amount, string currency)
+
+    public Result ValidateNonGroupTransfer(string senderId, string receiverId, string userId, decimal amount, string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
@@ -262,7 +262,7 @@ public class ValidationService
             return amountValidationResult;
         }
 
-        if (senderId !=  userId && receiverId != userId)
+        if (senderId != userId && receiverId != userId)
         {
             return Result.Failure($"User {userId} must be part of the non-group transfer");
         }

@@ -45,6 +45,7 @@ public static class TransferEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
+
     private static async Task<IResult> CreateNonGroupTransferHandler(
         CreateNonGroupTransferRequest request,
         IMediator mediator,
@@ -84,6 +85,7 @@ public static class TransferEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
+
     private static async Task<IResult> CreateManyNonGroupTransfersHandler(
         CreateManyNonGroupTransfersRequest request,
         IMediator mediator,
@@ -117,7 +119,7 @@ public static class TransferEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
+
     private static async Task<IResult> DeleteNonGroupTransferHandler(
         DeleteTransferRequest request,
         IMediator mediator,
@@ -179,7 +181,7 @@ public static class TransferEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
-    
+
     private static async Task<IResult> GetNonGroupTransfersHandler(
         HttpContext httpContext,
         IMediator mediator,
@@ -245,4 +247,3 @@ public static class TransferEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 }
-

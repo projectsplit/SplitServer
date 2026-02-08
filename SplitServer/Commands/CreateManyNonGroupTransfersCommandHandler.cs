@@ -3,30 +3,32 @@ using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
+
 namespace SplitServer.Commands;
 
-public class CreateManyNonGroupTransfersCommandHandler: IRequestHandler<CreateManyNonGroupTransfersCommand, Result>
+public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateManyNonGroupTransfersCommand, Result>
 {
-    private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
 
     public CreateManyNonGroupTransfersCommandHandler(
         ITransfersRepository transfersRepository,
-        ValidationService validationService,
-        PermissionService permissionService)
+        ValidationService validationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
-        _permissionService = permissionService;
     }
 
     public async Task<Result> Handle(CreateManyNonGroupTransfersCommand command, CancellationToken ct)
     {
-        
         foreach (var t in command.Transfers)
         {
-            var transferValidationResult = _validationService.ValidateNonGroupTransfer(t.SenderId, t.ReceiverId,command.UserId, t.Amount, t.Currency);
+            var transferValidationResult = _validationService.ValidateNonGroupTransfer(
+                t.SenderId,
+                t.ReceiverId,
+                command.UserId,
+                t.Amount,
+                t.Currency);
 
             if (transferValidationResult.IsFailure)
             {
