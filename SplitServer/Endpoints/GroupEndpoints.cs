@@ -119,8 +119,9 @@ public static class GroupEndpoints
 
     private static async Task<IResult> GetGroupsWithDetailsHandler(
         int pageSize,
-        bool? isArchived,
+        string? keyword,
         string? next,
+        bool? isArchived,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
@@ -130,6 +131,7 @@ public static class GroupEndpoints
             UserId = httpContext.GetUserId(),
             IsArchived = isArchived,
             PageSize = pageSize,
+            Keyword = keyword,
             Next = next
         };
 
@@ -139,6 +141,7 @@ public static class GroupEndpoints
     }
 
     private static async Task<IResult> GetGroupDetailsHandler(
+    
         string groupId,
         IMediator mediator,
         HttpContext httpContext,
