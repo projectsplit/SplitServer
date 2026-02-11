@@ -8,6 +8,8 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<List<GroupExpense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct);
 
     Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct);
+    
+    Task<List<NonGroupExpense>> GetAllByUserId(string groupId, CancellationToken ct);
 
     Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
 

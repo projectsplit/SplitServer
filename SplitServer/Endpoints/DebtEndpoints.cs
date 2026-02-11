@@ -11,6 +11,7 @@ public static class DebtEndpoints
     public static void MapDebtEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/", GetGroupDebtsHandler);
+        app.MapGet("/non-group", GetNonGroupDebtsHandler);
         app.MapPost("/settle-guest", SettleGuestDebtHandler);
     }
 
@@ -24,6 +25,20 @@ public static class DebtEndpoints
         {
             UserId = httpContext.GetUserId(),
             GroupId = groupId
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+    private static async Task<IResult> GetNonGroupDebtsHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetNonGroupDebtsQuery
+        {
+            UserId = httpContext.GetUserId(),
         };
 
         var result = await mediator.Send(query, ct);

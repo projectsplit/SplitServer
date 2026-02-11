@@ -75,6 +75,23 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
+    public async Task<List<NonGroupExpense>> GetAllByUserId(string userId, CancellationToken ct)
+    {
+        var nonGroupExpensesCollection =
+            Collection.Database.GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace
+                .CollectionName);
+        
+        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
+        
+        var filter = filterBuilder.Or(
+            filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
+            filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
+        );
+        
+        var documents = await nonGroupExpensesCollection.Find(filter).ToListAsync(ct);
+        return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
     {
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
@@ -150,21 +167,21 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId,  DateTime startDate,
-        DateTime endDate,CancellationToken ct)
+    public async Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate,
+        DateTime endDate, CancellationToken ct)
     {
         var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
-        
+
         var involvedFilter = filterBuilder.Or(
             filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
-            filterBuilder.ElemMatch(x => x.Shares,   s => s.UserId == userId)
+            filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
         );
-        
+
         var occurredFilter = filterBuilder.And(
             filterBuilder.Gte(x => x.Occurred, startDate),
             filterBuilder.Lte(x => x.Occurred, endDate));
 
-       var filter = filterBuilder.And(involvedFilter, occurredFilter);
+        var filter = filterBuilder.And(involvedFilter, occurredFilter);
 
         var documents = await _nonGroupExpensesCollection
             .Find(filter)

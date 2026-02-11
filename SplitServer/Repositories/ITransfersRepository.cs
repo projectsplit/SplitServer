@@ -15,6 +15,8 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
         CancellationToken ct);
 
     Task<List<GroupTransfer>> GetAllByGroupId(string groupId, CancellationToken ct);
+    
+    Task<List<NonGroupTransfer>> GetAllByUserId(string userId, CancellationToken ct);
 
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 

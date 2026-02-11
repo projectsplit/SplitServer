@@ -106,6 +106,23 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
 
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
+    
+     public async Task<List<NonGroupTransfer>> GetAllByUserId(string userId, CancellationToken ct)
+        {
+            var nonGroupTransfersCollection =
+                Collection.Database.GetCollection<NonGroupTransferMongoDbDocument>(Collection.CollectionNamespace
+                    .CollectionName);
+            
+            var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
+            
+            var filter = filterBuilder.Or(
+                filterBuilder.Eq(x => x.ReceiverId, userId),
+                filterBuilder.Eq(x => x.SenderId,  userId)
+            );
+            
+            var documents = await nonGroupTransfersCollection.Find(filter).ToListAsync(ct);
+            return documents.Select(d => (NonGroupTransfer)Mapper.ToEntity(d)).ToList();
+        }
 
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
     {
