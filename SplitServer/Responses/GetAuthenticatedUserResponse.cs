@@ -10,5 +10,5 @@ public class GetAuthenticatedUserResponse
     public required string Currency { get; init; }
     public required string TimeZone { get; init; }
     public required Coordinates TimeZoneCoordinates { get; init; }
-    public required string? RecentGroupId { get; init; }
+    public required string? RecentContextId { get; init; }
 }

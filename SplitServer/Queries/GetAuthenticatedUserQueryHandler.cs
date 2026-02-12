@@ -51,7 +51,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
 
         var currency = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.Currency ?? DefaultValues.Currency : DefaultValues.Currency;
         var timeZone = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone : DefaultValues.TimeZone;
-        var recentGroupId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentGroupId : null;
+        var recentContextId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentContextId : null;
 
         return new GetAuthenticatedUserResponse
         {
@@ -61,7 +61,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             Currency = currency,
             TimeZone = timeZone,
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
-            RecentGroupId = recentGroupId,
+            RecentContextId = recentContextId,
         };
     }
 }

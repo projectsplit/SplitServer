@@ -12,7 +12,7 @@ public static class UserEndpoints
     {
         app.MapGet("/me", GetAuthenticatedUserHandler);
         app.MapPut("/activity/last-viewed-notification", SetLastViewedNotificationTimestampHandler);
-        app.MapPut("/activity/recent-group", SetRecentGroupHandler);
+        app.MapPut("/activity/recent-context", SetRecentContextHandler);
         app.MapPut("/preferences/time-zone", SetTimeZoneHandler);
         app.MapPut("/preferences/currency", SetCurrencyHandler);
         app.MapGet("/username/{username}", GetUsernameStatusHandler);
@@ -54,16 +54,16 @@ public static class UserEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
-    private static async Task<IResult> SetRecentGroupHandler(
-        SetRecentGroupRequest request,
+    private static async Task<IResult> SetRecentContextHandler(
+        SetRecentContextRequest request,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new SetRecentGroupCommand
+        var command = new SetRecentContextCommand
         {
             UserId = httpContext.GetUserId(),
-            GroupId = request.GroupId
+            ContextId = request.ContextId
         };
 
         var result = await mediator.Send(command, ct);

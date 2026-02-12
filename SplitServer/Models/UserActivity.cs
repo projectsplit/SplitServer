@@ -2,6 +2,6 @@
 
 public record UserActivity : EntityBase
 {
-    public required string? RecentGroupId { get; init; }
+    public required string? RecentContextId { get; init; }
     public required DateTime? LastViewedNotificationTimestamp { get; init; }
 }
