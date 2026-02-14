@@ -1,5 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
@@ -55,18 +57,74 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
             return Result.Failure<GetGroupDebtsResponse>("User must be a group member");
         }
 
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var userTimeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
+
         var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
         var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
 
-        var totalSpentByMember = GroupService.GetTotalSpent(group, groupExpenses);
+        var filteredExpenses = groupExpenses.AsEnumerable();
+        var filteredTransfers = groupTransfers.AsEnumerable();
 
+        if (query.After.HasValue)
+        {
+            var afterUtc = query.After.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred >= afterUtc);
+            filteredTransfers = filteredTransfers.Where(x => x.Occurred >= afterUtc);
+        }
+
+        if (query.Before.HasValue)
+        {
+            var beforeUtc = query.Before.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred <= beforeUtc);
+            filteredTransfers = filteredTransfers.Where(x => x.Occurred <= beforeUtc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+            filteredTransfers = filteredTransfers.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ParticipantIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Shares.Any(s => query.ParticipantIds.Contains(s.MemberId)));
+        }
+
+        if (query.PayerIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Payments.Any(p => query.PayerIds.Contains(p.MemberId)));
+        }
+
+        if (query.LabelIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => query.LabelIds.Contains(l)));
+        }
+
+        if (query.ReceiverIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.ReceiverIds.Contains(x.ReceiverId));
+        }
+
+        if (query.SenderIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.SenderIds.Contains(x.SenderId));
+        }
+
+        var filteredExpensesList = filteredExpenses.ToList();
+        var filteredTransfersList = filteredTransfers.ToList();
+
+        var totalSpentByMember = GroupService.GetTotalSpent(group, filteredExpensesList);
+        
         return new GetGroupDebtsResponse
         {
             Debts = GroupService.GetDebts(groupExpenses, groupTransfers),
             TotalSpent = totalSpentByMember,
             ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByMember, ct),
-            TotalSent = GroupService.GetTotalSent(group, groupTransfers),
-            TotalReceived = GroupService.GetTotalReceived(group, groupTransfers),
+            TotalSent = GroupService.GetTotalSent(group, filteredTransfersList),
+            TotalReceived = GroupService.GetTotalReceived(group, filteredTransfersList),
         };
     }
 

@@ -17,6 +17,14 @@ public static class DebtEndpoints
 
     private static async Task<IResult> GetGroupDebtsHandler(
         string groupId,
+        DateTime? after,
+        DateTime? before,
+        string? searchTerm,
+        string[]? labelIds,
+        string[]? participantIds,
+        string[]? payerIds,
+        string[]? receiverIds,
+        string[]? senderIds,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
@@ -24,7 +32,15 @@ public static class DebtEndpoints
         var query = new GetGroupDebtsQuery
         {
             UserId = httpContext.GetUserId(),
-            GroupId = groupId
+            GroupId = groupId,
+            After = after,
+            Before = before,
+            SearchTerm = searchTerm,
+            LabelIds = labelIds,
+            ParticipantIds = participantIds,
+            PayerIds = payerIds,
+            ReceiverIds = receiverIds,
+            SenderIds = senderIds
         };
 
         var result = await mediator.Send(query, ct);
