@@ -5,6 +5,7 @@ using SplitServer.Responses;
 using SplitServer.Services.CurrencyExchangeRate;
 using SplitServer.Services;
 using SplitServer.Models;
+using SplitServer.Extensions;
 
 namespace SplitServer.Queries;
 
@@ -40,21 +41,29 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
         }
         var user = userMaybe.Value;
         
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var userTimeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
+
         var nonGroupExpenses = await _expensesRepository.GetAllByUserId(user.Id, ct);
         var nonGroupTransfers = await _transfersRepository.GetAllByUserId(user.Id, ct);
 
         var usersIds = GetUniqueUsersIds(nonGroupExpenses, nonGroupTransfers).ToList();
         var users = await _usersRepository.GetByIds(usersIds,ct);
 
-        var totalSpentByMember = NonGroupService.GetTotalSpent(nonGroupExpenses);
+        var filteredExpensesList = NonGroupService.CalculateFilteredExpensesList(query, nonGroupExpenses, userTimeZoneId);
+        var filteredTransfersList = NonGroupService.CalculateFilteredTransfersList(query, nonGroupTransfers, userTimeZoneId);
+
+        var totalSpentByMember = NonGroupService.GetTotalSpent(filteredExpensesList);
         
         return new GetNonGroupDebtsResponse
         {
             Debts = NonGroupService.GetDebts(nonGroupExpenses, nonGroupTransfers, query.UserId, users),
             TotalSpent = totalSpentByMember,
             ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByMember, ct),
-            TotalSent = NonGroupService.GetTotalSent(nonGroupTransfers),
-            TotalReceived = NonGroupService.GetTotalReceived(nonGroupTransfers),
+            TotalSent = NonGroupService.GetTotalSent(filteredTransfersList),
+            TotalReceived = NonGroupService.GetTotalReceived(filteredTransfersList),
         };
     }
 

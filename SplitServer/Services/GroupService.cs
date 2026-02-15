@@ -1,5 +1,7 @@
 ﻿using CSharpFunctionalExtensions;
+using SplitServer.Extensions;
 using SplitServer.Models;
+using SplitServer.Queries;
 using SplitServer.Repositories;
 using SplitServer.Requests;
 
@@ -145,5 +147,72 @@ public class GroupService
         return await _groupsRepository.Update(
             group with { Labels = group.Labels.Concat(labelsNotInGroup).DistinctBy(x => x.Id).ToList(), Updated = now },
             ct);
+    }
+
+    public static List<GroupExpense> CalculateFilteredExpensesList(GetGroupDebtsQuery query, List<GroupExpense> expenses, string userTimeZoneId)
+    {
+        var filteredExpenses = expenses.AsEnumerable();
+
+        if (query.After.HasValue)
+        {
+            var afterUtc = query.After.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred >= afterUtc);
+        }
+
+        if (query.Before.HasValue)
+        {
+            var beforeUtc = query.Before.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred <= beforeUtc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ParticipantIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Shares.Any(s => query.ParticipantIds.Contains(s.MemberId)));
+        }
+
+        if (query.PayerIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Payments.Any(p => query.PayerIds.Contains(p.MemberId)));
+        }
+
+        if (query.LabelIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => query.LabelIds.Contains(l)));
+        }
+
+        return filteredExpenses.ToList();
+    }
+
+    public static List<GroupTransfer> CalculateFilteredTransfersList(GetGroupDebtsQuery query, List<GroupTransfer> transfers, string userTimeZoneId)
+    {
+        var filteredTransfers = transfers.AsEnumerable();
+
+        if (query.Before.HasValue)
+        {
+            var beforeUtc = query.Before.Value.ToUtc(userTimeZoneId);
+            filteredTransfers = filteredTransfers.Where(x => x.Occurred <= beforeUtc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        {
+            filteredTransfers = filteredTransfers.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ReceiverIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.ReceiverIds.Contains(x.ReceiverId));
+        }
+
+        if (query.SenderIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.SenderIds.Contains(x.SenderId));
+        }
+
+        return filteredTransfers.ToList();
     }
 }

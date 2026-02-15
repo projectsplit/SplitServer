@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Diagnostics;
 using SplitServer.Models;
-using SplitServer.Repositories;
+using SplitServer.Queries;
+using SplitServer.Extensions;
 
 namespace SplitServer.Services;
 
@@ -205,5 +205,78 @@ public class NonGroupService
         }
 
         return debts;
+    }
+
+    public static List<NonGroupExpense> CalculateFilteredExpensesList(GetNonGroupDebtsQuery query, List<NonGroupExpense> expenses, string userTimeZoneId)
+    {
+        var filteredExpenses = expenses.AsEnumerable();
+
+        if (query.After.HasValue)
+        {
+            var afterUtc = query.After.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred >= afterUtc);
+        }
+
+        if (query.Before.HasValue)
+        {
+            var beforeUtc = query.Before.Value.ToUtc(userTimeZoneId);
+            filteredExpenses = filteredExpenses.Where(x => x.Occurred <= beforeUtc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ParticipantIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Shares.Any(s => query.ParticipantIds.Contains(s.UserId)));
+        }
+
+        if (query.PayerIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Payments.Any(p => query.PayerIds.Contains(p.UserId)));
+        }
+
+        if (query.LabelIds is { Length: > 0 })
+        {
+            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => query.LabelIds.Contains(l)));
+        }
+
+        return filteredExpenses.ToList();
+    }
+
+    public static List<NonGroupTransfer> CalculateFilteredTransfersList(GetNonGroupDebtsQuery query, List<NonGroupTransfer> transfers, string userTimeZoneId)
+    {
+        var filteredTransfers = transfers.AsEnumerable();
+
+        if (query.After.HasValue)
+        {
+            var afterUtc = query.After.Value.ToUtc(userTimeZoneId);
+            filteredTransfers = filteredTransfers.Where(x => x.Occurred >= afterUtc);
+        }
+
+        if (query.Before.HasValue)
+        {
+            var beforeUtc = query.Before.Value.ToUtc(userTimeZoneId);
+            filteredTransfers = filteredTransfers.Where(x => x.Occurred <= beforeUtc);
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        {
+            filteredTransfers = filteredTransfers.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.ReceiverIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.ReceiverIds.Contains(x.ReceiverId));
+        }
+
+        if (query.SenderIds is { Length: > 0 })
+        {
+            filteredTransfers = filteredTransfers.Where(x => query.SenderIds.Contains(x.SenderId));
+        }
+
+        return filteredTransfers.ToList();
     }
 }
