@@ -48,7 +48,7 @@ public static class DebtEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
     private static async Task<IResult> GetNonGroupDebtsHandler(
-        string searchTerm,
+        string? searchTerm,
         DateTime? after,
         DateTime? before,
         string[]? labelIds,
