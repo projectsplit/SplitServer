@@ -272,6 +272,16 @@ public class ValidationService
             return Result.Failure("Receiver must be different from sender");
         }
 
+        if (senderId == "" )
+        {
+            return Result.Failure("Sender must be provided");
+        }
+        
+        if (receiverId == "" )
+        {
+            return Result.Failure("Receiver must be provided");
+        }
+
         return Result.Success();
     }
 }
