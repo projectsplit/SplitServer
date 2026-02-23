@@ -72,6 +72,7 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
+                    TransactionType = ExpenseType.Group,
                     Payments = x.Payments,
                     Shares = x.Shares,
                     Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),

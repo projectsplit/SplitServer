@@ -1,5 +1,13 @@
 ﻿namespace SplitServer.Models;
 
+public enum ExpenseType
+{
+    Personal,
+    Group,
+    NonGroup
+}
+
+
 public abstract record Expense : EntityBase
 {
     public required DateTime Occurred { get; init; }

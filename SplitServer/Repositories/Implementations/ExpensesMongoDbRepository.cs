@@ -24,6 +24,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         _nonGroupExpensesCollection = Collection.Database
             .GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
+
     }
 
     public async Task<List<GroupExpense>> GetByGroupId(
@@ -80,14 +81,14 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         var nonGroupExpensesCollection =
             Collection.Database.GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace
                 .CollectionName);
-        
+
         var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
-        
+
         var filter = filterBuilder.Or(
             filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
             filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
         );
-        
+
         var documents = await nonGroupExpensesCollection.Find(filter).ToListAsync(ct);
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
@@ -319,6 +320,107 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             .ToListAsync(ct);
 
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<Expense>> GetPersonalByUserId(
+        string userId,
+        List<string> memberIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<ExpenseMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var userRelatedFilter = filterBuilder.Or(
+            filterBuilder.And(filterBuilder.Eq("_t", "personal"), filterBuilder.Eq(x => x.CreatorId, userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "non_group"), filterBuilder.Eq("Shares.UserId", userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "group"), filterBuilder.In("Shares.MemberId", memberIds))
+        );
+
+        var filter = filterBuilder.And(userRelatedFilter, paginationFilter);
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await Collection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<Expense>> SearchPersonalByUserId(
+        string userId,
+        List<string> memberIds,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? labels,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
+        var sortBuilder = Builders<ExpenseMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var userRelatedFilter = filterBuilder.Or(
+            filterBuilder.And(filterBuilder.Eq("_t", "personal"), filterBuilder.Eq(x => x.CreatorId, userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "non_group"), filterBuilder.Eq("Shares.UserId", userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "group"), filterBuilder.In("Shares.MemberId", memberIds))
+        );
+
+        var descriptionFilter = searchTerm is not null
+            ? filterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : filterBuilder.Empty;
+
+        var labelsFilter = !labels.IsNullOrEmpty()
+            ? filterBuilder.AnyIn(x => x.Labels, labels)
+            : filterBuilder.Empty;
+
+        var minTimeFilter = minTime is not null
+            ? filterBuilder.Gte(x => x.Occurred, minTime)
+            : filterBuilder.Empty;
+
+        var maxTimeFilter = maxTime is not null
+            ? filterBuilder.Lte(x => x.Occurred, maxTime)
+            : filterBuilder.Empty;
+
+        var filter = filterBuilder.And(
+            userRelatedFilter,
+            descriptionFilter,
+            labelsFilter,
+            minTimeFilter,
+            maxTimeFilter,
+            paginationFilter);
+
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await Collection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<List<NonGroupExpense>> SearchNonGroup(

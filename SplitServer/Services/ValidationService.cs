@@ -223,6 +223,18 @@ public class ValidationService
 
         return Result.Success();
     }
+    
+    public Result ValidatePersonalExpense( decimal amount, string currency)
+    {
+        var amountValidationResult = ValidateAmount(amount, currency);
+
+        if (amountValidationResult.IsFailure)
+        {
+            return amountValidationResult;
+        }
+        
+        return Result.Success();
+    }
 
     public Result ValidateTransfer(Group group, string senderId, string receiverId, decimal amount, string currency)
     {

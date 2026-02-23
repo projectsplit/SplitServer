@@ -1,8 +1,8 @@
-﻿using SplitServer.Models;
+using SplitServer.Models;
 
 namespace SplitServer.Responses;
 
-public record NonGroupExpenseResponseItem
+public record PersonalExpenseResponseItem
 {
     public required string Id { get; init; }
     public required DateTime Created { get; init; }
@@ -13,8 +13,7 @@ public record NonGroupExpenseResponseItem
     public required string Description { get; init; }
     public required string Currency { get; init; }
     public required ExpenseType TransactionType { get; init; }
-    public required List<GetNonGroupPaymentItem> Payments { get; init; }
-    public required List<GetNonGroupShareItem> Shares { get; init; }
+    public string? GroupId { get; init; }
     public required List<Label> Labels { get; init; }
     public required Location? Location { get; init; }
 }

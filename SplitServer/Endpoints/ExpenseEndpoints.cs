@@ -14,9 +14,11 @@ public static class ExpenseEndpoints
     {
         app.MapGet("/", GetGroupExpensesHandler);
         app.MapGet("/non-group", GetNonGroupExpensesHandler);
+        app.MapGet("/personal", GetPersonalExpensesHandler);
         app.MapGet("/labels", GetLabelsHandler);
         app.MapPost("/create", CreateExpenseHandler);
         app.MapPost("/create-non-group", CreateNonGroupExpenseHandler);
+        app.MapPost("/create-personal", CreatePersonalExpenseHandler);
         app.MapPost("/delete", DeleteExpenseHandler);
         app.MapPost("/edit", EditExpenseHandler);
         app.MapPost("/edit-non-group", EditNonGroupExpenseHandler);
@@ -71,6 +73,29 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
+    
+    private static async Task<IResult> CreatePersonalExpenseHandler(
+        CreatePersonalExpenseRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new CreatePersonalExpenseCommand
+        {
+            UserId = httpContext.GetUserId(),
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occurred = request.Occurred,
+            Labels = request.Labels,
+            Location = request.Location
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+    
 
     private static async Task<IResult> DeleteExpenseHandler(
         DeleteExpenseRequest request,
@@ -188,6 +213,46 @@ public static class ExpenseEndpoints
                 Next = next,
             }
             : new GetNonGroupExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                PageSize = pageSize,
+                Next = next
+            };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+    
+    private static async Task<IResult> GetPersonalExpensesHandler(
+        HttpContext httpContext,
+        IMediator mediator,
+        int pageSize,
+        string? next,
+        DateTime? before,
+        DateTime? after,
+        string? searchTerm,
+        string[]? labels,
+        CancellationToken ct)
+    {
+        var hasAnySearchParams = before is not null ||
+                                 after is not null ||
+                                 searchTerm is not null ||
+                                 !labels.IsNullOrEmpty();
+
+
+        IRequest<CSharpFunctionalExtensions.Result<PersonalExpensesResponse>> query = hasAnySearchParams
+            ? new SearchPersonalExpensesQuery
+            {
+                UserId = httpContext.GetUserId(),
+                Before = before,
+                After = after,
+                SearchTerm = searchTerm,
+                Labels = labels,
+                PageSize = pageSize,
+                Next = next,
+            }
+            : new GetPersonalExpensesQuery
             {
                 UserId = httpContext.GetUserId(),
                 PageSize = pageSize,

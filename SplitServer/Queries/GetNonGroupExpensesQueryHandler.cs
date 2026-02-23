@@ -65,6 +65,7 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
+                    TransactionType = ExpenseType.NonGroup,
                     Payments = x.Payments
                         .Select(p => new GetNonGroupPaymentItem
                         {

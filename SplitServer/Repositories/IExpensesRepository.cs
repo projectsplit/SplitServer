@@ -5,10 +5,11 @@ namespace SplitServer.Repositories;
 
 public interface IExpensesRepository : IRepositoryBase<Expense>
 {
-    Task<List<GroupExpense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct);
+    Task<List<GroupExpense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated,
+        CancellationToken ct);
 
     Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct);
-    
+
     Task<List<NonGroupExpense>> GetAllByUserId(string groupId, CancellationToken ct);
 
     Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
@@ -17,9 +18,11 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
-    Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate, CancellationToken ct);
-    
-    Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate, DateTime endDate, CancellationToken ct);
+    Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate,
+        CancellationToken ct);
+
+    Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate, DateTime endDate,
+        CancellationToken ct);
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
@@ -40,6 +43,26 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<List<NonGroupExpense>> GetNonGroupByUserId(
         string userId,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
+
+    Task<List<Expense>> GetPersonalByUserId(
+        string userId,
+        List<string> memberIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct);
+
+    Task<List<Expense>> SearchPersonalByUserId(
+        string userId,
+        List<string> memberIds,
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? labels,
         int pageSize,
         DateTime? maxOccurred,
         DateTime? maxCreated,

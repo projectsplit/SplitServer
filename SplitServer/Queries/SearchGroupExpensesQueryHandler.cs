@@ -87,6 +87,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
+                    TransactionType = ExpenseType.Group,
                     Payments = x.Payments,
                     Shares = x.Shares,
                     Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
