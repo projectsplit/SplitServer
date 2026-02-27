@@ -1,11 +1,18 @@
 ﻿using CSharpFunctionalExtensions;
 using SplitServer.Models;
+using SplitServer.Queries.Models;
 
 namespace SplitServer.Repositories;
 
 public interface IExpensesRepository : IRepositoryBase<Expense>
 {
-    Task<List<GroupExpense>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated,
+    Task<List<GroupExpense>> GetByGroupId(
+        string groupId,
+        int pageSize,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct);
@@ -37,23 +44,29 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         string[]? payerIds,
         string[]? labelIds,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<NonGroupExpense>> GetNonGroupByUserId(
         string userId,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<Expense>> GetPersonalByUserId(
         string userId,
         List<string> memberIds,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<Expense>> SearchPersonalByUserId(
@@ -64,8 +77,10 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         DateTime? maxTime,
         string[]? labels,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<NonGroupExpense>> SearchNonGroup(
@@ -77,8 +92,10 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         string[]? payerIds,
         string[]? labelIds,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct);

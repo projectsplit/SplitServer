@@ -45,10 +45,21 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         var expenses = await _expensesRepository.GetPersonalByUserId(
             query.UserId,
             memberIds,
-            query.PageSize,
+            query.PageSize + 1,
             nextDetails?.Occurred,
             nextDetails?.Created,
+            PaginationDirection.Older,
+            false,
             ct);
+
+        bool hasMoreOlder = false;
+        if (expenses.Count > query.PageSize)
+        {
+            hasMoreOlder = true;
+            expenses.RemoveAt(expenses.Count - 1);
+        }
+
+        bool hasMoreNewer = query.Next != null;
 
         var responseItems = MapToResponseItems(query.UserId, memberIds, expenses, userGroups);
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
@@ -63,8 +74,22 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         return new PersonalExpensesResponse
         {
             Expenses = responseItems,
-            Next = GetNext(query, expenses)
+            Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,
+            Previous = hasMoreNewer ? CreateToken(expenses.First(), false) : null
         };
+    }
+
+    private static string? CreateToken(Expense expense, bool isJumpTo)
+    {
+        var details = new NextExpensePageDetails
+        {
+            Created = expense.Created,
+            Occurred = expense.Occurred,
+            IsJumpTo = isJumpTo
+        };
+
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
 
     private static List<PersonalExpenseResponseItem> MapToResponseItems(

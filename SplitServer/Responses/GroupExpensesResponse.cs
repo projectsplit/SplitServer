@@ -4,4 +4,5 @@ public class GroupExpensesResponse
 {
     public required List<GroupExpenseResponseItem> Expenses { get; init; }
     public required string? Next { get; init; }
+    public string? Previous { get; init; }
 }

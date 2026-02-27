@@ -60,18 +60,83 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var expenses = await _expensesRepository.Search(
-            query.GroupId,
-            query.SearchTerm,
-            query.After?.ToUtc(userTimeZoneId),
-            query.Before?.ToUtc(userTimeZoneId),
-            query.ParticipantIds,
-            query.PayerIds,
-            query.LabelIds,
-            query.PageSize,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            ct);
+        List<GroupExpense> expenses;
+        bool hasMoreNewer = false;
+        bool hasMoreOlder = false;
+
+        if (nextDetails?.IsJumpTo == true)
+        {
+            var newerTargetCount = query.PageSize / 2;
+            var newerItems = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                newerTargetCount + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Newer,
+                true,
+                ct);
+
+            if (newerItems.Count > newerTargetCount)
+            {
+                hasMoreNewer = true;
+                newerItems.RemoveAt(0);
+            }
+
+            var olderNeeded = query.PageSize - newerItems.Count;
+            var olderItems = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                olderNeeded + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (olderItems.Count > olderNeeded)
+            {
+                hasMoreOlder = true;
+                olderItems.RemoveAt(olderItems.Count - 1);
+            }
+
+            expenses = newerItems.Concat(olderItems).ToList();
+        }
+        else
+        {
+            expenses = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                query.PageSize + 1,
+                nextDetails?.Occurred,
+                nextDetails?.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (expenses.Count > query.PageSize)
+            {
+                hasMoreOlder = true;
+                expenses.RemoveAt(expenses.Count - 1);
+            }
+
+            hasMoreNewer = query.Next != null;
+        }
 
         return new GroupExpensesResponse
         {
@@ -94,8 +159,22 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                     Location = x.Location,
                 })
                 .ToList(),
-            Next = GetNext(query, expenses)
+            Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,
+            Previous = hasMoreNewer ? CreateToken(expenses.First(), false) : null
         };
+    }
+
+    private static string? CreateToken(GroupExpense expense, bool isJumpTo)
+    {
+        var details = new NextExpensePageDetails
+        {
+            Created = expense.Created,
+            Occurred = expense.Occurred,
+            IsJumpTo = isJumpTo
+        };
+
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
 
     private static string? GetNext(SearchGroupExpensesQuery query, List<GroupExpense> expenses)

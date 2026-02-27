@@ -35,12 +35,65 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var nonGroupExpenses = await _expensesRepository.GetNonGroupByUserId(
-            query.UserId,
-            query.PageSize,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            ct);
+        List<NonGroupExpense> nonGroupExpenses;
+        bool hasMoreNewer = false;
+        bool hasMoreOlder = false;
+
+        if (nextDetails?.IsJumpTo == true)
+        {
+            var newerTargetCount = query.PageSize / 2;
+            var newerItems = await _expensesRepository.GetNonGroupByUserId(
+                query.UserId,
+                newerTargetCount + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Newer,
+                true,
+                ct);
+
+            if (newerItems.Count > newerTargetCount)
+            {
+                hasMoreNewer = true;
+                newerItems.RemoveAt(0);
+            }
+
+            var olderNeeded = query.PageSize - newerItems.Count;
+            var olderItems = await _expensesRepository.GetNonGroupByUserId(
+                query.UserId,
+                olderNeeded + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (olderItems.Count > olderNeeded)
+            {
+                hasMoreOlder = true;
+                olderItems.RemoveAt(olderItems.Count - 1);
+            }
+
+            nonGroupExpenses = newerItems.Concat(olderItems).ToList();
+        }
+        else
+        {
+            nonGroupExpenses = await _expensesRepository.GetNonGroupByUserId(
+                query.UserId,
+                query.PageSize + 1,
+                nextDetails?.Occurred,
+                nextDetails?.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (nonGroupExpenses.Count > query.PageSize)
+            {
+                hasMoreOlder = true;
+                nonGroupExpenses.RemoveAt(nonGroupExpenses.Count - 1);
+            }
+
+            hasMoreNewer = query.Next != null;
+        }
 
         var uniqueUserIds = nonGroupExpenses
             .SelectMany(e => e.Payments.Select(p => p.UserId).Concat(e.Shares.Select(s => s.UserId)))
@@ -97,8 +150,22 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
                         .ToList(),
                     Location = x.Location,
                 }).ToList(),
-            Next = GetNext(query, nonGroupExpenses)
+            Next = hasMoreOlder ? CreateToken(nonGroupExpenses.Last(), false) : null,
+            Previous = hasMoreNewer ? CreateToken(nonGroupExpenses.First(), false) : null
         };
+    }
+
+    private static string? CreateToken(NonGroupExpense expense, bool isJumpTo)
+    {
+        var details = new NextExpensePageDetails
+        {
+            Created = expense.Created,
+            Occurred = expense.Occurred,
+            IsJumpTo = isJumpTo
+        };
+
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
 
     private static string? GetNext(GetNonGroupExpensesQuery query, List<NonGroupExpense> expenses)
