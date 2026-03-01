@@ -69,18 +69,22 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
         var filteredTransfersList = GroupService.CalculateFilteredTransfersList(query, groupTransfers, userTimeZoneId);
 
         var totalSpentByMember = GroupService.GetTotalSpent(group, filteredExpensesList);
+        var totalSent = GroupService.GetTotalSent(group,filteredTransfersList);
+        var totalReceived = GroupService.GetTotalReceived(group,filteredTransfersList);
         
         return new GetGroupDebtsResponse
         {
             Debts = GroupService.GetDebts(groupExpenses, groupTransfers),
             TotalSpent = totalSpentByMember,
-            ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByMember, ct),
-            TotalSent = GroupService.GetTotalSent(group, filteredTransfersList),
-            TotalReceived = GroupService.GetTotalReceived(group, filteredTransfersList),
+            ConvertedTotalSpent = await GetConvertedTotal(query.UserId, totalSpentByMember, ct),
+            TotalSent = totalSent,
+            ConvertedTotalSent = await GetConvertedTotal(query.UserId, totalSent, ct),
+            TotalReceived = totalReceived,
+            ConvertedTotalReceived = await GetConvertedTotal(query.UserId, totalReceived, ct),
         };
     }
 
-    private async Task<Dictionary<string, decimal>> GetConvertedTotalSpent(
+    private async Task<Dictionary<string, decimal>> GetConvertedTotal(
         string userId,
         Dictionary<string, Dictionary<string, decimal>> totalSpentByMember,
         CancellationToken ct)

@@ -25,7 +25,6 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         _nonGroupExpensesCollection = Collection.Database
             .GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
-
     }
 
     private static FilterDefinition<TDocument> BuildPaginationFilter<TDocument>(
@@ -127,6 +126,26 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var documents = await nonGroupExpensesCollection.Find(filter).ToListAsync(ct);
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<Expense>> GetAllPersonalByUserId( string userId,
+        List<string> memberIds,
+        CancellationToken ct)
+    {
+        var expensesCollection =
+            Collection.Database.GetCollection<ExpenseMongoDbDocument>(Collection.CollectionNamespace
+                .CollectionName);
+        
+        var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
+
+        var userRelatedFilter = filterBuilder.Or(
+            filterBuilder.And(filterBuilder.Eq("_t", "personal"), filterBuilder.Eq(x => x.CreatorId, userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "non_group"), filterBuilder.Eq("Shares.UserId", userId)),
+            filterBuilder.And(filterBuilder.Eq("_t", "group"), filterBuilder.In("Shares.MemberId", memberIds))
+        );
+        
+        var documents = await expensesCollection.Find(userRelatedFilter).ToListAsync(ct);
+        return documents.Select(d => Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)

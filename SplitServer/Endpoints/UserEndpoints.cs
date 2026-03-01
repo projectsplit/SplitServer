@@ -20,6 +20,7 @@ public static class UserEndpoints
         app.MapGet("/search-non-group-expense-users", SearchNonGroupExpenseUsersHandler);
         app.MapGet("/search-non-group-transfer-users", SearchNonGroupTransferUsersHandler);
         app.MapGet("/search-all-users", SearchAllUsersHandler);
+      
     }
 
     private static async Task<IResult> GetAuthenticatedUserHandler(

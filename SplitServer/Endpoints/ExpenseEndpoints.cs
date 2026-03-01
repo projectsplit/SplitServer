@@ -23,6 +23,7 @@ public static class ExpenseEndpoints
         app.MapPost("/edit", EditExpenseHandler);
         app.MapPost("/edit-non-group", EditNonGroupExpenseHandler);
         app.MapPost("/delete-non-group", DeleteNonGroupExpenseHandler);
+        app.MapGet("/user-totals", GetUserTotalsHandler);
     }
 
     private static async Task<IResult> CreateExpenseHandler(
@@ -329,5 +330,28 @@ public static class ExpenseEndpoints
         var result = await mediator.Send(command, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> GetUserTotalsHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        string? searchTerm,
+        DateTime? after,
+        DateTime? before,
+        string[]? labelIds,
+        CancellationToken ct)
+    {
+        var query = new GetUserTotalsQuery
+        {
+            UserId = httpContext.GetUserId(),
+            After = after,
+            Before = before,
+            LabelIds = labelIds,
+            SearchTerm = searchTerm,
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 }
