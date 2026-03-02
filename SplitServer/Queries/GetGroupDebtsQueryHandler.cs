@@ -62,7 +62,7 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
 
-        var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
+        var groupExpenses = await _expensesRepository.GetGroupExpensesByGroupId(group.Id, ct);
         var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
 
         var filteredExpensesList = GroupService.CalculateFilteredExpensesList(query, groupExpenses, userTimeZoneId);

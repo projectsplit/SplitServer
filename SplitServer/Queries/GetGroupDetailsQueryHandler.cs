@@ -49,7 +49,7 @@ public class GetGroupDetailsQueryHandler : IRequestHandler<GetGroupDetailsQuery,
 
         var memberId = group.Members.First(m => m.UserId == query.UserId).Id;
 
-        var expenses = await _expensesRepository.GetAllByMemberIds([memberId], ct);
+        var expenses = await _expensesRepository.GetGroupExpensesByMemberIds([memberId], ct: ct);
         var transfers = await _transfersRepository.GetAllByMemberIds([memberId], ct);
 
         var groupDetails = new Dictionary<string, decimal>();

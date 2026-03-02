@@ -46,7 +46,7 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
 
-        var nonGroupExpenses = await _expensesRepository.GetAllByUserId(user.Id, ct);
+        var nonGroupExpenses = await _expensesRepository.GetNonGroupExpensesByUserId(user.Id, ct: ct);
         var nonGroupTransfers = await _transfersRepository.GetAllByUserId(user.Id, ct);
 
         var usersIds = GetUniqueUsersIds(nonGroupExpenses, nonGroupTransfers).ToList();

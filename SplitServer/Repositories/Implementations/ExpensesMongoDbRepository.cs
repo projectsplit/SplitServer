@@ -95,7 +95,7 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return results;
     }
 
-    public async Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct)
+    public async Task<List<GroupExpense>> GetGroupExpensesByGroupId(string groupId, CancellationToken ct)
     {
         var groupExpensesCollection = Collection.Database
             .GetCollection<GroupExpenseMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
@@ -111,26 +111,36 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<NonGroupExpense>> GetAllByUserId(string userId, CancellationToken ct)
+    public async Task<List<NonGroupExpense>> GetNonGroupExpensesByUserId(
+        string userId,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        CancellationToken ct = default)
     {
-        var nonGroupExpensesCollection =
-            Collection.Database.GetCollection<NonGroupExpenseMongoDbDocument>(Collection.CollectionNamespace
-                .CollectionName);
-
         var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
 
-        var filter = filterBuilder.Or(
+        var involvedFilter = filterBuilder.Or(
             filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
             filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
         );
+        
+        if (startDate.HasValue) involvedFilter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
+        if (endDate.HasValue)   involvedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
 
-        var documents = await nonGroupExpensesCollection.Find(filter).ToListAsync(ct);
+        var documents = await _nonGroupExpensesCollection
+            .Find(involvedFilter)
+            .SortBy(x => x.Occurred)
+            .ToListAsync(ct);
+
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<Expense>> GetAllPersonalByUserId( string userId,
+    public async Task<List<Expense>> GetPersonalExpensesByUserId(string userId,
         List<string> memberIds,
-        CancellationToken ct)
+        CancellationToken ct,
+        DateTime? startDate = null,
+        DateTime? endDate = null
+        )
     {
         var expensesCollection =
             Collection.Database.GetCollection<ExpenseMongoDbDocument>(Collection.CollectionNamespace
@@ -144,8 +154,11 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             filterBuilder.And(filterBuilder.Eq("_t", "group"), filterBuilder.In("Shares.MemberId", memberIds))
         );
         
-        var documents = await expensesCollection.Find(userRelatedFilter).ToListAsync(ct);
-        return documents.Select(d => Mapper.ToEntity(d)).ToList();
+        if (startDate.HasValue) userRelatedFilter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
+        if (endDate.HasValue)   userRelatedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
+
+        var documents = await expensesCollection.Find(userRelatedFilter).SortBy(x => x.Occurred).ToListAsync(ct);
+        return documents.Select(Mapper.ToEntity).ToList();
     }
 
     public async Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct)
@@ -183,68 +196,28 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group expenses");
     }
 
-    public async Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
+    public async Task<List<GroupExpense>> GetGroupExpensesByMemberIds(
+        List<string> memberIds,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        CancellationToken ct = default)
     {
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
 
         var sharesFilter = filterBuilder.In("Shares.MemberId", memberIds);
         var paymentsFilter = filterBuilder.In("Payments.MemberId", memberIds);
-
+        
         var filter = filterBuilder.Or(sharesFilter, paymentsFilter);
+
+        if (startDate.HasValue) filter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
+        if (endDate.HasValue)   filter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
 
         var documents = await _groupExpensesCollection
             .Find(filter)
-            .ToListAsync(ct);
-
-        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
-    }
-
-    public async Task<List<GroupExpense>> GetAllByMemberIds(
-        List<string> memberIds,
-        DateTime startDate,
-        DateTime endDate,
-        CancellationToken ct)
-    {
-        var sharesFilter = FilterBuilder.In("Shares.MemberId", memberIds);
-        var paymentsFilter = FilterBuilder.In("Payments.MemberId", memberIds);
-        var occurredFilter = FilterBuilder.And(
-            FilterBuilder.Gte(x => x.Occurred, startDate),
-            FilterBuilder.Lte(x => x.Occurred, endDate));
-
-        var filter = FilterBuilder.And(
-            FilterBuilder.Or(sharesFilter, paymentsFilter),
-            occurredFilter);
-
-        var documents = await Collection
-            .Find(filter)
             .SortBy(x => x.Occurred)
             .ToListAsync(ct);
 
         return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
-    }
-
-    public async Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate,
-        DateTime endDate, CancellationToken ct)
-    {
-        var filterBuilder = Builders<NonGroupExpenseMongoDbDocument>.Filter;
-
-        var involvedFilter = filterBuilder.Or(
-            filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
-            filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
-        );
-
-        var occurredFilter = filterBuilder.And(
-            filterBuilder.Gte(x => x.Occurred, startDate),
-            filterBuilder.Lte(x => x.Occurred, endDate));
-
-        var filter = filterBuilder.And(involvedFilter, occurredFilter);
-
-        var documents = await _nonGroupExpensesCollection
-            .Find(filter)
-            .SortBy(x => x.Occurred)
-            .ToListAsync(ct);
-
-        return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct)

@@ -22,7 +22,9 @@ public static class ExpenseEndpoints
         app.MapPost("/delete", DeleteExpenseHandler);
         app.MapPost("/edit", EditExpenseHandler);
         app.MapPost("/edit-non-group", EditNonGroupExpenseHandler);
+        app.MapPost("/edit-personal", EditPersonalExpenseHandler);
         app.MapPost("/delete-non-group", DeleteNonGroupExpenseHandler);
+        app.MapPost("/delete-personal", DeletePersonalExpenseHandler);
         app.MapGet("/user-totals", GetUserTotalsHandler);
     }
 
@@ -122,6 +124,23 @@ public static class ExpenseEndpoints
         CancellationToken ct)
     {
         var command = new DeleteNonGroupExpenseCommand
+        {
+            UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+    
+    private static async Task<IResult> DeletePersonalExpenseHandler(
+        DeleteExpenseRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new DeletePersonalExpenseCommand
         {
             UserId = httpContext.GetUserId(),
             ExpenseId = request.ExpenseId
@@ -323,6 +342,29 @@ public static class ExpenseEndpoints
             Occurred = request.Occurred,
             Payments = request.Payments,
             Shares = request.Shares,
+            Labels = request.Labels,
+            Location = request.Location
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+    
+    private static async Task<IResult> EditPersonalExpenseHandler(
+        EditPersonalExpenseRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new EditPersonalExpenseCommand
+        {
+            ExpenseId = request.ExpenseId,
+            UserId = httpContext.GetUserId(),
+            Amount = request.Amount,
+            Currency = request.Currency,
+            Description = request.Description,
+            Occurred = request.Occurred,
             Labels = request.Labels,
             Location = request.Location
         };

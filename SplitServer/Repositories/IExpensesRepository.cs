@@ -15,23 +15,17 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         bool inclusive,
         CancellationToken ct);
 
-    Task<List<GroupExpense>> GetAllByGroupId(string groupId, CancellationToken ct);
+    Task<List<GroupExpense>> GetGroupExpensesByGroupId(string groupId, CancellationToken ct);
 
-    Task<List<NonGroupExpense>> GetAllByUserId(string groupId, CancellationToken ct);
+    Task<List<NonGroupExpense>> GetNonGroupExpensesByUserId(string userId, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
     
-    Task<List<Expense>> GetAllPersonalByUserId(string userId, List<string> memberIds, CancellationToken ct);
+    Task<List<Expense>> GetPersonalExpensesByUserId(string userId, List<string> memberIds, CancellationToken ct,DateTime? startDate = null, DateTime? endDate = null);
 
     Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
 
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
-    Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
-
-    Task<List<GroupExpense>> GetAllByMemberIds(List<string> memberIds, DateTime startDate, DateTime endDate,
-        CancellationToken ct);
-
-    Task<List<NonGroupExpense>> GetAllNonGroupExpensesByUserId(string userId, DateTime startDate, DateTime endDate,
-        CancellationToken ct);
+    Task<List<GroupExpense>> GetGroupExpensesByMemberIds(List<string> memberIds, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 

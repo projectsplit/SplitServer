@@ -38,7 +38,7 @@ public class SettleGuestDebtCommandHandler : IRequestHandler<SettleGuestDebtComm
             return Result.Failure("Guest is not a member of this group");
         }
 
-        var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
+        var groupExpenses = await _expensesRepository.GetGroupExpensesByGroupId(group.Id, ct);
         var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
 
         var debts = GroupService.GetDebts(groupExpenses, groupTransfers);

@@ -48,7 +48,7 @@ public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Resu
         var userGroups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
         var memberIds = userGroups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
 
-        var expenses = await _expensesRepository.GetAllPersonalByUserId(query.UserId,memberIds, ct);
+        var expenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId,memberIds, ct);
 
         var filteredExpensesList = CalculateFilteredExpensesList(query, expenses, userTimeZoneId);
         

@@ -61,7 +61,7 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
             .Select(m => m.Id)
             .ToList();
 
-        var expenses = await _expensesRepository.GetAllByMemberIds(userMemberIds, ct);
+        var expenses = await _expensesRepository.GetGroupExpensesByMemberIds(userMemberIds, ct: ct);
         var transfers = await _transfersRepository.GetAllByMemberIds(userMemberIds, ct);
 
         var groupDetails = new Dictionary<string, Dictionary<string, decimal>>();

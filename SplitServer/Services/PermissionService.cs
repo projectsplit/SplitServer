@@ -141,6 +141,44 @@ public class PermissionService
 
         return (user, nonGroupExpense);
     }
+    
+    public async Task<Result<(User user, Expense expense)>> VerifyPersonalExpenseAction(
+        string userId,
+        string expenseId,
+        CancellationToken ct)
+    {
+        var userMaybe = await _usersRepository.GetById(userId, ct);
+
+        if (userMaybe.HasNoValue)
+        {
+            return Result.Failure<(User user, Expense expense)>($"User with id {userId} was not found");
+        }
+
+        var user = userMaybe.Value;
+
+        var expenseMaybe = await _expensesRepository.GetById(expenseId, ct);
+
+        if (expenseMaybe.HasNoValue)
+        {
+            return Result.Failure<(User user, Expense expense)>($"Expense with id {expenseId} was not found");
+        }
+
+        var expense = expenseMaybe.Value;
+
+        if (expense is not Expense personalExpense)
+        {
+            return Result.Failure<(User user, Expense expense)>($"Expense with id {expenseId} was not found");
+        }
+
+        var userFoundInExpense = personalExpense.CreatorId == userId;
+
+        if (!userFoundInExpense)
+        {
+            return Result.Failure<(User user, Expense expense)>($"User with id {userId} was not found in expense with id {expenseId}");
+        }
+
+        return (user, personalExpense);
+    }
 
     public async Task<Result<(User user, Group group, Transfer transfer, string memberId)>> VerifyTransferAction(
         string userId,
