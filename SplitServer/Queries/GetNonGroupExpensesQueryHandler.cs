@@ -138,11 +138,11 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
                     Labels = x.Labels
                         .Select(text =>
                         {
-                            var userLabel = userLabels.FirstOrDefault(l => l.Text == text);
+                            var userLabel = userLabels.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
 
                             return new Label
                             {
-                                Id = text,
+                                Id = $"{query.UserId}_{text}",
                                 Text = userLabel?.Text ?? text,
                                 Color = userLabel?.Color ?? ""
                             };
