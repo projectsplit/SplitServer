@@ -62,7 +62,12 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         bool hasMoreNewer = query.Next != null;
 
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
-        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses, userLabels);
+
+        var groupIds = expenses.OfType<GroupExpense>().Select(ge => ge.GroupId).Distinct().ToList();
+        var groups = await _groupsRepository.GetByIds(groupIds, ct);
+        var groupLabels = groups.ToDictionary(g => g.Id, g => g.Labels.ToDictionary(l => l.Id));
+
+        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses, userLabels, groupLabels);
 
         return new PersonalExpensesResponse
         {
@@ -89,7 +94,8 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         string currentUserId,
         List<string> memberIds,
         List<Expense> expenses,
-        List<UserLabel>? userLabels)
+        List<UserLabel>? userLabels,
+        Dictionary<string, Dictionary<string, Label>> groupLabels)
     {
         var result = new List<PersonalExpenseResponseItem>();
 
@@ -114,7 +120,7 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
                     _ => throw new ArgumentOutOfRangeException(nameof(e))
                 },
                 GroupId = (e as GroupExpense)?.GroupId,
-                Labels = GetLabels(e, currentUserId, userLabels)
+                Labels = GetLabels(e, currentUserId, userLabels, groupLabels)
             };
 
             result.Add(item);
@@ -135,11 +141,20 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         };
     }
 
-    private static List<Label> GetLabels(Expense e, string userId, List<UserLabel>? userLabels)
+    private static List<Label> GetLabels(
+        Expense e, 
+        string userId, 
+        List<UserLabel>? userLabels,
+        Dictionary<string, Dictionary<string, Label>> groupLabels)
     {
+        if (e is GroupExpense ge)
+        {
+            var labelsDict = groupLabels.GetValueOrDefault(ge.GroupId);
+            return ge.Labels.Select(id => labelsDict?.GetValueOrDefault(id) ?? new Label { Id = id, Text = id, Color = "" }).ToList();
+        }
+
         var labelTexts = e switch
         {
-            GroupExpense ge => ge.Labels,
             NonGroupExpense nge => nge.Labels,
             PersonalExpense pe => pe.Labels,
             _ => new List<string>()
