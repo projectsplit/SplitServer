@@ -126,7 +126,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
          
          
 
-            var shareSum = groupShareSum + nonGroupShareSum + personalExpensesSum;
+            var shareSum = groupShareSum + nonGroupShareSum ;
             var paymentSum = groupPaymentSum + nonGroupPaymentSum ;
             
             shareSumSoFar += groupShareSum + nonGroupShareSum + personalExpensesSum;
