@@ -35,8 +35,7 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         {
             return Result.Failure<PersonalExpensesResponse>($"User with id {query.UserId} was not found");
         }
-
-        var user = userMaybe.Value;
+        
         var userGroups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
         var memberIds = userGroups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
 

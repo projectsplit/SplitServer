@@ -207,7 +207,7 @@ public static class ExpenseEndpoints
         DateTime? before,
         DateTime? after,
         string? searchTerm,
-        string[]? labels,
+        string[]? labelIds,
         string[]? participantIds,
         string[]? payerIds,
         CancellationToken ct)
@@ -215,7 +215,7 @@ public static class ExpenseEndpoints
         var hasAnySearchParams = before is not null ||
                                  after is not null ||
                                  searchTerm is not null ||
-                                 !labels.IsNullOrEmpty() ||
+                                 !labelIds.IsNullOrEmpty() ||
                                  !participantIds.IsNullOrEmpty() ||
                                  !payerIds.IsNullOrEmpty();
 
@@ -226,7 +226,7 @@ public static class ExpenseEndpoints
                 Before = before,
                 After = after,
                 SearchTerm = searchTerm,
-                Labels = labels,
+                LabelIds = labelIds,
                 ParticipantIds = participantIds,
                 PayerIds = payerIds,
                 PageSize = pageSize,
@@ -252,15 +252,14 @@ public static class ExpenseEndpoints
         DateTime? before,
         DateTime? after,
         string? searchTerm,
-        string[]? labels,
+        string[]? labelIds,
         CancellationToken ct)
     {
         var hasAnySearchParams = before is not null ||
                                  after is not null ||
                                  searchTerm is not null ||
-                                 !labels.IsNullOrEmpty();
-
-
+                                 !labelIds.IsNullOrEmpty();
+        
         IRequest<CSharpFunctionalExtensions.Result<PersonalExpensesResponse>> query = hasAnySearchParams
             ? new SearchPersonalExpensesQuery
             {
@@ -268,7 +267,7 @@ public static class ExpenseEndpoints
                 Before = before,
                 After = after,
                 SearchTerm = searchTerm,
-                Labels = labels,
+                LabelIds = labelIds,
                 PageSize = pageSize,
                 Next = next,
             }

@@ -102,12 +102,16 @@ public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Resu
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
+           
             filteredExpenses = filteredExpenses.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (query.LabelIds is { Length: > 0 })
+        var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
+        
+        if (labelIds is { Length: > 0 })
         {
-            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => query.LabelIds.Contains(l)));
+            
+            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => labelIds.Contains(l)));
         }
 
         return filteredExpenses.ToList();

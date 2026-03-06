@@ -12,7 +12,7 @@ public class SearchNonGroupExpensesQuery : IRequest<Result<NonGroupExpensesRespo
     public required DateTime? Before { get; init; }
     public required DateTime? After { get; init; }
     public required string? SearchTerm { get; init; }
-    public required string[]? Labels { get; init; }
+    public required string[]? LabelIds { get; init; }
     public required string[]? ParticipantIds { get; init; }
     public required string[]? PayerIds { get; init; }
 }

@@ -1,4 +1,3 @@
-using SplitServer.Models;
 namespace SplitServer.Responses;
 
 public class GetUserLabelsResponse

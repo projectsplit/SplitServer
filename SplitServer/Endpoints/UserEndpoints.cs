@@ -21,10 +21,11 @@ public static class UserEndpoints
         app.MapGet("/search-non-group-transfer-users", SearchNonGroupTransferUsersHandler);
         app.MapGet("/search-all-users", SearchAllUsersHandler);
         app.MapGet("/user-labels", GetAllUserLabels);
+        app.MapGet("/user-group-labels", GetUserAndGroupsLabels);
     }
 
     private static async Task<IResult> GetAllUserLabels(
-        IMediator mediator, 
+        IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
@@ -35,6 +36,21 @@ public static class UserEndpoints
 
         var result = await mediator.Send(query, ct);
 
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetUserAndGroupsLabels(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetUserAndGroupsLabelsQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+        
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 

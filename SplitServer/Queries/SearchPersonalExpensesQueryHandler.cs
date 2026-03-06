@@ -53,13 +53,15 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
+        var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
+
         var expenses = await _expensesRepository.SearchPersonalByUserId(
             query.UserId,
             memberIds,
             query.SearchTerm,
             query.After?.ToUtc(userTimeZoneId),
             query.Before?.ToUtc(userTimeZoneId),
-            query.Labels,
+            labelIds,
             query.PageSize + 1,
             nextDetails?.Occurred,
             nextDetails?.Created,
@@ -75,21 +77,13 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
         }
 
         bool hasMoreNewer = query.Next != null;
-
-        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses, userGroups);
+        
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
-        var labelsByText = userLabels.ToDictionary(l => l.Text);
-
-        foreach (var item in responseItems)
-        {
-            var enrichedLabels = new List<Label>();
-            foreach (var l in item.Labels)
-            {
-                enrichedLabels.Add(labelsByText.TryGetValue(l.Text, out var ul) ? l with { Color = ul.Color } : l);
-            }
-            item.Labels.Clear();
-            item.Labels.AddRange(enrichedLabels);
-        }
+        var groupIds = expenses.OfType<GroupExpense>().Select(ge => ge.GroupId).Distinct().ToList();
+        var groups = await _groupsRepository.GetByIds(groupIds, ct);
+        var groupLabels = groups.ToDictionary(g => g.Id, g => g.Labels.ToDictionary(l => l.Id));
+        
+        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses,userLabels, groupLabels);
 
         return new PersonalExpensesResponse
         {
@@ -111,14 +105,14 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
         var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
-
-    // This method is identical to the one in GetPersonalExpensesQueryHandler
-    // In a real project, this should be refactored into a shared service or mapper
+    
     private List<PersonalExpenseResponseItem> MapToResponseItems(
         string currentUserId,
         List<string> memberIds,
         List<Expense> expenses,
-        IList<Group> userGroups)
+        List<UserLabel>? userLabels,
+        Dictionary<string, Dictionary<string, Label>> groupLabels
+       )
     {
         var result = new List<PersonalExpenseResponseItem>();
 
@@ -143,7 +137,7 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
                     _ => throw new ArgumentOutOfRangeException(nameof(e))
                 },
                 GroupId = (e as GroupExpense)?.GroupId,
-                Labels = GetLabels(e)
+                Labels = GetLabels(e, currentUserId, userLabels, groupLabels)
             };
 
             result.Add(item);
@@ -163,17 +157,36 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
         };
     }
 
-    private List<Label> GetLabels(Expense e)
+    private static List<Label> GetLabels(
+        Expense e, 
+        string userId, 
+        List<UserLabel>? userLabels,
+        Dictionary<string, Dictionary<string, Label>> groupLabels)
     {
+        if (e is GroupExpense ge)
+        {
+            var labelsDict = groupLabels.GetValueOrDefault(ge.GroupId);
+            return ge.Labels.Select(id => labelsDict?.GetValueOrDefault(id) ?? new Label { Id = id, Text = id, Color = "" }).ToList();
+        }
+
         var labelTexts = e switch
         {
-            GroupExpense ge => ge.Labels,
             NonGroupExpense nge => nge.Labels,
             PersonalExpense pe => pe.Labels,
             _ => new List<string>()
         };
 
-        return labelTexts.Select(t => new Label { Id = t, Text = t, Color = "" }).ToList();
+        return labelTexts.Select(text =>
+        {
+            var userLabel = userLabels?.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
+
+            return new Label
+            {
+                Id = $"{userId}_{text}",
+                Text = userLabel?.Text ?? text,
+                Color = userLabel?.Color ?? ""
+            };
+        }).ToList();
     }
 
     private static string? GetNext(SearchPersonalExpensesQuery query, List<Expense> expenses)
