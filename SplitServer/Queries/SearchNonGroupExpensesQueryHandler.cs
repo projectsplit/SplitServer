@@ -41,6 +41,8 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
+        
+        var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
@@ -58,7 +60,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
                 query.Before?.ToUtc(userTimeZoneId),
                 query.ParticipantIds,
                 query.PayerIds,
-                query.LabelIds,
+                labelIds,
                 newerTargetCount + 1,
                 nextDetails.Occurred,
                 nextDetails.Created,
@@ -80,7 +82,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
                 query.Before?.ToUtc(userTimeZoneId),
                 query.ParticipantIds,
                 query.PayerIds,
-                query.LabelIds,
+                labelIds,
                 olderNeeded + 1,
                 nextDetails.Occurred,
                 nextDetails.Created,
@@ -105,7 +107,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
                 query.Before?.ToUtc(userTimeZoneId),
                 query.ParticipantIds,
                 query.PayerIds,
-                query.LabelIds,
+                labelIds,
                 query.PageSize + 1,
                 nextDetails?.Occurred,
                 nextDetails?.Created,

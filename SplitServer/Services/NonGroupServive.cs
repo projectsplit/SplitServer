@@ -238,9 +238,11 @@ public class NonGroupService
             filteredExpenses = filteredExpenses.Where(x => x.Payments.Any(p => query.PayerIds.Contains(p.UserId)));
         }
 
-        if (query.LabelIds is { Length: > 0 })
+        var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
+        
+        if (labelIds is { Length: > 0 })
         {
-            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => query.LabelIds.Contains(l)));
+            filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => labelIds.Contains(l)));
         }
 
         return filteredExpenses.ToList();
