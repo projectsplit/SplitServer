@@ -30,6 +30,8 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
     Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct);
+    
+    Task<bool> UserLabelInUse(string labelText, CancellationToken ct);
 
     Task<List<GroupExpense>> Search(
         string groupId,

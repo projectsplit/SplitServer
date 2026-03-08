@@ -244,6 +244,19 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return await _groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
+    public async Task<bool> UserLabelInUse(string labelText, CancellationToken ct)
+    {
+        var expensesCollection =
+            Collection.Database.GetCollection<ExpenseMongoDbDocument>(Collection.CollectionNamespace
+                .CollectionName);
+        
+        var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
+        
+        var filter = filterBuilder.AnyEq(x=>x.Labels, labelText);
+        
+        return await expensesCollection.Find(filter).AnyAsync(ct);
+    }
+
     public async Task<List<GroupExpense>> Search(
         string groupId,
         string? searchTerm,

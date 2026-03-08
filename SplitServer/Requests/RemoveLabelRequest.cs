@@ -3,4 +3,5 @@
 public class RemoveLabelRequest
 {
     public required string LabelId { get; init; }
+    
 }

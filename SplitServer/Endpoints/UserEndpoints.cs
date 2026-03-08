@@ -22,6 +22,7 @@ public static class UserEndpoints
         app.MapGet("/search-all-users", SearchAllUsersHandler);
         app.MapGet("/user-labels", GetAllUserLabels);
         app.MapGet("/user-group-labels", GetUserAndGroupsLabels);
+        app.MapPost("/delete-user-label", DeleteUserLabel);
     }
 
     private static async Task<IResult> GetAllUserLabels(
@@ -38,6 +39,25 @@ public static class UserEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
+    
+    private static async Task<IResult> DeleteUserLabel(
+        IMediator mediator,
+        HttpContext httpContext,
+        DeleteUserLabelRequest request,
+        CancellationToken ct)
+    {
+        var query = new DeleteUserLabelCommand
+        {
+            UserId = httpContext.GetUserId(),
+            LabelId = request.LabelId
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+    
+    
 
     private static async Task<IResult> GetUserAndGroupsLabels(
         IMediator mediator,
