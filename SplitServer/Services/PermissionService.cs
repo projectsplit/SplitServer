@@ -102,6 +102,49 @@ public class PermissionService
 
         return (user, group, expense, memberId);
     }
+    
+    public async Task<Result<(User user, List<string>? targetGroupIds)>> VerifyBudgetAction(
+        string userId,
+        BudgetScope scope,
+        List<string>? targetGroupIds,
+        CancellationToken ct)
+    {
+        var userMaybe = await _usersRepository.GetById(userId, ct);
+
+        if (userMaybe.HasNoValue)
+        {
+            return Result.Failure<(User user, List<string>? targetGroupIds)>($"User with id {userId} was not found");
+        }
+
+        var user = userMaybe.Value;
+
+        var groups = await _groupsRepository.GetAllByUserId(userId, ct);
+        var groupIds = groups.Select(g => g.Id).ToList();
+
+        if(scope == BudgetScope.Group && groupIds is {Count: 0})
+        {
+            return Result.Failure<(User user, List<string>? targetGroupIds)>("User must belong to at least one group to create a budget for specific groups");
+        }
+        
+        if (targetGroupIds is { Count: > 0 })
+        {
+            if (targetGroupIds.Count != targetGroupIds.Distinct().Count())
+            {
+                return Result.Failure<(User user, List<string>? targetGroupIds)>("Duplicate Group IDs are not allowed");
+            }
+
+            foreach (var targetId in targetGroupIds)
+            {
+                if (!groupIds.Contains(targetId))
+                {
+                    return Result.Failure<(User user, List<string>? targetGroupIds)>(
+                        $"Group ID '{targetId}' does not belong to the user or was not found");
+                }
+            }
+        }
+
+        return (user, targetGroupIds);
+    }
 
     public async Task<Result<(User user, NonGroupExpense expense)>> VerifyNonGroupExpenseAction(
         string userId,

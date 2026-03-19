@@ -10,7 +10,10 @@ public class ValidationService
 {
     public const int UsernameMinLength = 4;
     public const int UsernameMaxLength = 16;
-    public HashSet<char> UsernameAllowedChars { get; } = new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
+
+    public HashSet<char> UsernameAllowedChars { get; } =
+        new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
+
     private readonly HashSet<char> _usernameForbiddenLeadingChars = new("_.");
     private readonly HashSet<char> _usernameForbiddenTrailingChars = new("_.");
     private readonly List<string> _usernameForbiddenSequences = ["_.", "._", "__", ".."];
@@ -90,7 +93,8 @@ public class ValidationService
         return parsedCurrency!;
     }
 
-    public Result ValidateExpense(Group group, List<GroupPayment> payments, List<GroupShare> shares, decimal amount, string currency)
+    public Result ValidateExpense(Group group, List<GroupPayment> payments, List<GroupShare> shares, decimal amount,
+        string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
@@ -161,6 +165,68 @@ public class ValidationService
         return Result.Success();
     }
 
+    public Result ValidateBudget(decimal amount, string currency,string description, BudgetScope scope,BudgetFrequency frequency, DateTime? startDate, DateTime? endDate, string? commencementDay,List<string>? targetGroupIds)
+    {
+        var amountValidationResult = ValidateAmount(amount, currency);
+
+        if (amountValidationResult.IsFailure)
+        {
+            return amountValidationResult;
+        }
+
+        if (targetGroupIds is { Count: > 0 } && !scope.HasFlag(BudgetScope.Group))
+        {
+            return Result.Failure("Target groups were provided but the 'Group' scope is not selected.");
+        }
+        
+        if ( string.IsNullOrEmpty(description))
+        {
+            return Result.Failure("Description is required");
+        }
+        
+        if(frequency is BudgetFrequency.Weekly or BudgetFrequency.Monthly)
+        {   
+            if(string.IsNullOrEmpty(commencementDay))
+            {
+                return Result.Failure("Commencement day must be provided for weekly and monthly budgets.");
+            }
+        }
+
+        if (scope == BudgetScope.None)
+        {
+            return Result.Failure("Budget must have at least one scope selected.");
+        }
+
+
+        if (frequency == BudgetFrequency.Custom)
+        {
+            if (startDate == null || endDate == null)
+                return Result.Failure("Custom budgets must have a start and end date.");
+            if (startDate >= endDate)
+                return Result.Failure("Start date must be before end date.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(commencementDay))
+        {
+            var value = commencementDay.Trim();
+
+            if (int.TryParse(value, out var day))
+            {
+                if (day < 1 || day > 31)
+                    return Result.Failure("Commencement day must be between 1 and 31 or a weekday name.");
+            }
+            else
+            {
+                if (!Enum.TryParse<DayOfWeek>(value, true, out _))
+                {
+                    return Result.Failure("Commencement day must be between 1 and 31 or a weekday name.");
+                }
+            }
+        }
+
+        return Result.Success();
+    }
+
     public Result ValidateNonGroupExpense(List<Payment> payments, List<Share> shares, decimal amount, string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
@@ -223,8 +289,8 @@ public class ValidationService
 
         return Result.Success();
     }
-    
-    public Result ValidatePersonalExpense( decimal amount, string currency)
+
+    public Result ValidatePersonalExpense(decimal amount, string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
@@ -232,7 +298,7 @@ public class ValidationService
         {
             return amountValidationResult;
         }
-        
+
         return Result.Success();
     }
 
@@ -265,7 +331,8 @@ public class ValidationService
         return Result.Success();
     }
 
-    public Result ValidateNonGroupTransfer(string senderId, string receiverId, string userId, decimal amount, string currency)
+    public Result ValidateNonGroupTransfer(string senderId, string receiverId, string userId, decimal amount,
+        string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
@@ -284,12 +351,12 @@ public class ValidationService
             return Result.Failure("Receiver must be different from sender");
         }
 
-        if (senderId == "" )
+        if (senderId == "")
         {
             return Result.Failure("Sender must be provided");
         }
-        
-        if (receiverId == "" )
+
+        if (receiverId == "")
         {
             return Result.Failure("Receiver must be provided");
         }

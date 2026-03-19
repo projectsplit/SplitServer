@@ -14,6 +14,7 @@ public static class EndpointMappings
         app.MapGroup("/join").RequireAuthorization().MapJoinEndpoints();
         app.MapGroup("/currency-rates").RequireAuthorization().MapCurrencyExchangeEndpoints();
         app.MapGroup("/analytics").RequireAuthorization().MapAnalyticsEndpoints();
+        app.MapGroup("/budgets").RequireAuthorization().MapBudgetsEndpoints();
         app.MapGroup("/health").MapHealthEndpoints();
 
         return app;
