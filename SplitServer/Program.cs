@@ -34,7 +34,7 @@ builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
 builder.Services.AddSingleton<NonGroupService>();
 builder.Services.AddSingleton<UserLabelService>();
-builder.Services.AddSingleton<IBudgetService, BudgetService>();
+builder.Services.AddSingleton< BudgetService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();

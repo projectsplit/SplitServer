@@ -5,6 +5,8 @@ namespace SplitServer.Responses;
 public class GetActiveBudgetInfoResponse
 {
     public required string TotalAmountSpent { get; init; }
+    public required string Id { get; init; }
+    public required string Description { get; init; }
     public required string RemainingDays { get; init; }
     public required string AverageSpentPerDay { get; init; }
     public required string Goal { get; init; }

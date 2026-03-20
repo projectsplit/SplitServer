@@ -9,11 +9,11 @@ namespace SplitServer.Queries;
 public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetInfoQuery, Result<GetActiveBudgetInfoResponse>>
 {
     private readonly IBudgetsRepository _budgetsRepository;
-    private readonly IBudgetService _budgetService;
+    private readonly BudgetService _budgetService;
 
     public GetActiveBudgetInfoQueryHandler(
         IBudgetsRepository budgetsRepository,
-        IBudgetService budgetService)
+        BudgetService budgetService)
     {
         _budgetsRepository = budgetsRepository;
         _budgetService = budgetService;
@@ -53,6 +53,8 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
         return new GetActiveBudgetInfoResponse
         {
             TotalAmountSpent = spentAmount.ToString("F2"),
+            Id = activeBudget.Id,
+            Description = activeBudget.Description,
             RemainingDays = remainingDays.ToString(),
             AverageSpentPerDay = averageSpentPerDay.ToString("F2"),
             Goal = activeBudget.Amount.ToString("F2"),
