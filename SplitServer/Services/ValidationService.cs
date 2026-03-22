@@ -214,6 +214,7 @@ public class ValidationService
         {
             if (startDate == null || endDate == null) return Result.Failure("Custom budgets must have a start and end date.");
             if (startDate >= endDate) return Result.Failure("Start date must be before end date.");
+            if (endDate < DateTime.UtcNow.Date) return Result.Failure("End date must be in the future.");
         }
 
         if (!string.IsNullOrWhiteSpace(commencementDay))

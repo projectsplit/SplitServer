@@ -56,6 +56,8 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
             TotalAmountSpent = spentAmount.ToString("F2"),
             Id = activeBudget.Id,
             Description = activeBudget.Description,
+            Scope = activeBudget.Scope,
+            TargetGroupIds = activeBudget.TargetGroupIds,
             RemainingDays = remainingDays.ToString(),
             AverageSpentPerDay = averageSpentPerDay.ToString("F2"),
             Goal = activeBudget.Amount.ToString("F2"),

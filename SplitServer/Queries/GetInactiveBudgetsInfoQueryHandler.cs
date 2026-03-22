@@ -45,6 +45,8 @@ public class GetInactiveBudgetsInfoQueryHandler : IRequestHandler<GetInactiveBud
                     Description = budget.Description,
                     Currency = budget.Currency,
                     Frequency = budget.Frequency,
+                    Scope = budget.Scope,
+                    TargetGroupIds = budget.TargetGroupIds,
                     StartDate = startDate,
                     EndDate = endDate
                 };
