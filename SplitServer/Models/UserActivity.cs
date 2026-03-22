@@ -4,4 +4,5 @@ public record UserActivity : EntityBase
 {
     public required string? RecentContextId { get; init; }
     public required DateTime? LastViewedNotificationTimestamp { get; init; }
+    public required bool? ShowBudgetInfo { get; init; }
 }

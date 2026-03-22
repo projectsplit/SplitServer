@@ -63,7 +63,8 @@ public class SetRecentContextCommandHandler : IRequestHandler<SetRecentContextCo
                 Created = now,
                 Updated = now,
                 RecentContextId = command.ContextId,
-                LastViewedNotificationTimestamp = null
+                LastViewedNotificationTimestamp = null,
+                ShowBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : true
             };
 
         return await _userActivityRepository.Upsert(userActivity, ct);

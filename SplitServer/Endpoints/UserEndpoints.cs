@@ -13,6 +13,7 @@ public static class UserEndpoints
         app.MapGet("/me", GetAuthenticatedUserHandler);
         app.MapPut("/activity/last-viewed-notification", SetLastViewedNotificationTimestampHandler);
         app.MapPut("/activity/recent-context", SetRecentContextHandler);
+        app.MapPut("/activity/show-budget-info", SetShowBudgetInfoHandler);
         app.MapPut("/preferences/time-zone", SetTimeZoneHandler);
         app.MapPut("/preferences/currency", SetCurrencyHandler);
         app.MapGet("/username/{username}", GetUsernameStatusHandler);
@@ -99,6 +100,23 @@ public static class UserEndpoints
         {
             UserId = httpContext.GetUserId(),
             Timestamp = request.Timestamp
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> SetShowBudgetInfoHandler(
+        SetShowBudgetInfoRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new SetShowBudgetInfoCommand
+        {
+            UserId = httpContext.GetUserId(),
+            ShowBudgetInfo = request.ShowBudgetInfo
         };
 
         var result = await mediator.Send(command, ct);

@@ -43,7 +43,8 @@ public class SetLastViewedNotificationTimestampCommandHandler : IRequestHandler<
                 Created = now,
                 Updated = now,
                 RecentContextId = null,
-                LastViewedNotificationTimestamp = command.Timestamp
+                LastViewedNotificationTimestamp = command.Timestamp,
+                ShowBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : true
             };
 
         return await _userActivityRepository.Upsert(userActivity, ct);

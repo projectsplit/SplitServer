@@ -23,7 +23,7 @@ public class GetInactiveBudgetsInfoQueryHandler : IRequestHandler<GetInactiveBud
     {
         var budgets = await _budgetsRepository.GetAllByUserId(query.UserId, ct);
         
-        var inactiveBudgets = budgets.Where(b => !b.IsActive).ToList();
+        var inactiveBudgets = budgets.Where(b => !b.IsActive).OrderByDescending(b => b.Created).ToList();
         
         var responseItems = new List<GetInactiveBudgetsInfoResponseItem>();
         
@@ -48,7 +48,7 @@ public class GetInactiveBudgetsInfoQueryHandler : IRequestHandler<GetInactiveBud
                 EndDate = endDate
             });
         }
-
+        
         return new GetInactiveBudgetsInfoResponse
         {
             Budgets = responseItems
