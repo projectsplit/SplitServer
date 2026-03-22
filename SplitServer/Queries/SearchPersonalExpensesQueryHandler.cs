@@ -1,6 +1,5 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using Microsoft.IdentityModel.Tokens;
 using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Queries.Models;
@@ -41,8 +40,6 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
             return Result.Failure<PersonalExpensesResponse>($"User with id {query.UserId} was not found");
         }
 
-        var user = userMaybe.Value;
-        
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
@@ -69,21 +66,21 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
             false,
             ct);
 
-        bool hasMoreOlder = false;
+        var hasMoreOlder = false;
         if (expenses.Count > query.PageSize)
         {
             hasMoreOlder = true;
             expenses.RemoveAt(expenses.Count - 1);
         }
 
-        bool hasMoreNewer = query.Next != null;
-        
+        var hasMoreNewer = query.Next != null;
+
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
         var groupIds = expenses.OfType<GroupExpense>().Select(ge => ge.GroupId).Distinct().ToList();
         var groups = await _groupsRepository.GetByIds(groupIds, ct);
         var groupLabels = groups.ToDictionary(g => g.Id, g => g.Labels.ToDictionary(l => l.Id));
-        
-        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses,userLabels, groupLabels);
+
+        var responseItems = MapToResponseItems(query.UserId, memberIds, expenses, userLabels, groupLabels);
 
         return new PersonalExpensesResponse
         {
@@ -105,20 +102,17 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
         var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
-    
+
     private List<PersonalExpenseResponseItem> MapToResponseItems(
         string currentUserId,
         List<string> memberIds,
         List<Expense> expenses,
         List<UserLabel>? userLabels,
         Dictionary<string, Dictionary<string, Label>> groupLabels
-       )
+    )
     {
-        var result = new List<PersonalExpenseResponseItem>();
-
-        foreach (var e in expenses)
-        {
-            var item = new PersonalExpenseResponseItem
+        return expenses
+            .Select(e => new PersonalExpenseResponseItem
             {
                 Id = e.Id,
                 Created = e.Created,
@@ -131,24 +125,20 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
                 Location = e.Location,
                 TransactionType = e switch
                 {
-                    PersonalExpense => ExpenseType.Personal,
-                    GroupExpense => ExpenseType.Group,
-                    NonGroupExpense => ExpenseType.NonGroup,
+                    PersonalExpense => ExpenseResponseType.Personal,
+                    GroupExpense => ExpenseResponseType.Group,
+                    NonGroupExpense => ExpenseResponseType.NonGroup,
                     _ => throw new ArgumentOutOfRangeException(nameof(e))
                 },
                 GroupId = (e as GroupExpense)?.GroupId,
                 Labels = GetLabels(e, currentUserId, userLabels, groupLabels)
-            };
-
-            result.Add(item);
-        }
-
-        return result;
+            })
+            .ToList();
     }
 
-    private decimal GetUserShareAmount(Expense e, string userId, List<string> memberIds)
+    private static decimal GetUserShareAmount(Expense expense, string userId, List<string> memberIds)
     {
-        return e switch
+        return expense switch
         {
             PersonalExpense pe => pe.Amount,
             NonGroupExpense nge => nge.Shares.FirstOrDefault(s => s.UserId == userId)?.Amount ?? 0,
@@ -158,8 +148,8 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
     }
 
     private static List<Label> GetLabels(
-        Expense e, 
-        string userId, 
+        Expense e,
+        string userId,
         List<UserLabel>? userLabels,
         Dictionary<string, Dictionary<string, Label>> groupLabels)
     {
@@ -173,27 +163,21 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
         {
             NonGroupExpense nge => nge.Labels,
             PersonalExpense pe => pe.Labels,
-            _ => new List<string>()
+            _ => []
         };
 
-        return labelTexts.Select(text =>
-        {
-            var userLabel = userLabels?.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
-
-            return new Label
+        return labelTexts
+            .Select(text =>
             {
-                Id = $"{userId}_{text}",
-                Text = userLabel?.Text ?? text,
-                Color = userLabel?.Color ?? ""
-            };
-        }).ToList();
-    }
+                var userLabel = userLabels?.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
 
-    private static string? GetNext(SearchPersonalExpensesQuery query, List<Expense> expenses)
-    {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
+                return new Label
+                {
+                    Id = $"{userId}_{text}",
+                    Text = userLabel?.Text ?? text,
+                    Color = userLabel?.Color ?? ""
+                };
+            })
+            .ToList();
     }
 }

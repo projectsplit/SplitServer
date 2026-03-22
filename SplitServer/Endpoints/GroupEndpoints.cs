@@ -141,7 +141,6 @@ public static class GroupEndpoints
     }
 
     private static async Task<IResult> GetGroupDetailsHandler(
-    
         string groupId,
         IMediator mediator,
         HttpContext httpContext,

@@ -29,7 +29,7 @@ public class SetRecentContextCommandHandler : IRequestHandler<SetRecentContextCo
         {
             return Result.Failure($"User with id {command.UserId} was not found");
         }
-        
+
         if (command.ContextId != "NON_GROUP")
         {
             var groupMaybe = await _groupsRepository.GetById(command.ContextId, ct);

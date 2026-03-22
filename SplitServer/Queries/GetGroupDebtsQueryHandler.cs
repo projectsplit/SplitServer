@@ -1,7 +1,5 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Extensions;
-using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
@@ -69,9 +67,9 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
         var filteredTransfersList = GroupService.CalculateFilteredTransfersList(query, groupTransfers, userTimeZoneId);
 
         var totalSpentByMember = GroupService.GetTotalSpent(group, filteredExpensesList);
-        var totalSent = GroupService.GetTotalSent(group,filteredTransfersList);
-        var totalReceived = GroupService.GetTotalReceived(group,filteredTransfersList);
-        
+        var totalSent = GroupService.GetTotalSent(group, filteredTransfersList);
+        var totalReceived = GroupService.GetTotalReceived(group, filteredTransfersList);
+
         return new GetGroupDebtsResponse
         {
             Debts = GroupService.GetDebts(groupExpenses, groupTransfers),
@@ -98,12 +96,11 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
         return totalSpentByMember.ToDictionary(
             memberPair => memberPair.Key,
             memberPair => memberPair.Value
-                .Select(
-                    currencyPair => _currencyExchangeRateService.Convert(
-                        currencyPair.Value,
-                        currencyPair.Key,
-                        rates,
-                        preferredCurrency))
+                .Select(currencyPair => _currencyExchangeRateService.Convert(
+                    currencyPair.Value,
+                    currencyPair.Key,
+                    rates,
+                    preferredCurrency))
                 .Sum());
     }
 }

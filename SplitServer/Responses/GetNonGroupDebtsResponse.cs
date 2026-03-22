@@ -1,7 +1,8 @@
 using SplitServer.Models;
+
 namespace SplitServer.Responses;
 
-public class GetNonGroupDebtsResponse  
+public class GetNonGroupDebtsResponse
 {
     public required List<NonGroupDebt> Debts { get; init; }
     public required Dictionary<string, Dictionary<string, decimal>> TotalSpent { get; init; }

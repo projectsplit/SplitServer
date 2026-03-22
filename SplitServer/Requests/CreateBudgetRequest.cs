@@ -4,7 +4,6 @@ namespace SplitServer.Requests;
 
 public class CreateBudgetRequest
 {
-
     public required decimal Amount { get; init; }
     public required string Description { get; init; }
     public required string Currency { get; init; }

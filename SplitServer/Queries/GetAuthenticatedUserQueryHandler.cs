@@ -49,8 +49,12 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
 
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
 
-        var currency = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.Currency ?? DefaultValues.Currency : DefaultValues.Currency;
-        var timeZone = userPreferencesMaybe.HasValue ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone : DefaultValues.TimeZone;
+        var currency = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.Currency ?? DefaultValues.Currency
+            : DefaultValues.Currency;
+        var timeZone = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
         var recentContextId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentContextId : null;
         var showBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : null;
 

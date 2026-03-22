@@ -36,8 +36,8 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
         List<NonGroupExpense> nonGroupExpenses;
-        bool hasMoreNewer = false;
-        bool hasMoreOlder = false;
+        var hasMoreNewer = false;
+        var hasMoreOlder = false;
 
         if (nextDetails?.IsJumpTo == true)
         {
@@ -107,49 +107,54 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
 
         return new NonGroupExpensesResponse
         {
-            Expenses = nonGroupExpenses.Select(x =>
-                new NonGroupExpenseResponseItem
-                {
-                    Id = x.Id,
-                    Created = x.Created,
-                    Updated = x.Updated,
-                    CreatorId = x.CreatorId,
-                    Amount = x.Amount,
-                    Occurred = x.Occurred,
-                    Description = x.Description,
-                    Currency = x.Currency,
-                    TransactionType = ExpenseType.NonGroup,
-                    Payments = x.Payments
-                        .Select(p => new GetNonGroupPaymentItem
-                        {
-                            Amount = p.Amount,
-                            UserId = p.UserId,
-                            Username = usersById.GetValueOrDefault(p.UserId)?.Username ?? DeletedUser.Username(p.UserId)
-                        })
-                        .ToList(),
-                    Shares = x.Shares
-                        .Select(s => new GetNonGroupShareItem
-                        {
-                            Amount = s.Amount,
-                            UserId = s.UserId,
-                            Username = usersById.GetValueOrDefault(s.UserId)?.Username ?? DeletedUser.Username(s.UserId)
-                        })
-                        .ToList(),
-                    Labels = x.Labels
-                        .Select(text =>
-                        {
-                            var userLabel = userLabels.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
-
-                            return new Label
+            Expenses = nonGroupExpenses
+                .Select(x =>
+                    new NonGroupExpenseResponseItem
+                    {
+                        Id = x.Id,
+                        Created = x.Created,
+                        Updated = x.Updated,
+                        CreatorId = x.CreatorId,
+                        Amount = x.Amount,
+                        Occurred = x.Occurred,
+                        Description = x.Description,
+                        Currency = x.Currency,
+                        TransactionType = ExpenseResponseType.NonGroup,
+                        Payments = x.Payments
+                            .Select(p => new GetNonGroupPaymentItem
                             {
-                                Id = $"{query.UserId}_{text}",
-                                Text = userLabel?.Text ?? text,
-                                Color = userLabel?.Color ?? ""
-                            };
-                        })
-                        .ToList(),
-                    Location = x.Location,
-                }).ToList(),
+                                Amount = p.Amount,
+                                UserId = p.UserId,
+                                Username = usersById.GetValueOrDefault(p.UserId)?.Username ?? DeletedUser.Username(p.UserId)
+                            })
+                            .ToList(),
+                        Shares = x.Shares
+                            .Select(s => new GetNonGroupShareItem
+                            {
+                                Amount = s.Amount,
+                                UserId = s.UserId,
+                                Username = usersById.GetValueOrDefault(s.UserId)?.Username ?? DeletedUser.Username(s.UserId)
+                            })
+                            .ToList(),
+                        Labels = x.Labels
+                            .Select(text =>
+                            {
+                                var userLabel = userLabels.FirstOrDefault(l => string.Equals(
+                                    l.Text,
+                                    text,
+                                    StringComparison.OrdinalIgnoreCase));
+
+                                return new Label
+                                {
+                                    Id = $"{query.UserId}_{text}",
+                                    Text = userLabel?.Text ?? text,
+                                    Color = userLabel?.Color ?? ""
+                                };
+                            })
+                            .ToList(),
+                        Location = x.Location,
+                    })
+                .ToList(),
             Next = hasMoreOlder ? CreateToken(nonGroupExpenses.Last(), false) : null,
             Previous = hasMoreNewer ? CreateToken(nonGroupExpenses.First(), false) : null
         };
@@ -166,13 +171,5 @@ public class GetNonGroupExpensesQueryHandler : IRequestHandler<GetNonGroupExpens
 
         var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
-    }
-
-    private static string? GetNext(GetNonGroupExpensesQuery query, List<NonGroupExpense> expenses)
-    {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
     }
 }

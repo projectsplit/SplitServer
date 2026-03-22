@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class GetUserLabelsQuery: IRequest<Result<GetUserLabelsResponse>>
+public class GetUserLabelsQuery : IRequest<Result<GetUserLabelsResponse>>
 {
     public required string UserId { get; init; }
 }

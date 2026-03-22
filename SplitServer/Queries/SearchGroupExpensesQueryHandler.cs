@@ -61,8 +61,8 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
         List<GroupExpense> expenses;
-        bool hasMoreNewer = false;
-        bool hasMoreOlder = false;
+        var hasMoreNewer = false;
+        var hasMoreOlder = false;
 
         if (nextDetails?.IsJumpTo == true)
         {
@@ -152,7 +152,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
-                    TransactionType = ExpenseType.Group,
+                    TransactionType = ExpenseResponseType.Group,
                     Payments = x.Payments,
                     Shares = x.Shares,
                     Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
@@ -175,13 +175,5 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
 
         var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
-    }
-
-    private static string? GetNext(SearchGroupExpensesQuery query, List<GroupExpense> expenses)
-    {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
     }
 }

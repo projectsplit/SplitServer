@@ -32,29 +32,32 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         DateTime? occurred,
         DateTime? created,
         PaginationDirection direction,
-        bool inclusive)
+        bool inclusive) where TDocument : ExpenseMongoDbDocument
     {
-        if (occurred is null || created is null) return filterBuilder.Empty;
-
-        var fieldOccurred = "Occurred";
-        var fieldCreated = "Created";
-
-        if (direction == PaginationDirection.Older)
+        if (occurred is null || created is null)
         {
-            return filterBuilder.Or(
-                filterBuilder.Lt(fieldOccurred, occurred),
-                filterBuilder.And(
-                    filterBuilder.Eq(fieldOccurred, occurred),
-                    inclusive ? filterBuilder.Lte(fieldCreated, created) : filterBuilder.Lt(fieldCreated, created)));
+            return filterBuilder.Empty;
         }
-        else
+
+        var occurredFilter = direction switch
         {
-            return filterBuilder.Or(
-                filterBuilder.Gt(fieldOccurred, occurred),
-                filterBuilder.And(
-                    filterBuilder.Eq(fieldOccurred, occurred),
-                    inclusive ? filterBuilder.Gte(fieldCreated, created) : filterBuilder.Gt(fieldCreated, created)));
-        }
+            PaginationDirection.Newer => filterBuilder.Gt(x => x.Occurred, occurred),
+            PaginationDirection.Older => filterBuilder.Lt(x => x.Occurred, occurred),
+            _ => throw new Exception($"Unexpected PaginationDirection value: {direction}")
+        };
+
+        var createdFilter = direction switch
+        {
+            PaginationDirection.Newer => inclusive ? filterBuilder.Gte(x => x.Created, created) : filterBuilder.Gt(x => x.Created, created),
+            PaginationDirection.Older => inclusive ? filterBuilder.Lte(x => x.Created, created) : filterBuilder.Lt(x => x.Created, created),
+            _ => throw new Exception($"Unexpected PaginationDirection value: {direction}")
+        };
+
+        return filterBuilder.Or(
+            occurredFilter,
+            filterBuilder.And(
+                filterBuilder.Eq(x => x.Occurred, occurred),
+                createdFilter));
     }
 
     public async Task<List<GroupExpense>> GetByGroupId(
@@ -123,9 +126,9 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             filterBuilder.ElemMatch(x => x.Payments, p => p.UserId == userId),
             filterBuilder.ElemMatch(x => x.Shares, s => s.UserId == userId)
         );
-        
+
         if (startDate.HasValue) involvedFilter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
-        if (endDate.HasValue)   involvedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
+        if (endDate.HasValue) involvedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
 
         var documents = await _nonGroupExpensesCollection
             .Find(involvedFilter)
@@ -135,17 +138,19 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return documents.Select(d => (NonGroupExpense)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<Expense>> GetPersonalExpensesByUserId(string userId,
+    public async Task<List<Expense>> GetPersonalExpensesByUserId(
+        string userId,
         List<string> memberIds,
         CancellationToken ct,
         DateTime? startDate = null,
         DateTime? endDate = null
-        )
+    )
     {
         var expensesCollection =
-            Collection.Database.GetCollection<ExpenseMongoDbDocument>(Collection.CollectionNamespace
-                .CollectionName);
-        
+            Collection.Database.GetCollection<ExpenseMongoDbDocument>(
+                Collection.CollectionNamespace
+                    .CollectionName);
+
         var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
 
         var userRelatedFilter = filterBuilder.Or(
@@ -153,9 +158,9 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
             filterBuilder.And(filterBuilder.Eq("_t", "non_group"), filterBuilder.Eq("Shares.UserId", userId)),
             filterBuilder.And(filterBuilder.Eq("_t", "group"), filterBuilder.In("Shares.MemberId", memberIds))
         );
-        
+
         if (startDate.HasValue) userRelatedFilter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
-        if (endDate.HasValue)   userRelatedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
+        if (endDate.HasValue) userRelatedFilter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
 
         var documents = await expensesCollection.Find(userRelatedFilter).SortBy(x => x.Occurred).ToListAsync(ct);
         return documents.Select(Mapper.ToEntity).ToList();
@@ -206,11 +211,11 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         var sharesFilter = filterBuilder.In("Shares.MemberId", memberIds);
         var paymentsFilter = filterBuilder.In("Payments.MemberId", memberIds);
-        
+
         var filter = filterBuilder.Or(sharesFilter, paymentsFilter);
 
         if (startDate.HasValue) filter &= filterBuilder.Gte(x => x.Occurred, startDate.Value);
-        if (endDate.HasValue)   filter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
+        if (endDate.HasValue) filter &= filterBuilder.Lte(x => x.Occurred, endDate.Value);
 
         var documents = await _groupExpensesCollection
             .Find(filter)
@@ -247,13 +252,14 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
     public async Task<bool> UserLabelInUse(string labelText, CancellationToken ct)
     {
         var expensesCollection =
-            Collection.Database.GetCollection<ExpenseMongoDbDocument>(Collection.CollectionNamespace
-                .CollectionName);
-        
+            Collection.Database.GetCollection<ExpenseMongoDbDocument>(
+                Collection.CollectionNamespace
+                    .CollectionName);
+
         var filterBuilder = Builders<ExpenseMongoDbDocument>.Filter;
-        
-        var filter = filterBuilder.AnyEq(x=>x.Labels, labelText);
-        
+
+        var filter = filterBuilder.AnyEq(x => x.Labels, labelText);
+
         return await expensesCollection.Find(filter).AnyAsync(ct);
     }
 

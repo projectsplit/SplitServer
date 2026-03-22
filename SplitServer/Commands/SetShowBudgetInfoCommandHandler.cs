@@ -1,8 +1,9 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Commands;
 using SplitServer.Models;
 using SplitServer.Repositories;
+
+namespace SplitServer.Commands;
 
 public class SetShowBudgetInfoCommandHandler : IRequestHandler<SetShowBudgetInfoCommand, Result>
 {

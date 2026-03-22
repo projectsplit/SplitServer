@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class GetPersonalExpensesQuery: IRequest<Result<PersonalExpensesResponse>>
+public class GetPersonalExpensesQuery : IRequest<Result<PersonalExpensesResponse>>
 {
     public required string UserId { get; init; }
     public required int PageSize { get; init; }

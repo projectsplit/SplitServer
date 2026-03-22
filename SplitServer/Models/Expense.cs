@@ -1,13 +1,5 @@
 ﻿namespace SplitServer.Models;
 
-public enum ExpenseType
-{
-    Personal,
-    Group,
-    NonGroup
-}
-
-
 public abstract record Expense : EntityBase
 {
     public required DateTime Occurred { get; init; }
@@ -30,7 +22,6 @@ public record NonGroupExpense : Expense
 {
     public required List<Payment> Payments { get; init; }
     public required List<Share> Shares { get; init; }
-  
 }
 
 public record PersonalExpense : Expense;

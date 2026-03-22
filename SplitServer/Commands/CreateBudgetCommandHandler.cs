@@ -8,11 +8,11 @@ using SplitServer.Services;
 namespace SplitServer.Commands;
 
 public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, Result<CreateBudgetResponse>>
-{   
+{
     private readonly IBudgetsRepository _budgetsRepository;
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
-    
+
     public CreateBudgetCommandHandler(
         IBudgetsRepository budgetsRepository,
         PermissionService permissionService,
@@ -20,7 +20,6 @@ public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, R
     {
         _budgetsRepository = budgetsRepository;
         _validationService = validationService;
-
         _permissionService = permissionService;
     }
 
@@ -34,7 +33,16 @@ public class CreateBudgetCommandHandler : IRequestHandler<CreateBudgetCommand, R
         }
 
         var budgetValidationResult =
-            _validationService.ValidateBudget(command.Amount, command.Currency,command.Description,command.Scope,command.Frequency, command.StartDate, command.EndDate, command.CommencementDay,command.TargetGroupIds);
+            _validationService.ValidateBudget(
+                command.Amount,
+                command.Currency,
+                command.Description,
+                command.Scope,
+                command.Frequency,
+                command.StartDate,
+                command.EndDate,
+                command.CommencementDay,
+                command.TargetGroupIds);
 
         if (budgetValidationResult.IsFailure)
         {

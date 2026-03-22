@@ -40,7 +40,7 @@ public static class UserEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
-    
+
     private static async Task<IResult> DeleteUserLabel(
         IMediator mediator,
         HttpContext httpContext,
@@ -57,8 +57,7 @@ public static class UserEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
-    
+
 
     private static async Task<IResult> GetUserAndGroupsLabels(
         IMediator mediator,
@@ -71,7 +70,7 @@ public static class UserEndpoints
         };
 
         var result = await mediator.Send(query, ct);
-        
+
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 

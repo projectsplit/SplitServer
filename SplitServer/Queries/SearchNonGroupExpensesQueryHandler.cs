@@ -41,14 +41,14 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
-        
+
         var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
         List<NonGroupExpense> expenses;
-        bool hasMoreNewer = false;
-        bool hasMoreOlder = false;
+        var hasMoreNewer = false;
+        var hasMoreOlder = false;
 
         if (nextDetails?.IsJumpTo == true)
         {
@@ -146,7 +146,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
                     Occurred = x.Occurred,
                     Description = x.Description,
                     Currency = x.Currency,
-                    TransactionType = ExpenseType.NonGroup,
+                    TransactionType = ExpenseResponseType.NonGroup,
                     Payments = x.Payments
                         .Select(p => new GetNonGroupPaymentItem
                         {
@@ -184,7 +184,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
         };
     }
 
-    private static string? CreateToken(NonGroupExpense expense, bool isJumpTo)
+    private static string CreateToken(NonGroupExpense expense, bool isJumpTo)
     {
         var details = new NextExpensePageDetails
         {
@@ -195,13 +195,5 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
 
         var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
         return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
-    }
-
-    private static string? GetNext(SearchNonGroupExpensesQuery query, List<NonGroupExpense> expenses)
-    {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
     }
 }

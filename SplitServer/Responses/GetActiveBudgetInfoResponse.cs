@@ -11,8 +11,7 @@ public class GetActiveBudgetInfoResponse
     public required string AverageSpentPerDay { get; init; }
     public required string Goal { get; init; }
     public required string Currency { get; init; }
-    public required BudgetFrequency Frequency  {get; init; }
-    public required DateTime StartDate {get; init; }
-    public required DateTime EndDate {get; init; }
-    
+    public required BudgetFrequency Frequency { get; init; }
+    public required DateTime StartDate { get; init; }
+    public required DateTime EndDate { get; init; }
 }

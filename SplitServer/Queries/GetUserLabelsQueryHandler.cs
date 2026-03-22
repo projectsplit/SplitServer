@@ -5,7 +5,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class GetUserLabelsQueryHandler: IRequestHandler<GetUserLabelsQuery, Result<GetUserLabelsResponse>>
+public class GetUserLabelsQueryHandler : IRequestHandler<GetUserLabelsQuery, Result<GetUserLabelsResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IUserLabelsRepository _userLabelsRepository;
@@ -26,20 +26,21 @@ public class GetUserLabelsQueryHandler: IRequestHandler<GetUserLabelsQuery, Resu
         {
             return Result.Failure<GetUserLabelsResponse>($"User with id {query.UserId} was not found");
         }
-        
+
         var user = userMaybe.Value;
-        var labels = await _userLabelsRepository.GetByUserId(user.Id,ct);
+        var labels = await _userLabelsRepository.GetByUserId(user.Id, ct);
 
         return new GetUserLabelsResponse
         {
-            Labels = labels.Select(x => new GetUserLabelsResponseItem
-            {
-                Color = x.Color,
-                Text = x.Text,
-                Id = x.Id,
-                Count = labels.Count
-
-            }).ToList()
+            Labels = labels
+                .Select(x => new GetUserLabelsResponseItem
+                {
+                    Color = x.Color,
+                    Text = x.Text,
+                    Id = x.Id,
+                    Count = labels.Count
+                })
+                .ToList()
         };
     }
 }

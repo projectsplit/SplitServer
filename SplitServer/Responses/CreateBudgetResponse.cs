@@ -4,4 +4,3 @@ public class CreateBudgetResponse
 {
     public required string BudgetId { get; init; }
 }
-

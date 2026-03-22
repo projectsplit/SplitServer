@@ -8,4 +8,3 @@ public class SetShowBudgetInfoCommand : IRequest<Result>
     public required string UserId { get; init; }
     public required bool ShowBudgetInfo { get; init; }
 }
-

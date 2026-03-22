@@ -5,11 +5,10 @@ using SplitServer.Responses;
 using SplitServer.Services.CurrencyExchangeRate;
 using SplitServer.Services;
 using SplitServer.Models;
-using SplitServer.Extensions;
 
 namespace SplitServer.Queries;
 
-public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery, Result<GetNonGroupDebtsResponse>>
+public class GetNonGroupDebtsQueryHandler : IRequestHandler<GetNonGroupDebtsQuery, Result<GetNonGroupDebtsResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IExpensesRepository _expensesRepository;
@@ -39,8 +38,9 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
         {
             return Result.Failure<GetNonGroupDebtsResponse>($"User with id {query.UserId} was not found");
         }
+
         var user = userMaybe.Value;
-        
+
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
@@ -50,7 +50,7 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
         var nonGroupTransfers = await _transfersRepository.GetAllByUserId(user.Id, ct);
 
         var usersIds = GetUniqueUsersIds(nonGroupExpenses, nonGroupTransfers).ToList();
-        var users = await _usersRepository.GetByIds(usersIds,ct);
+        var users = await _usersRepository.GetByIds(usersIds, ct);
 
         var filteredExpensesList = NonGroupService.CalculateFilteredExpensesList(query, nonGroupExpenses, userTimeZoneId);
         var filteredTransfersList = NonGroupService.CalculateFilteredTransfersList(query, nonGroupTransfers, userTimeZoneId);
@@ -58,16 +58,16 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
         var totalSpentByMember = NonGroupService.GetTotalSpent(filteredExpensesList);
         var totalSent = NonGroupService.GetTotalSent(filteredTransfersList);
         var totalReceived = NonGroupService.GetTotalReceived(filteredTransfersList);
-        
+
         return new GetNonGroupDebtsResponse
         {
             Debts = NonGroupService.GetDebts(nonGroupExpenses, nonGroupTransfers, query.UserId, users),
             TotalSpent = totalSpentByMember,
             ConvertedTotalSpent = await GetConvertedTotal(query.UserId, totalSpentByMember, ct),
             TotalSent = totalSent,
-            ConvertedTotalSent = await GetConvertedTotal(query.UserId, totalSent,ct),
+            ConvertedTotalSent = await GetConvertedTotal(query.UserId, totalSent, ct),
             TotalReceived = totalReceived,
-            ConvertedTotalReceived = await GetConvertedTotal(query.UserId, totalReceived,ct),
+            ConvertedTotalReceived = await GetConvertedTotal(query.UserId, totalReceived, ct),
         };
     }
 
@@ -85,22 +85,21 @@ public class GetNonGroupDebtsQueryHandler: IRequestHandler<GetNonGroupDebtsQuery
         return totalSpentByMember.ToDictionary(
             memberPair => memberPair.Key,
             memberPair => memberPair.Value
-                .Select(
-                    currencyPair => _currencyExchangeRateService.Convert(
-                        currencyPair.Value,
-                        currencyPair.Key,
-                        rates,
-                        preferredCurrency))
+                .Select(currencyPair => _currencyExchangeRateService.Convert(
+                    currencyPair.Value,
+                    currencyPair.Key,
+                    rates,
+                    preferredCurrency))
                 .Sum());
     }
 
-    private static IEnumerable<string> GetUniqueUsersIds (List<NonGroupExpense> expenses, List<NonGroupTransfer> transfers){
-       
+    private static IEnumerable<string> GetUniqueUsersIds(List<NonGroupExpense> expenses, List<NonGroupTransfer> transfers)
+    {
         var expensesUserIds = expenses
-         .SelectMany(e => e.Shares.Select(s => s.UserId).Concat(e.Payments.Select(p => p.UserId)));
-            
+            .SelectMany(e => e.Shares.Select(s => s.UserId).Concat(e.Payments.Select(p => p.UserId)));
+
         var transfersUserIds = transfers
-         .SelectMany(t => new[] { t.SenderId, t.ReceiverId });
+            .SelectMany(t => new[] { t.SenderId, t.ReceiverId });
 
         return expensesUserIds.Concat(transfersUserIds).Distinct();
     }

@@ -11,8 +11,7 @@ public class ValidationService
     public const int UsernameMinLength = 4;
     public const int UsernameMaxLength = 16;
 
-    public HashSet<char> UsernameAllowedChars { get; } =
-        new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
+    public HashSet<char> UsernameAllowedChars { get; } = new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
 
     private readonly HashSet<char> _usernameForbiddenLeadingChars = new("_.");
     private readonly HashSet<char> _usernameForbiddenTrailingChars = new("_.");
@@ -93,7 +92,11 @@ public class ValidationService
         return parsedCurrency!;
     }
 
-    public Result ValidateExpense(Group group, List<GroupPayment> payments, List<GroupShare> shares, decimal amount,
+    public Result ValidateExpense(
+        Group group,
+        List<GroupPayment> payments,
+        List<GroupShare> shares,
+        decimal amount,
         string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
@@ -165,7 +168,16 @@ public class ValidationService
         return Result.Success();
     }
 
-    public Result ValidateBudget(decimal amount, string currency,string description, BudgetScope scope,BudgetFrequency frequency, DateTime? startDate, DateTime? endDate, string? commencementDay,List<string>? targetGroupIds)
+    public Result ValidateBudget(
+        decimal amount,
+        string currency,
+        string description,
+        BudgetScope scope,
+        BudgetFrequency frequency,
+        DateTime? startDate,
+        DateTime? endDate,
+        string? commencementDay,
+        List<string>? targetGroupIds)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
@@ -178,15 +190,15 @@ public class ValidationService
         {
             return Result.Failure("Target groups were provided but the 'Group' scope is not selected.");
         }
-        
-        if ( string.IsNullOrEmpty(description))
+
+        if (string.IsNullOrEmpty(description))
         {
             return Result.Failure("Description is required");
         }
-        
-        if(frequency is BudgetFrequency.Weekly or BudgetFrequency.Monthly)
-        {   
-            if(string.IsNullOrEmpty(commencementDay))
+
+        if (frequency is BudgetFrequency.Weekly or BudgetFrequency.Monthly)
+        {
+            if (string.IsNullOrEmpty(commencementDay))
             {
                 return Result.Failure("Commencement day must be provided for weekly and monthly budgets.");
             }
@@ -200,10 +212,8 @@ public class ValidationService
 
         if (frequency == BudgetFrequency.Custom)
         {
-            if (startDate == null || endDate == null)
-                return Result.Failure("Custom budgets must have a start and end date.");
-            if (startDate >= endDate)
-                return Result.Failure("Start date must be before end date.");
+            if (startDate == null || endDate == null) return Result.Failure("Custom budgets must have a start and end date.");
+            if (startDate >= endDate) return Result.Failure("Start date must be before end date.");
         }
 
         if (!string.IsNullOrWhiteSpace(commencementDay))
@@ -212,8 +222,7 @@ public class ValidationService
 
             if (int.TryParse(value, out var day))
             {
-                if (day < 1 || day > 31)
-                    return Result.Failure("Commencement day must be between 1 and 31 or a weekday name.");
+                if (day < 1 || day > 31) return Result.Failure("Commencement day must be between 1 and 31 or a weekday name.");
             }
             else
             {
@@ -331,7 +340,11 @@ public class ValidationService
         return Result.Success();
     }
 
-    public Result ValidateNonGroupTransfer(string senderId, string receiverId, string userId, decimal amount,
+    public Result ValidateNonGroupTransfer(
+        string senderId,
+        string receiverId,
+        string userId,
+        decimal amount,
         string currency)
     {
         var amountValidationResult = ValidateAmount(amount, currency);

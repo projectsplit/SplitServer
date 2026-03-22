@@ -7,7 +7,7 @@ using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-public class CreatePersonalExpenseCommandHandler: IRequestHandler<CreatePersonalExpenseCommand, Result<CreateExpenseResponse>>
+public class CreatePersonalExpenseCommandHandler : IRequestHandler<CreatePersonalExpenseCommand, Result<CreateExpenseResponse>>
 {
     private readonly IExpensesRepository _expensesRepository;
     private readonly ValidationService _validationService;

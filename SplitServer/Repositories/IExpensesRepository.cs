@@ -17,20 +17,33 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<List<GroupExpense>> GetGroupExpensesByGroupId(string groupId, CancellationToken ct);
 
-    Task<List<NonGroupExpense>> GetNonGroupExpensesByUserId(string userId, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
-    
-    Task<List<Expense>> GetPersonalExpensesByUserId(string userId, List<string> memberIds, CancellationToken ct,DateTime? startDate = null, DateTime? endDate = null);
+    Task<List<NonGroupExpense>> GetNonGroupExpensesByUserId(
+        string userId,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        CancellationToken ct = default);
+
+    Task<List<Expense>> GetPersonalExpensesByUserId(
+        string userId,
+        List<string> memberIds,
+        CancellationToken ct,
+        DateTime? startDate = null,
+        DateTime? endDate = null);
 
     Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct);
 
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
-    Task<List<GroupExpense>> GetGroupExpensesByMemberIds(List<string> memberIds, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default);
+    Task<List<GroupExpense>> GetGroupExpensesByMemberIds(
+        List<string> memberIds,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
+        CancellationToken ct = default);
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
     Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct);
-    
+
     Task<bool> UserLabelInUse(string labelText, CancellationToken ct);
 
     Task<List<GroupExpense>> Search(

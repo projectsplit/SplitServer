@@ -17,7 +17,7 @@ public class ToggleBudgetStatusCommandHandler : IRequestHandler<ToggleBudgetStat
     {
         var now = DateTime.UtcNow;
         var budgets = await _budgetsRepository.GetAllByUserId(command.UserId, ct);
-        
+
         var targetBudget = budgets.FirstOrDefault(b => b.Id == command.BudgetId);
         if (targetBudget == null)
         {

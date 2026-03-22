@@ -35,7 +35,7 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         {
             return Result.Failure<PersonalExpensesResponse>($"User with id {query.UserId} was not found");
         }
-        
+
         var userGroups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
         var memberIds = userGroups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
 
@@ -51,14 +51,14 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
             false,
             ct);
 
-        bool hasMoreOlder = false;
+        var hasMoreOlder = false;
         if (expenses.Count > query.PageSize)
         {
             hasMoreOlder = true;
             expenses.RemoveAt(expenses.Count - 1);
         }
 
-        bool hasMoreNewer = query.Next != null;
+        var hasMoreNewer = query.Next != null;
 
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
 
@@ -76,7 +76,7 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         };
     }
 
-    private static string? CreateToken(Expense expense, bool isJumpTo)
+    private static string CreateToken(Expense expense, bool isJumpTo)
     {
         var details = new NextExpensePageDetails
         {
@@ -96,11 +96,8 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         List<UserLabel>? userLabels,
         Dictionary<string, Dictionary<string, Label>> groupLabels)
     {
-        var result = new List<PersonalExpenseResponseItem>();
-
-        foreach (var e in expenses)
-        {
-            var item = new PersonalExpenseResponseItem
+        return expenses
+            .Select(e => new PersonalExpenseResponseItem
             {
                 Id = e.Id,
                 Created = e.Created,
@@ -113,24 +110,24 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
                 Location = e.Location,
                 TransactionType = e switch
                 {
-                    PersonalExpense => ExpenseType.Personal,
-                    GroupExpense => ExpenseType.Group,
-                    NonGroupExpense => ExpenseType.NonGroup,
+                    PersonalExpense => ExpenseResponseType.Personal,
+                    GroupExpense => ExpenseResponseType.Group,
+                    NonGroupExpense => ExpenseResponseType.NonGroup,
                     _ => throw new ArgumentOutOfRangeException(nameof(e))
                 },
                 GroupId = (e as GroupExpense)?.GroupId,
-                Labels = GetLabels(e, currentUserId, userLabels, groupLabels)
-            };
-
-            result.Add(item);
-        }
-
-        return result;
+                Labels = e switch
+                {
+                    GroupExpense ge => CreateGroupLabels(groupLabels, ge),
+                    NonGroupExpense or PersonalExpense => CreateNonGroupLabels(currentUserId, userLabels, e.Labels),
+                    _ => []
+                }
+            })
+            .ToList();
     }
 
     private static decimal GetUserShareAmount(Expense e, string userId, List<string> memberIds)
     {
-        
         return e switch
         {
             PersonalExpense pe => pe.Amount,
@@ -140,43 +137,33 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         };
     }
 
-    private static List<Label> GetLabels(
-        Expense e, 
-        string userId, 
-        List<UserLabel>? userLabels,
-        Dictionary<string, Dictionary<string, Label>> groupLabels)
+    private static List<Label> CreateNonGroupLabels(string userId, List<UserLabel>? userLabels, List<string> labelTexts)
     {
-        if (e is GroupExpense ge)
-        {
-            var labelsDict = groupLabels.GetValueOrDefault(ge.GroupId);
-            return ge.Labels.Select(id => labelsDict?.GetValueOrDefault(id) ?? new Label { Id = id, Text = id, Color = "" }).ToList();
-        }
-
-        var labelTexts = e switch
-        {
-            NonGroupExpense nge => nge.Labels,
-            PersonalExpense pe => pe.Labels,
-            _ => new List<string>()
-        };
-
-        return labelTexts.Select(text =>
-        {
-            var userLabel = userLabels?.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
-
-            return new Label
+        return labelTexts
+            .Select(text =>
             {
-                Id = $"{userId}_{text}",
-                Text = userLabel?.Text ?? text,
-                Color = userLabel?.Color ?? ""
-            };
-        }).ToList();
+                var userLabel = userLabels?.FirstOrDefault(l => string.Equals(l.Text, text, StringComparison.OrdinalIgnoreCase));
+
+                return new Label
+                {
+                    Id = $"{userId}_{text}",
+                    Text = userLabel?.Text ?? text,
+                    Color = userLabel?.Color ?? ""
+                };
+            })
+            .ToList();
     }
 
-    private static string? GetNext(GetPersonalExpensesQuery query, List<Expense> expenses)
+    private static List<Label> CreateGroupLabels(
+        Dictionary<string, Dictionary<string, Label>> groupLabels,
+        GroupExpense groupExpense)
     {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
+        return groupExpense.Labels
+            .Select(id =>
+                groupLabels
+                    .GetValueOrDefault(groupExpense.GroupId)?
+                    .GetValueOrDefault(id) ??
+                new Label { Id = id, Text = id, Color = "" })
+            .ToList();
     }
 }

@@ -88,7 +88,8 @@ public class PermissionService
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Expense expense, string memberId)>($"Group with id {groupExpense.GroupId} was not found");
+            return Result.Failure<(User user, Group group, Expense expense, string memberId)>(
+                $"Group with id {groupExpense.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -102,7 +103,7 @@ public class PermissionService
 
         return (user, group, expense, memberId);
     }
-    
+
     public async Task<Result<(User user, List<string>? targetGroupIds)>> VerifyBudgetAction(
         string userId,
         BudgetScope scope,
@@ -121,25 +122,28 @@ public class PermissionService
         var groups = await _groupsRepository.GetAllByUserId(userId, ct);
         var groupIds = groups.Select(g => g.Id).ToList();
 
-        if(scope == BudgetScope.Group && groupIds is {Count: 0})
+        if (scope == BudgetScope.Group && groupIds is { Count: 0 })
         {
-            return Result.Failure<(User user, List<string>? targetGroupIds)>("User must belong to at least one group to create a budget for specific groups");
+            return Result.Failure<(User user, List<string>? targetGroupIds)>(
+                "User must belong to at least one group to create a budget for specific groups");
         }
-        
-        if (targetGroupIds is { Count: > 0 })
-        {
-            if (targetGroupIds.Count != targetGroupIds.Distinct().Count())
-            {
-                return Result.Failure<(User user, List<string>? targetGroupIds)>("Duplicate Group IDs are not allowed");
-            }
 
-            foreach (var targetId in targetGroupIds)
+        if (targetGroupIds is not { Count: > 0 })
+        {
+            return (user, targetGroupIds);
+        }
+
+        if (targetGroupIds.Count != targetGroupIds.Distinct().Count())
+        {
+            return Result.Failure<(User user, List<string>? targetGroupIds)>("Duplicate Group IDs are not allowed");
+        }
+
+        foreach (var targetId in targetGroupIds)
+        {
+            if (!groupIds.Contains(targetId))
             {
-                if (!groupIds.Contains(targetId))
-                {
-                    return Result.Failure<(User user, List<string>? targetGroupIds)>(
-                        $"Group ID '{targetId}' does not belong to the user or was not found");
-                }
+                return Result.Failure<(User user, List<string>? targetGroupIds)>(
+                    $"Group ID '{targetId}' does not belong to the user or was not found");
             }
         }
 
@@ -179,12 +183,13 @@ public class PermissionService
 
         if (!userFoundInExpense)
         {
-            return Result.Failure<(User user, NonGroupExpense expense)>($"User with id {userId} was not found in expense with id {expenseId}");
+            return Result.Failure<(User user, NonGroupExpense expense)>(
+                $"User with id {userId} was not found in expense with id {expenseId}");
         }
 
         return (user, nonGroupExpense);
     }
-    
+
     public async Task<Result<(User user, Expense expense)>> VerifyPersonalExpenseAction(
         string userId,
         string expenseId,
@@ -208,7 +213,7 @@ public class PermissionService
 
         var expense = expenseMaybe.Value;
 
-        if (expense is not Expense personalExpense)
+        if (expense is not PersonalExpense personalExpense)
         {
             return Result.Failure<(User user, Expense expense)>($"Expense with id {expenseId} was not found");
         }
@@ -241,21 +246,24 @@ public class PermissionService
 
         if (transferMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Transfer with id {transferId} was not found");
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
+                $"Transfer with id {transferId} was not found");
         }
 
         var transfer = transferMaybe.Value;
 
         if (transfer is not GroupTransfer groupTransfer)
         {
-            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Expense with id {transferId} was not found");
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
+                $"Expense with id {transferId} was not found");
         }
 
         var groupMaybe = await _groupsRepository.GetById(groupTransfer.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>($"Group with id {groupTransfer.GroupId} was not found");
+            return Result.Failure<(User user, Group group, Transfer transfer, string memberId)>(
+                $"Group with id {groupTransfer.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;

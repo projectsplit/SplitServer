@@ -76,7 +76,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
-    
+
     private static async Task<IResult> CreatePersonalExpenseHandler(
         CreatePersonalExpenseRequest request,
         IMediator mediator,
@@ -98,7 +98,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
-    
+
 
     private static async Task<IResult> DeleteExpenseHandler(
         DeleteExpenseRequest request,
@@ -133,7 +133,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
+
     private static async Task<IResult> DeletePersonalExpenseHandler(
         DeleteExpenseRequest request,
         IMediator mediator,
@@ -243,7 +243,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
-    
+
     private static async Task<IResult> GetPersonalExpensesHandler(
         HttpContext httpContext,
         IMediator mediator,
@@ -259,7 +259,7 @@ public static class ExpenseEndpoints
                                  after is not null ||
                                  searchTerm is not null ||
                                  !labelIds.IsNullOrEmpty();
-        
+
         IRequest<CSharpFunctionalExtensions.Result<PersonalExpensesResponse>> query = hasAnySearchParams
             ? new SearchPersonalExpensesQuery
             {
@@ -349,7 +349,7 @@ public static class ExpenseEndpoints
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
-    
+
     private static async Task<IResult> EditPersonalExpenseHandler(
         EditPersonalExpenseRequest request,
         IMediator mediator,

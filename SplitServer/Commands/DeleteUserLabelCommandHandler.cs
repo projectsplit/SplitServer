@@ -1,16 +1,14 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer.Models;
 using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
 
-public class DeleteUserLabelCommandHandler: IRequestHandler<DeleteUserLabelCommand, Result>
+public class DeleteUserLabelCommandHandler : IRequestHandler<DeleteUserLabelCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IUserLabelsRepository _userLabelsRepository;
     private readonly IExpensesRepository _expensesRepository;
-
 
     public DeleteUserLabelCommandHandler(
         IUsersRepository usersRepository,
@@ -30,8 +28,9 @@ public class DeleteUserLabelCommandHandler: IRequestHandler<DeleteUserLabelComma
         {
             return Result.Failure($"User with id {command.UserId} was not found");
         }
+
         var userLabelMaybe = await _userLabelsRepository.GetById(command.LabelId, ct);
-        
+
         if (userLabelMaybe.HasNoValue)
         {
             return Result.Failure($"Label with id {command.LabelId} was not found");
@@ -42,7 +41,7 @@ public class DeleteUserLabelCommandHandler: IRequestHandler<DeleteUserLabelComma
         {
             return Result.Failure("Label is in use and cannot be deleted");
         }
-        
+
         return await _userLabelsRepository.Delete(command.LabelId, ct);
     }
 }

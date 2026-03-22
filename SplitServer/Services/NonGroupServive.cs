@@ -6,9 +6,11 @@ namespace SplitServer.Services;
 
 public class NonGroupService
 {
-
-    public static List<NonGroupDebt> GetDebts(List<NonGroupExpense> expenses, List<NonGroupTransfer> transfers,
-        string userId, IList<User>? users)
+    public static List<NonGroupDebt> GetDebts(
+        List<NonGroupExpense> expenses,
+        List<NonGroupTransfer> transfers,
+        string userId,
+        IList<User>? users)
     {
         var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
 
@@ -75,8 +77,12 @@ public class NonGroupService
         return totalSentByUser;
     }
 
-    private static List<NonGroupDebt> GetDebtsForCurrency(string currency, List<NonGroupExpense> expenses,
-        List<NonGroupTransfer> transfers, string userId, IList<User>? users)
+    private static List<NonGroupDebt> GetDebtsForCurrency(
+        string currency,
+        List<NonGroupExpense> expenses,
+        List<NonGroupTransfer> transfers,
+        string userId,
+        IList<User>? users)
     {
         var debts = new List<NonGroupDebt>();
 
@@ -136,8 +142,11 @@ public class NonGroupService
         return expense.Shares.Any(s => s.UserId == userId) || expense.Payments.Any(p => p.UserId == userId);
     }
 
-    private static List<NonGroupDebt> CalculateDebtsForSubset(List<NonGroupExpense> expenses,
-        List<NonGroupTransfer> transfers, string currency,  IList<User>? users)
+    private static List<NonGroupDebt> CalculateDebtsForSubset(
+        List<NonGroupExpense> expenses,
+        List<NonGroupTransfer> transfers,
+        string currency,
+        IList<User>? users)
     {
         var balances = new Dictionary<string, decimal>();
 
@@ -178,11 +187,9 @@ public class NonGroupService
             // Standard decimal should be fine, but good to be safe if amounts are 0.
             if (amount == 0) break;
 
-            var debtorName = users?.FirstOrDefault(u => u.Id == maxDebtor.Key)?.Username 
-                             ?? DeletedUser.Username(maxDebtor.Key);
-                             
-            var creditorName = users?.FirstOrDefault(u => u.Id == maxCreditor.Key)?.Username 
-                               ?? DeletedUser.Username(maxCreditor.Key);
+            var debtorName = users?.FirstOrDefault(u => u.Id == maxDebtor.Key)?.Username ?? DeletedUser.Username(maxDebtor.Key);
+
+            var creditorName = users?.FirstOrDefault(u => u.Id == maxCreditor.Key)?.Username ?? DeletedUser.Username(maxCreditor.Key);
 
             var debt = new NonGroupDebt
             {
@@ -207,7 +214,10 @@ public class NonGroupService
         return debts;
     }
 
-    public static List<NonGroupExpense> CalculateFilteredExpensesList(GetNonGroupDebtsQuery query, List<NonGroupExpense> expenses, string userTimeZoneId)
+    public static List<NonGroupExpense> CalculateFilteredExpensesList(
+        GetNonGroupDebtsQuery query,
+        List<NonGroupExpense> expenses,
+        string userTimeZoneId)
     {
         var filteredExpenses = expenses.AsEnumerable();
 
@@ -239,7 +249,7 @@ public class NonGroupService
         }
 
         var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
-        
+
         if (labelIds is { Length: > 0 })
         {
             filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => labelIds.Contains(l)));
@@ -248,7 +258,10 @@ public class NonGroupService
         return filteredExpenses.ToList();
     }
 
-    public static List<NonGroupTransfer> CalculateFilteredTransfersList(GetNonGroupDebtsQuery query, List<NonGroupTransfer> transfers, string userTimeZoneId)
+    public static List<NonGroupTransfer> CalculateFilteredTransfersList(
+        GetNonGroupDebtsQuery query,
+        List<NonGroupTransfer> transfers,
+        string userTimeZoneId)
     {
         var filteredTransfers = transfers.AsEnumerable();
 

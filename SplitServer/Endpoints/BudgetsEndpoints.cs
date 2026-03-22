@@ -9,11 +9,11 @@ namespace SplitServer.Endpoints;
 public static class BudgetsEndpoints
 {
     public static void MapBudgetsEndpoints(this IEndpointRouteBuilder app)
-    {   app.MapGet("/get-inactive", GetInactiveBudgetsInfo);
+    {
+        app.MapGet("/get-inactive", GetInactiveBudgetsInfo);
         app.MapGet("/get-active", GetActiveBudgetInfo);
         app.MapPost("/create", CreateBudget);
         app.MapPost("/toggle-status", ToggleBudgetStatus);
-
     }
 
     private static async Task<IResult> GetInactiveBudgetsInfo(
@@ -25,7 +25,7 @@ public static class BudgetsEndpoints
         {
             UserId = httpContext.GetUserId()
         };
-        
+
         var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
@@ -48,7 +48,7 @@ public static class BudgetsEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
-    private static async Task<IResult> GetActiveBudgetInfo( 
+    private static async Task<IResult> GetActiveBudgetInfo(
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
@@ -57,7 +57,7 @@ public static class BudgetsEndpoints
         {
             UserId = httpContext.GetUserId()
         };
-        
+
         var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);

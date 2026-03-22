@@ -144,6 +144,7 @@ file class NextGroupPageDetails
 {
     public required DateTime Created { get; init; }
 }
+
 file class SkipNext
 {
     public int Skip { get; init; }

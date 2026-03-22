@@ -4,7 +4,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Queries;
 
-public class GetNonGroupDebtsQuery: IRequest<Result<GetNonGroupDebtsResponse>>
+public class GetNonGroupDebtsQuery : IRequest<Result<GetNonGroupDebtsResponse>>
 {
     public required string UserId { get; init; }
     public string? SearchTerm { get; init; }
@@ -15,5 +15,4 @@ public class GetNonGroupDebtsQuery: IRequest<Result<GetNonGroupDebtsResponse>>
     public string[]? LabelIds { get; init; }
     public string[]? ReceiverIds { get; init; }
     public string[]? SenderIds { get; init; }
-    
 }

@@ -5,7 +5,6 @@ using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
-
 public class DeletePersonalExpenseCommandHandler : IRequestHandler<DeletePersonalExpenseCommand, Result>
 {
     private readonly PermissionService _permissionService;

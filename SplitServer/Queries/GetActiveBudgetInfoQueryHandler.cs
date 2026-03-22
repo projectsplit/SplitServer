@@ -22,15 +22,16 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
     public async Task<Result<GetActiveBudgetInfoResponse>> Handle(GetActiveBudgetInfoQuery query, CancellationToken ct)
     {
         var budgets = await _budgetsRepository.GetAllByUserId(query.UserId, ct);
-        
+
         var activeBudget = budgets.FirstOrDefault(b => b.IsActive);
-        
+
         if (activeBudget == null)
         {
             return Result.Failure<GetActiveBudgetInfoResponse>("No active budget found");
         }
 
         var spentAmountResult = await _budgetService.GetSpentAmount(activeBudget, ct);
+
         if (spentAmountResult.IsFailure)
         {
             return Result.Failure<GetActiveBudgetInfoResponse>(spentAmountResult.Error);

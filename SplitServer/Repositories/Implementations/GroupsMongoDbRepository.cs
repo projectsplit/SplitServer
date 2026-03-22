@@ -47,7 +47,7 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
             .Find(filter)
             .ToListAsync(ct);
     }
-    
+
     public async Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct)
     {
         var search = SearchBuilder.Autocomplete(

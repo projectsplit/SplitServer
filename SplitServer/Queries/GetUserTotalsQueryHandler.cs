@@ -1,21 +1,20 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using SplitServer;
 using SplitServer.Extensions;
 using SplitServer.Models;
-using SplitServer.Queries;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services.CurrencyExchangeRate;
 
-public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Result<GetUserTotalsResponse>>
+namespace SplitServer.Queries;
+
+public class GetUserTotalsQueryHandler : IRequestHandler<GetUserTotalsQuery, Result<GetUserTotalsResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly CurrencyExchangeRateService _currencyExchangeRateService;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly IGroupsRepository _groupsRepository;
-    
 
     public GetUserTotalsQueryHandler(
         IUsersRepository usersRepository,
@@ -39,21 +38,21 @@ public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Resu
         {
             return Result.Failure<GetUserTotalsResponse>($"User with id {query.UserId} was not found");
         }
-        
+
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
         var userTimeZoneId = userPreferencesMaybe.HasValue
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
-        
+
         var userGroups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
         var memberIds = userGroups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
 
-        var expenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId,memberIds, ct);
+        var expenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId, memberIds, ct);
 
         var filteredExpensesList = CalculateFilteredExpensesList(query, expenses, userTimeZoneId);
-        
+
         var totalSpentByCurrency = GetTotalSpent(filteredExpensesList, query.UserId, memberIds);
-        
+
         return new GetUserTotalsResponse
         {
             TotalSpent = totalSpentByCurrency,
@@ -75,17 +74,16 @@ public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Resu
         return totalSpentByMember.ToDictionary(
             memberPair => memberPair.Key,
             memberPair => memberPair.Value
-                .Select(
-                    currencyPair => _currencyExchangeRateService.Convert(
-                        currencyPair.Value,
-                        currencyPair.Key,
-                        rates,
-                        preferredCurrency))
+                .Select(currencyPair => _currencyExchangeRateService.Convert(
+                    currencyPair.Value,
+                    currencyPair.Key,
+                    rates,
+                    preferredCurrency))
                 .Sum());
     }
 
-    private static  List<Expense> CalculateFilteredExpensesList (GetUserTotalsQuery query, List<Expense> expenses, string userTimeZoneId){
-       
+    private static List<Expense> CalculateFilteredExpensesList(GetUserTotalsQuery query, List<Expense> expenses, string userTimeZoneId)
+    {
         var filteredExpenses = expenses.AsEnumerable();
 
         if (query.After.HasValue)
@@ -102,15 +100,13 @@ public class GetUserTotalsQueryHandler: IRequestHandler<GetUserTotalsQuery, Resu
 
         if (!string.IsNullOrWhiteSpace(query.SearchTerm))
         {
-           
             filteredExpenses = filteredExpenses.Where(x => x.Description.Contains(query.SearchTerm, StringComparison.OrdinalIgnoreCase));
         }
 
         var labelIds = query.LabelIds?.Select(id => id.Contains('_') ? id.Split('_')[1] : id).ToArray();
-        
+
         if (labelIds is { Length: > 0 })
         {
-            
             filteredExpenses = filteredExpenses.Where(x => x.Labels.Any(l => labelIds.Contains(l)));
         }
 

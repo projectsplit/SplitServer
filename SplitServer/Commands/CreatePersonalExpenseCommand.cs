@@ -6,7 +6,7 @@ using SplitServer.Responses;
 
 namespace SplitServer.Commands;
 
-public class CreatePersonalExpenseCommand: IRequest<Result<CreateExpenseResponse>>
+public class CreatePersonalExpenseCommand : IRequest<Result<CreateExpenseResponse>>
 {
     public required string UserId { get; init; }
     public required decimal Amount { get; init; }
