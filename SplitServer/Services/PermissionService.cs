@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 
@@ -10,17 +10,20 @@ public class PermissionService
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IBudgetsRepository _budgetsRepository;
 
     public PermissionService(
         IGroupsRepository groupsRepository,
         IUsersRepository usersRepository,
         IExpensesRepository expensesRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        IBudgetsRepository budgetsRepository)
     {
         _groupsRepository = groupsRepository;
         _usersRepository = usersRepository;
         _expensesRepository = expensesRepository;
         _transfersRepository = transfersRepository;
+        _budgetsRepository = budgetsRepository;
     }
 
     public async Task<Result<(User user, Group group, string memberId)>> VerifyGroupAction(
@@ -148,6 +151,37 @@ public class PermissionService
         }
 
         return (user, targetGroupIds);
+    }
+
+    public async Task<Result<(User user, Budget budget)>> VerifyEditBudgetAction(
+        string userId,
+        string budgetId,
+        CancellationToken ct)
+    {
+        var userMaybe = await _usersRepository.GetById(userId, ct);
+
+        if (userMaybe.HasNoValue)
+        {
+            return Result.Failure<(User user, Budget budget)>($"User with id {userId} was not found");
+        }
+
+        var user = userMaybe.Value;
+
+        var budgetMaybe = await _budgetsRepository.GetById(budgetId, ct);
+
+        if (budgetMaybe.HasNoValue)
+        {
+            return Result.Failure<(User user, Budget budget)>($"Budget with id {budgetId} was not found");
+        }
+
+        var budget = budgetMaybe.Value;
+
+        if (budget.UserId != userId)
+        {
+            return Result.Failure<(User user, Budget budget)>($"Budget with id {budgetId} does not belong to user {userId}");
+        }
+
+        return (user, budget);
     }
 
     public async Task<Result<(User user, NonGroupExpense expense)>> VerifyNonGroupExpenseAction(
