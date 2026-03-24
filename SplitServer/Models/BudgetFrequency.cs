@@ -4,5 +4,6 @@ public enum BudgetFrequency
 {
     Weekly,
     Monthly,
+    Annually,
     Custom
 }
