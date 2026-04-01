@@ -27,7 +27,7 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
 
         if (activeBudget == null)
         {
-            return Result.Failure<GetActiveBudgetInfoResponse>("No active budget found");
+             return Result.Failure<GetActiveBudgetInfoResponse>("No active budget found");
         }
 
         var spentAmountResult = await _budgetService.GetSpentAmount(activeBudget, ct);
