@@ -150,7 +150,7 @@ public class BudgetService
         if (budget.Scope.HasFlag(BudgetScope.Personal))
         {
             var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(budget.UserId, allMemberIds, ct, startDate, endDate);
-            var personalSpent = personalExpenses.Sum(x => _currencyExchangeRateService.Convert(x.Amount, x.Currency, rates, budget.Currency));
+            var personalSpent = personalExpenses.OfType<PersonalExpense>().Sum(x => _currencyExchangeRateService.Convert(x.Amount, x.Currency, rates, budget.Currency));
             totalSpent += personalSpent;
         }
 

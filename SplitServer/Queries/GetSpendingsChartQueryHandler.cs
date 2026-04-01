@@ -116,7 +116,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                     return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
                 });
 
-            var personalExpensesSum = personalExpenses
+            var personalExpensesSum = personalExpenses.OfType<PersonalExpense>()
                 .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
                 .Sum(x =>
                 {
