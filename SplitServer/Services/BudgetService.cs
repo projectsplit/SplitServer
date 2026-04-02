@@ -150,7 +150,21 @@ public class BudgetService
         if (budget.Scope.HasFlag(BudgetScope.Personal))
         {
             var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(budget.UserId, allMemberIds, ct, startDate, endDate);
-            var personalSpent = personalExpenses.OfType<PersonalExpense>().Sum(x => _currencyExchangeRateService.Convert(x.Amount, x.Currency, rates, budget.Currency));
+            var skipGroup = budget.Scope.HasFlag(BudgetScope.Group);
+            var skipNonGroup = budget.Scope.HasFlag(BudgetScope.NonGroup);
+            var personalSpent = personalExpenses.Sum(x =>
+            {
+                var shareAmount = x switch
+                {
+                    GroupExpense when skipGroup => 0m,
+                    NonGroupExpense when skipNonGroup => 0m,
+                    PersonalExpense pe => pe.Amount,
+                    NonGroupExpense nge => nge.Shares.FirstOrDefault(s => s.UserId == budget.UserId)?.Amount ?? 0,
+                    GroupExpense ge => ge.Shares.FirstOrDefault(s => allMemberIds.Contains(s.MemberId))?.Amount ?? 0,
+                    _ => 0m
+                };
+                return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, budget.Currency);
+            });
             totalSpent += personalSpent;
         }
 
