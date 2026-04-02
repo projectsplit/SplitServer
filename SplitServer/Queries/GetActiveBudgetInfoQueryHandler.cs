@@ -37,6 +37,7 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
             return Result.Failure<GetActiveBudgetInfoResponse>(spentAmountResult.Error);
         }
 
+
         var datesResult = _budgetService.CalculateDates(activeBudget);
         if (datesResult.IsFailure)
         {
