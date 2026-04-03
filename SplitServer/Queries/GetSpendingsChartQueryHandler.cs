@@ -112,7 +112,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                 .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
                 .Sum(x =>
                 {
-                    var paymentAmount = x.Shares.FirstOrDefault(p => p.UserId == query.UserId)?.Amount ?? 0;
+                    var paymentAmount = x.Payments.FirstOrDefault(p => p.UserId == query.UserId)?.Amount ?? 0;
                     return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
                 });
 
