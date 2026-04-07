@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
@@ -55,6 +56,14 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
         var (startDate, endDate) = datesResult.Value;
         var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
+
+        if (activeBudget.Frequency == BudgetFrequency.Custom && endDate < now)
+        {
+            activeBudget = activeBudget with { IsActive = false };
+            await _budgetsRepository.Update(activeBudget, ct);
+            return Result.Failure<GetActiveBudgetInfoResponse>("No active budget found");
+        }
+
         var spentAmount = spentAmountResult.Value;
 
         var remainingDays = (endDate - now).Days;
