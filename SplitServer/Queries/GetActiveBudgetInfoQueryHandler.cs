@@ -9,13 +9,16 @@ namespace SplitServer.Queries;
 public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetInfoQuery, Result<GetActiveBudgetInfoResponse>>
 {
     private readonly IBudgetsRepository _budgetsRepository;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly BudgetService _budgetService;
 
     public GetActiveBudgetInfoQueryHandler(
         IBudgetsRepository budgetsRepository,
+        IUserPreferencesRepository userPreferencesRepository,
         BudgetService budgetService)
     {
         _budgetsRepository = budgetsRepository;
+        _userPreferencesRepository = userPreferencesRepository;
         _budgetService = budgetService;
     }
 
@@ -30,7 +33,12 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
              return Result.Failure<GetActiveBudgetInfoResponse>("No active budget found");
         }
 
-        var spentAmountResult = await _budgetService.GetSpentAmount(activeBudget, ct);
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var timeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
+
+        var spentAmountResult = await _budgetService.GetSpentAmount(activeBudget, timeZoneId, ct);
 
         if (spentAmountResult.IsFailure)
         {
@@ -38,14 +46,15 @@ public class GetActiveBudgetInfoQueryHandler : IRequestHandler<GetActiveBudgetIn
         }
 
 
-        var datesResult = _budgetService.CalculateDates(activeBudget);
+        var datesResult = _budgetService.CalculateDates(activeBudget, timeZoneId);
         if (datesResult.IsFailure)
         {
             return Result.Failure<GetActiveBudgetInfoResponse>(datesResult.Error);
         }
 
         var (startDate, endDate) = datesResult.Value;
-        var now = DateTime.UtcNow.Date;
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
         var spentAmount = spentAmountResult.Value;
 
         var remainingDays = (endDate - now).Days;

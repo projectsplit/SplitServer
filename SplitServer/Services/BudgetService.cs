@@ -21,9 +21,10 @@ public class BudgetService
         _currencyExchangeRateService = currencyExchangeRateService;
     }
 
-    public Result<(DateTime startDate, DateTime endDate)> CalculateDates(Budget budget)
+    public Result<(DateTime startDate, DateTime endDate)> CalculateDates(Budget budget, string timeZoneId)
     {
-        var now = DateTime.UtcNow.Date;
+        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
 
         if (budget.Frequency == BudgetFrequency.Custom)
         {
@@ -86,9 +87,9 @@ public class BudgetService
         return Result.Failure<(DateTime startDate, DateTime endDate)>("Unsupported budget frequency");
     }
 
-    public async Task<Result<decimal>> GetSpentAmount(Budget budget, CancellationToken ct)
+    public async Task<Result<decimal>> GetSpentAmount(Budget budget, string timeZoneId, CancellationToken ct)
     {
-        var datesResult = CalculateDates(budget);
+        var datesResult = CalculateDates(budget, timeZoneId);
         if (datesResult.IsFailure)
         {
             return Result.Failure<decimal>(datesResult.Error);
