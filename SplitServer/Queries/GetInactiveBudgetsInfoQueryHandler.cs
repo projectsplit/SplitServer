@@ -33,32 +33,21 @@ public class GetInactiveBudgetsInfoQueryHandler : IRequestHandler<GetInactiveBud
             ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
             : DefaultValues.TimeZone;
 
-        var responseItems = new List<GetInactiveBudgetsInfoResponseItem>();
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
-        var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
-
-        foreach (var budget in budgets.OrderByDescending(b => b.Created))
-        {
-            var isExpired = false;
-            var datesResult = _budgetService.CalculateDates(budget, timeZoneId);
-
-            if (datesResult.IsFailure)
+        var responseItems = budgets
+            .Where(b => !b.IsActive)
+            .OrderByDescending(b => b.Created)
+            .Select(budget =>
             {
-                continue;
-            }
+                var datesResult = _budgetService.CalculateDates(budget, timeZoneId);
 
-            var (startDate, endDate) = datesResult.Value;
+                if (datesResult.IsFailure)
+                {
+                    return null;
+                }
 
-            if (budget.IsActive && budget.Frequency == BudgetFrequency.Custom && endDate < now)
-            {
-                var updatedBudget = budget with { IsActive = false };
-                await _budgetsRepository.Update(updatedBudget, ct);
-                isExpired = true;
-            }
+                var (startDate, endDate) = datesResult.Value;
 
-            if (!budget.IsActive || isExpired)
-            {
-                responseItems.Add(new GetInactiveBudgetsInfoResponseItem
+                return new GetInactiveBudgetsInfoResponseItem
                 {
                     Id = budget.Id,
                     Amount = budget.Amount,
@@ -69,9 +58,10 @@ public class GetInactiveBudgetsInfoQueryHandler : IRequestHandler<GetInactiveBud
                     TargetGroupIds = budget.TargetGroupIds,
                     StartDate = startDate,
                     EndDate = endDate
-                });
-            }
-        }
+                };
+            })
+            .WhereNotNull()
+            .ToList();
 
         return new GetInactiveBudgetsInfoResponse
         {
