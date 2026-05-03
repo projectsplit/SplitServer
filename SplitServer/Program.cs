@@ -12,6 +12,7 @@ using SplitServer.Services;
 using SplitServer.Services.Auth;
 using SplitServer.Services.CurrencyExchangeRate;
 using SplitServer.Services.OpenExchangeRates;
+using SplitServer.Services.RiskEngine;
 using SplitServer.Services.TimeZone;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -39,6 +40,7 @@ builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();
 builder.Services.AddSingleton<TimeZoneService>();
+builder.Services.AddSingleton<RiskEngineClient>();
 
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
