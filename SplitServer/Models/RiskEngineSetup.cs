@@ -1,15 +1,13 @@
-using CSharpFunctionalExtensions;
-using MediatR;
 using SplitServer.Services.RiskEngine.Models;
 
-namespace SplitServer.Commands;
+namespace SplitServer.Models;
 
-public class RunSimulationCommand : IRequest<Result<SimulationResponse>>
+public record RiskEngineSetup : EntityBase
 {
     public required string UserId { get; init; }
-    public string Economy { get; init; } = "UK";
+    public required string Economy { get; init; }
     public required Financials Financials { get; init; }
     public required RiskToggles RiskToggles { get; init; }
-    public List<CustomRisk> CustomRisks { get; init; } = new();
+    public required List<CustomRisk> CustomRisks { get; init; }
     public CorrelationInput? Correlations { get; init; }
 }

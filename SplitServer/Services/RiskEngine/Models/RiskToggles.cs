@@ -4,6 +4,12 @@ namespace SplitServer.Services.RiskEngine.Models;
 
 public class RiskToggles
 {
+    [JsonPropertyName("savings")]
+    public bool Savings { get; set; } = true;
+
+    [JsonPropertyName("salary")]
+    public bool Salary { get; set; } = true;
+
     [JsonPropertyName("equities")]
     public bool Equities { get; set; } = true;
 
@@ -18,6 +24,9 @@ public class RiskToggles
 
     [JsonPropertyName("career_loss")]
     public bool CareerLoss { get; set; } = true;
+
+    [JsonPropertyName("career_once_every")]
+    public double CareerOnceEvery { get; set; } = 10;
 
     [JsonPropertyName("career_opt_loss")]
     public double CareerOptLoss { get; set; } = 9600;

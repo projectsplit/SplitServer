@@ -55,6 +55,7 @@ builder.Services.AddSingleton<IUserActivityRepository, UserActivityMongoDbReposi
 builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDbRepository>();
 builder.Services.AddSingleton<IUserLabelsRepository, UserLabelsMongoDbRepository>();
 builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
+builder.Services.AddSingleton<IRiskEngineRepository, RiskEngineMongoDbRepository>();
 
 builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
