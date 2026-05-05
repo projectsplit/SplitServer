@@ -49,4 +49,12 @@ public class RiskEngineClient
         return await response.Content.ReadFromJsonAsync<FairPremiumResponse>()
             ?? throw new InvalidOperationException("Null response from risk engine");
     }
+
+    public async Task<ConditionalQueryResponse> ConditionalProbabilitiesAsync(string runId, ConditionalQueryRequest request)
+    {
+        var response = await _riskEngineHttpClient.PostAsJsonAsync($"/v1/conditional/{runId}", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ConditionalQueryResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
 }
