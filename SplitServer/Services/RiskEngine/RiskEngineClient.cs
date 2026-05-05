@@ -41,4 +41,12 @@ public class RiskEngineClient
         return await response.Content.ReadFromJsonAsync<FactorsResponse>()
             ?? throw new InvalidOperationException("Null response from risk engine");
     }
+
+    public async Task<FairPremiumResponse> GetFairPremiumAsync(string runId, FairPremiumRequest request)
+    {
+        var response = await _riskEngineHttpClient.PostAsJsonAsync($"/v1/fair-premium/{runId}", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<FairPremiumResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
 }

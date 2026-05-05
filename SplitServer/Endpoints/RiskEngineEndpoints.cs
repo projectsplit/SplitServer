@@ -14,6 +14,7 @@ public static class RiskEngineEndpoints
         app.MapGet("/calculatedwealth", GetCalculatedWealthHandler);
         app.MapPost("/whatif", WhatIfHandler);
         app.MapGet("/factors", GetFactorsHandler);
+        app.MapPost("/fairpremium", GetFairPremiumHandler);
     }
 
     private static async Task<IResult> RunSimulationHandler(
@@ -98,6 +99,24 @@ public static class RiskEngineEndpoints
         var query = new GetFactorsQuery
         {
             UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetFairPremiumHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        FairPremiumRequest request,
+        CancellationToken ct)
+    {
+        var query = new GetFairPremiumQuery
+        {
+            UserId = httpContext.GetUserId(),
+            RiskName = request.RiskName,
+            MaxLoss = request.MaxLoss
         };
 
         var result = await mediator.Send(query, ct);
