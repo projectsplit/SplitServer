@@ -14,10 +14,10 @@ public class ScenarioRow
 
     [JsonPropertyName("portfolio_end")]
     public double PortfolioEnd { get; set; }
-    
+
     [JsonPropertyName("bond_portfolio_end")]
     public double BondPortfolioEnd { get; set; }
-    
+
     [JsonPropertyName("career_severance")]
     public double CareerSeverance { get; set; }
 
@@ -43,5 +43,5 @@ public class ScenarioRow
     public double? PropertyEnd { get; set; }
 
     [JsonExtensionData]
-    public Dictionary<string, JsonElement>? AdditionalRisks { get; set; }
+    public Dictionary<string, object>? AdditionalRisks { get; set; }
 }

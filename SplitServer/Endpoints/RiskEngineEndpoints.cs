@@ -11,6 +11,9 @@ public static class RiskEngineEndpoints
     {
         app.MapPost("/simulate", RunSimulationHandler);
         app.MapGet("/mostrecentsetup", GetMostRecentEngineSetupHandler);
+        app.MapGet("/calculatedwealth", GetCalculatedWealthHandler);
+        app.MapPost("/whatif", WhatIfHandler);
+        app.MapGet("/factors", GetFactorsHandler);
     }
 
     private static async Task<IResult> RunSimulationHandler(
@@ -40,6 +43,59 @@ public static class RiskEngineEndpoints
         CancellationToken ct)
     {
         var query = new GetMostRecentEngineSetupQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetCalculatedWealthHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetCalculatedWealthQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> WhatIfHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        WhatIfRequest request,
+        CancellationToken ct)
+    {
+        var command = new WhatIfCommand
+        {
+            UserId = httpContext.GetUserId(),
+            BufferDelta = request.BufferDelta,
+            ExpenseCut = request.ExpenseCut,
+            SalaryDelta = request.SalaryDelta,
+            Reweight = request.Reweight,
+            DisabledRisks = request.DisabledRisks,
+            RiskCaps = request.RiskCaps,
+            ExcludeProperty = request.ExcludeProperty
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetFactorsHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetFactorsQuery
         {
             UserId = httpContext.GetUserId()
         };

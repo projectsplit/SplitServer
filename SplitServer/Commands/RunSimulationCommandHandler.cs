@@ -12,11 +12,16 @@ public class RunSimulationCommandHandler : IRequestHandler<RunSimulationCommand,
 {
     private readonly RiskEngineClient _riskEngineClient;
     private readonly IRiskEngineRepository _riskEngineRepository;
+    private readonly ICalculatedWealthRepository _calculatedWealthRepository;
 
-    public RunSimulationCommandHandler(RiskEngineClient riskEngineClient, IRiskEngineRepository riskEngineRepository)
+    public RunSimulationCommandHandler(
+        RiskEngineClient riskEngineClient,
+        IRiskEngineRepository riskEngineRepository,
+        ICalculatedWealthRepository calculatedWealthRepository)
     {
         _riskEngineClient = riskEngineClient;
         _riskEngineRepository = riskEngineRepository;
+        _calculatedWealthRepository = calculatedWealthRepository;
     }
 
     public async Task<Result<SimulationResponse>> Handle(RunSimulationCommand command, CancellationToken ct)
@@ -33,6 +38,14 @@ public class RunSimulationCommandHandler : IRequestHandler<RunSimulationCommand,
         try
         {
             var response = await _riskEngineClient.RunSimulationAsync(request);
+
+            foreach (var scenario in response.Scenarios)
+            {
+                if (scenario.AdditionalRisks is null) continue;
+                scenario.AdditionalRisks = scenario.AdditionalRisks.ToDictionary(
+                    kvp => kvp.Key,
+                    kvp => kvp.Value is JsonElement el ? el.GetDouble() : kvp.Value);
+            }
 
             var existingMaybe = await _riskEngineRepository.GetByUserId(command.UserId, ct);
 
@@ -73,6 +86,25 @@ public class RunSimulationCommandHandler : IRequestHandler<RunSimulationCommand,
 
                 await _riskEngineRepository.Insert(setup, ct);
             }
+
+            var existingWealthMaybe = await _calculatedWealthRepository.GetByUserId(command.UserId, ct);
+
+            var calculatedWealth = new CalculatedWealth
+            {
+                Id = existingWealthMaybe.HasValue ? existingWealthMaybe.Value.Id : Guid.NewGuid().ToString(),
+                Created = existingWealthMaybe.HasValue ? existingWealthMaybe.Value.Created : now,
+                Updated = now,
+                UserId = command.UserId,
+                RunId = response.RunId,
+                StartingWealth = response.StartingWealth,
+                Economy = response.Economy,
+                Summary = response.Summary,
+                Scenarios = response.Scenarios,
+                NSims = response.NSims,
+                RealizedCorrelation = response.RealizedCorrelation
+            };
+
+            await _calculatedWealthRepository.UpsertByUserId(calculatedWealth, ct);
 
             return Result.Success(response);
         }

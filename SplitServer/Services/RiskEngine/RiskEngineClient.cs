@@ -25,4 +25,20 @@ public class RiskEngineClient
         return await response.Content.ReadFromJsonAsync<SimulationResponse>()
             ?? throw new InvalidOperationException("Null response from risk engine");
     }
+
+    public async Task<WhatIfResponse> WhatIfAsync(string runId, WhatIfRequest request)
+    {
+        var response = await _riskEngineHttpClient.PostAsJsonAsync($"/v1/whatif/{runId}", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<WhatIfResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
+
+    public async Task<FactorsResponse> GetFactorsAsync(string runId)
+    {
+        var response = await _riskEngineHttpClient.GetAsync($"/v1/factors/{runId}");
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<FactorsResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
 }
