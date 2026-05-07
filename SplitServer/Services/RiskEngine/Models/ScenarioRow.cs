@@ -21,6 +21,12 @@ public class ScenarioRow
     [JsonPropertyName("career_severance")]
     public double CareerSeverance { get; set; }
 
+    [JsonPropertyName("salary_cash")]
+    public decimal? SalaryCash { get; init; } 
+
+    [JsonPropertyName("severance_cash")]
+    public decimal? SeveranceCash { get; init; }
+
     [JsonPropertyName("income")]
     public double Income { get; set; }
 

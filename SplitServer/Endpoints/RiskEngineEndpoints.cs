@@ -16,6 +16,7 @@ public static class RiskEngineEndpoints
         app.MapGet("/factors", GetFactorsHandler);
         app.MapPost("/fairpremium", GetFairPremiumHandler);
         app.MapPost("/conditional", GetConditionalProbsHandler);
+        app.MapPost("/conditionalsweep", GetConditionalSweepProbsHandler);
     }
 
     private static async Task<IResult> RunSimulationHandler(
@@ -135,6 +136,26 @@ public static class RiskEngineEndpoints
         {
             UserId = httpContext.GetUserId(),
             Conditions = request.Conditions
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetConditionalSweepProbsHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        ConditionalSweepRequest request,
+        CancellationToken ct)
+    {
+        var command = new ConditionalSweepCommand
+        {
+            UserId = httpContext.GetUserId(),
+            Factor = request.Factor,
+            Op = request.Op,
+            Thresholds = request.Thresholds,
+            AutoQuantiles = request.AutoQuantiles
         };
 
         var result = await mediator.Send(command, ct);

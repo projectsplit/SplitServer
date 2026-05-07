@@ -57,4 +57,12 @@ public class RiskEngineClient
         return await response.Content.ReadFromJsonAsync<ConditionalQueryResponse>()
             ?? throw new InvalidOperationException("Null response from risk engine");
     }
+
+    public async Task<ConditionalSweepResponse> ConditionalSweepProbabilitiesAsync(string runId, ConditionalSweepRequest request)
+    {
+        var response = await _riskEngineHttpClient.PostAsJsonAsync($"/v1/conditional-sweep/{runId}", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<ConditionalSweepResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
 }

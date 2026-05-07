@@ -23,6 +23,14 @@ public class ConditionalQueryResponse
     [JsonPropertyName("n_busts_in_subset")]
     public int NBustsInSubset { get; set; }
 
+    [JsonPropertyName("p_bust_ci_low")]
+    public double? PBustCiLow { get; init; }
+
+    [JsonPropertyName("p_bust_ci_high")]
+    public double? PBustCiHigh { get; init; }
+
+    [JsonPropertyName("reliability")]
+    public string Reliability { get; init; } = "reliable";
     [JsonPropertyName("frac_busts")]
     public double FracBusts { get; set; }
 
