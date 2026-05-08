@@ -17,6 +17,7 @@ public static class RiskEngineEndpoints
         app.MapPost("/fairpremium", GetFairPremiumHandler);
         app.MapPost("/conditional", GetConditionalProbsHandler);
         app.MapPost("/conditionalsweep", GetConditionalSweepProbsHandler);
+        app.MapPost("/taildrivers", GetTailDriversHandler);
     }
 
     private static async Task<IResult> RunSimulationHandler(
@@ -156,6 +157,29 @@ public static class RiskEngineEndpoints
             Op = request.Op,
             Thresholds = request.Thresholds,
             AutoQuantiles = request.AutoQuantiles
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> GetTailDriversHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        TailDriversRequest request,
+        CancellationToken ct)
+    {
+        var command = new TailDriversCommand
+        {
+            UserId = httpContext.GetUserId(),
+            ExcludeProperty = request.ExcludeProperty,
+            TailThresholdBusts = request.TailThresholdBusts,
+            TailFallbackPct = request.TailFallbackPct,
+            PairQuantile = request.PairQuantile,
+            PairTopN = request.PairTopN,
+            PathDepth = request.PathDepth,
+            PathTopN = request.PathTopN
         };
 
         var result = await mediator.Send(command, ct);

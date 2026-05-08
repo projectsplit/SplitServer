@@ -65,4 +65,12 @@ public class RiskEngineClient
         return await response.Content.ReadFromJsonAsync<ConditionalSweepResponse>()
             ?? throw new InvalidOperationException("Null response from risk engine");
     }
+
+    public async Task<TailDriversResponse> TailRiskDriversAsync(string runId, TailDriversRequest request)
+    {
+        var response = await _riskEngineHttpClient.PostAsJsonAsync($"/v1/tail-drivers/{runId}", request);
+        response.EnsureSuccessStatusCode();
+        return await response.Content.ReadFromJsonAsync<TailDriversResponse>()
+            ?? throw new InvalidOperationException("Null response from risk engine");
+    }
 }
