@@ -167,8 +167,8 @@ public sealed class NarrativeSections
     [JsonPropertyName("diagnosis")]
     public List<string> Diagnosis { get; set; } = new();
 
-    [JsonPropertyName("pairs")]
-    public List<string> Pairs { get; set; } = new();
+    [JsonPropertyName("explanation")]
+    public string? Explanation { get; set; }    
 
     [JsonPropertyName("pathways")]
     public List<string> Pathways { get; set; } = new();
