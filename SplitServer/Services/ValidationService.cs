@@ -1,6 +1,8 @@
-﻿using CSharpFunctionalExtensions;
+﻿using System.Text.RegularExpressions;
+using CSharpFunctionalExtensions;
 using NMoneys;
 using SplitServer.Models;
+using Group = SplitServer.Models.Group;
 
 // ReSharper disable ForeachCanBePartlyConvertedToQueryUsingAnotherGetEnumerator
 
@@ -10,6 +12,11 @@ public class ValidationService
 {
     public const int UsernameMinLength = 4;
     public const int UsernameMaxLength = 16;
+    public const int EmailMaxLength = 254;
+
+    private static readonly Regex EmailRegex = new(
+        @"^[^\s@]+@[^\s@]+\.[^\s@]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public HashSet<char> UsernameAllowedChars { get; } = new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
 
@@ -42,6 +49,26 @@ public class ValidationService
         if (_usernameForbiddenSequences.Any(username.Contains))
         {
             return Result.Failure("Username cannot contain consecutive special characters");
+        }
+
+        return Result.Success();
+    }
+
+    public Result ValidateEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Result.Failure("Email is required");
+        }
+
+        if (email.Length > EmailMaxLength)
+        {
+            return Result.Failure($"Email length must be at most {EmailMaxLength}");
+        }
+
+        if (!EmailRegex.IsMatch(email))
+        {
+            return Result.Failure("Email is not a valid email address");
         }
 
         return Result.Success();

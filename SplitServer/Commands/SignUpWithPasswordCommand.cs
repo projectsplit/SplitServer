@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Responses;
 
@@ -8,4 +8,5 @@ public class SignUpWithPasswordCommand : IRequest<Result<AuthenticationResponse>
 {
     public required string Password { get; init; }
     public required string Username { get; init; }
+    public required string Email { get; init; }
 }

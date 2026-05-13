@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using SplitServer.Models;
@@ -52,6 +52,18 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             return Result.Failure<AuthenticationResponse>(usernameValidationResult.Error);
         }
 
+        var emailValidationResult = _validationService.ValidateEmail(command.Email);
+
+        if (emailValidationResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(emailValidationResult.Error);
+        }
+
+        if (await _usersRepository.AnyWithEmail(command.Email, ct))
+        {
+            return Result.Failure<AuthenticationResponse>("An account with this email already exists");
+        }
+
         var userId = Guid.NewGuid().ToString();
 
         var hasher = new PasswordHasher<string>();
@@ -65,7 +77,8 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             Id = userId,
             Created = now,
             Updated = now,
-            Email = null,
+            Email = command.Email,
+            EmailVerified = false,
             HashedPassword = hashedPassword,
             Username = command.Username,
             GoogleId = null,
