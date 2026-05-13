@@ -35,4 +35,18 @@ public class SessionsMongoDbRepository : MongoDbRepositoryBase<Session, Session>
 
         return Result.Success();
     }
+
+    public async Task<Result> DeleteByUserId(string userId, CancellationToken ct)
+    {
+        var filter = Builders<Session>.Filter.Eq(x => x.UserId, userId);
+
+        var deleteResult = await Collection.DeleteManyAsync(filter, ct);
+
+        if (!deleteResult.IsAcknowledged)
+        {
+            return Result.Failure<Result>("Failed to delete sessions");
+        }
+
+        return Result.Success();
+    }
 }
