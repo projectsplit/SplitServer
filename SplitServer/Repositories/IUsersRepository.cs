@@ -16,4 +16,6 @@ public interface IUsersRepository : IRepositoryBase<User>
     Task<List<User>> GetLatestUsers(int skip, int pageSize, CancellationToken ct);
 
     Task<bool> AnyWithUsername(string username, CancellationToken ct);
+
+    Task<bool> AnyWithEmail(string email, CancellationToken ct);
 }

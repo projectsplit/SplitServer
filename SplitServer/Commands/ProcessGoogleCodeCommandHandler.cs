@@ -105,6 +105,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
             Created = now,
             Updated = now,
             Email = googleUserInfo.Email,
+            EmailVerified = true,
             HashedPassword = null,
             Username = generatedUsername,
             GoogleId = googleUserInfo.Id,
