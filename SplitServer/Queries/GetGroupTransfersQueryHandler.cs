@@ -58,12 +58,27 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
 
         return new GroupTransfersResponse
         {
-            Transfers = transfers,
+            Transfers = transfers
+                .Select(x => new GroupTransferResponseItem
+                {
+                    Id = x.Id,
+                    Created = x.Created,
+                    Updated = x.Updated,
+                    GroupId = x.GroupId,
+                    CreatorId = x.CreatorId,
+                    Amount = x.Amount,
+                    Occurred = x.Occurred,
+                    Description = x.Description,
+                    Currency = x.Currency,
+                    ReceiverId = x.ReceiverId,
+                    SenderId = x.SenderId,
+                })
+                .ToList(),
             Next = GetNext(query, transfers)
         };
     }
 
-    private static string? GetNext(GetGroupTransfersQuery query, List<Transfer> transfers)
+    private static string? GetNext(GetGroupTransfersQuery query, List<GroupTransfer> transfers)
     {
         return Next.Create(
             transfers,

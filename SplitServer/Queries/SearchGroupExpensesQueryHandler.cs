@@ -60,48 +60,120 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var expenses = await _expensesRepository.Search(
-            query.GroupId,
-            query.SearchTerm,
-            query.After?.ToUtc(userTimeZoneId),
-            query.Before?.ToUtc(userTimeZoneId),
-            query.ParticipantIds,
-            query.PayerIds,
-            query.LabelIds,
-            query.PageSize,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            ct);
+        List<GroupExpense> expenses;
+        var hasMoreNewer = false;
+        var hasMoreOlder = false;
 
+        if (nextDetails?.IsJumpTo == true)
+        {
+            var newerTargetCount = query.PageSize / 2;
+            var newerItems = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                newerTargetCount + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Newer,
+                true,
+                ct);
 
+            if (newerItems.Count > newerTargetCount)
+            {
+                hasMoreNewer = true;
+                newerItems.RemoveAt(0);
+            }
+
+            var olderNeeded = query.PageSize - newerItems.Count;
+            var olderItems = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                olderNeeded + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (olderItems.Count > olderNeeded)
+            {
+                hasMoreOlder = true;
+                olderItems.RemoveAt(olderItems.Count - 1);
+            }
+
+            expenses = newerItems.Concat(olderItems).ToList();
+        }
+        else
+        {
+            expenses = await _expensesRepository.Search(
+                query.GroupId,
+                query.SearchTerm,
+                query.After?.ToUtc(userTimeZoneId),
+                query.Before?.ToUtc(userTimeZoneId),
+                query.ParticipantIds,
+                query.PayerIds,
+                query.LabelIds,
+                query.PageSize + 1,
+                nextDetails?.Occurred,
+                nextDetails?.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (expenses.Count > query.PageSize)
+            {
+                hasMoreOlder = true;
+                expenses.RemoveAt(expenses.Count - 1);
+            }
+
+            hasMoreNewer = query.Next != null;
+        }
 
         return new GroupExpensesResponse
         {
-            Expenses = expenses.Select(x => new ExpenseResponseItem
-            {
-                Id = x.Id,
-                Created = x.Created,
-                Updated = x.Updated,
-                GroupId = x.GroupId,
-                CreatorId = x.CreatorId,
-                Amount = x.Amount,
-                Occurred = x.Occurred,
-                Description = x.Description,
-                Currency = x.Currency,
-                Payments = x.Payments,
-                Shares = x.Shares,
-                Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
-                Location = x.Location,
-            }).ToList(),
-            Next = GetNext(query, expenses)
+            Expenses = expenses
+                .Select(x => new GroupExpenseResponseItem
+                {
+                    Id = x.Id,
+                    Created = x.Created,
+                    Updated = x.Updated,
+                    GroupId = x.GroupId,
+                    CreatorId = x.CreatorId,
+                    Amount = x.Amount,
+                    Occurred = x.Occurred,
+                    Description = x.Description,
+                    Currency = x.Currency,
+                    TransactionType = ExpenseResponseType.Group,
+                    Payments = x.Payments,
+                    Shares = x.Shares,
+                    Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
+                    Location = x.Location,
+                })
+                .ToList(),
+            Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,
+            Previous = hasMoreNewer ? CreateToken(expenses.First(), false) : null
         };
     }
 
-    private static string? GetNext(SearchGroupExpensesQuery query, List<Expense> expenses)
+    private static string? CreateToken(GroupExpense expense, bool isJumpTo)
     {
-        return Next.Create(
-            expenses,
-            query.PageSize,
-            x => new NextExpensePageDetails { Created = x.Last().Created, Occurred = x.Last().Occurred });
+        var details = new NextExpensePageDetails
+        {
+            Created = expense.Created,
+            Occurred = expense.Occurred,
+            IsJumpTo = isJumpTo
+        };
+
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(details);
+        return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(jsonString));
     }
 }

@@ -5,13 +5,13 @@ using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
 
-public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupCommand, Result>
+public class SetRecentContextCommandHandler : IRequestHandler<SetRecentContextCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IUserActivityRepository _userActivityRepository;
 
-    public SetRecentGroupCommandHandler(
+    public SetRecentContextCommandHandler(
         IUsersRepository usersRepository,
         IUserActivityRepository userActivityRepository,
         IGroupsRepository groupsRepository)
@@ -21,7 +21,7 @@ public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupComman
         _groupsRepository = groupsRepository;
     }
 
-    public async Task<Result> Handle(SetRecentGroupCommand command, CancellationToken ct)
+    public async Task<Result> Handle(SetRecentContextCommand command, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(command.UserId, ct);
 
@@ -30,18 +30,21 @@ public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupComman
             return Result.Failure($"User with id {command.UserId} was not found");
         }
 
-        var groupMaybe = await _groupsRepository.GetById(command.GroupId, ct);
-
-        if (groupMaybe.HasNoValue)
+        if (command.ContextId != "NON_GROUP")
         {
-            return Result.Failure($"Group with id {command.GroupId} was not found");
-        }
+            var groupMaybe = await _groupsRepository.GetById(command.ContextId, ct);
 
-        var group = groupMaybe.Value;
+            if (groupMaybe.HasNoValue)
+            {
+                return Result.Failure($"Group with id {command.ContextId} was not found");
+            }
 
-        if (group.Members.All(x => x.UserId != command.UserId))
-        {
-            return Result.Failure<Result>("User is not a group member");
+            var group = groupMaybe.Value;
+
+            if (group.Members.All(x => x.UserId != command.UserId))
+            {
+                return Result.Failure<Result>("User is not a group member");
+            }
         }
 
         var userActivityMaybe = await _userActivityRepository.GetById(command.UserId, ct);
@@ -51,7 +54,7 @@ public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupComman
         var userActivity = userActivityMaybe.HasValue
             ? userActivityMaybe.Value with
             {
-                RecentGroupId = command.GroupId,
+                RecentContextId = command.ContextId,
                 Updated = now
             }
             : new UserActivity
@@ -59,8 +62,9 @@ public class SetRecentGroupCommandHandler : IRequestHandler<SetRecentGroupComman
                 Id = command.UserId,
                 Created = now,
                 Updated = now,
-                RecentGroupId = command.GroupId,
-                LastViewedNotificationTimestamp = null
+                RecentContextId = command.ContextId,
+                LastViewedNotificationTimestamp = null,
+                ShowBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : true
             };
 
         return await _userActivityRepository.Upsert(userActivity, ct);

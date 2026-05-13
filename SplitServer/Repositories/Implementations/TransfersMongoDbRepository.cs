@@ -3,93 +3,168 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SplitServer.Models;
+using SplitServer.Repositories.Implementations.Models;
 using SplitServer.Repositories.Mappers;
 
 namespace SplitServer.Repositories.Implementations;
 
-public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transfer>, ITransfersRepository
+public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, TransferMongoDbDocument>, ITransfersRepository
 {
+    private readonly IMongoCollection<GroupTransferMongoDbDocument> _groupTransfersCollection;
+    private readonly IMongoCollection<NonGroupTransferMongoDbDocument> _nonGroupTransfersCollection;
+
     public TransfersMongoDbRepository(IMongoConnection mongoConnection) :
         base(
             mongoConnection,
             "Transfers",
-            new PassThroughMapper<Transfer>())
+            new TransferMapper())
     {
+        _groupTransfersCollection = Collection.Database
+            .GetCollection<GroupTransferMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
+
+        _nonGroupTransfersCollection = Collection.Database
+            .GetCollection<NonGroupTransferMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
     }
 
-    public async Task<List<Transfer>> GetByGroupId(
+    public async Task<List<GroupTransfer>> GetByGroupId(
         string groupId,
         int pageSize,
         DateTime? maxOccurred,
         DateTime? maxCreated,
         CancellationToken ct)
     {
-        var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? FilterBuilder.Or(
-                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
-                FilterBuilder.And(
-                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    FilterBuilder.Lt(x => x.Created, maxCreated)))
-            : FilterBuilder.Empty;
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+        var sortBuilder = Builders<GroupTransferMongoDbDocument>.Sort;
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
             paginationFilter);
 
-        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        return await Collection
+        var documents = await _groupTransfersCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
+
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
 
-    public async Task<List<Transfer>> GetAllByGroupId(string groupId, CancellationToken ct)
+    public async Task<List<NonGroupTransfer>> GetByUserId(
+        string userId,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupTransferMongoDbDocument>.Sort;
 
-        return await Collection
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Or(
+                filterBuilder.Eq(x => x.SenderId, userId),
+                filterBuilder.Eq(x => x.ReceiverId, userId)
+            ),
+            paginationFilter);
+
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await _nonGroupTransfersCollection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (NonGroupTransfer)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<GroupTransfer>> GetAllByGroupId(string groupId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+        var filter = filterBuilder.Eq(x => x.GroupId, groupId);
+
+        var documents = await _groupTransfersCollection
             .Find(filter)
             .ToListAsync(ct);
+
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
+    
+     public async Task<List<NonGroupTransfer>> GetAllByUserId(string userId, CancellationToken ct)
+        {
+            var nonGroupTransfersCollection =
+                Collection.Database.GetCollection<NonGroupTransferMongoDbDocument>(Collection.CollectionNamespace
+                    .CollectionName);
+            
+            var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
+            
+            var filter = filterBuilder.Or(
+                filterBuilder.Eq(x => x.ReceiverId, userId),
+                filterBuilder.Eq(x => x.SenderId,  userId)
+            );
+            
+            var documents = await nonGroupTransfersCollection.Find(filter).ToListAsync(ct);
+            return documents.Select(d => (NonGroupTransfer)Mapper.ToEntity(d)).ToList();
+        }
 
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.GroupId, groupId);
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+        var filter = filterBuilder.Eq(x => x.GroupId, groupId);
 
-        var result = await Collection.DeleteManyAsync(filter, null, ct);
+        var result = await _groupTransfersCollection.DeleteManyAsync(filter, null, ct);
 
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete group transfers");
     }
 
-    public async Task<List<Transfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
+    public async Task<List<GroupTransfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct)
     {
-        var receiverFilter = FilterBuilder.In(x => x.ReceiverId, memberIds);
-        var senderFilter = FilterBuilder.In(x => x.SenderId, memberIds);
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Or(receiverFilter, senderFilter));
+        var receiverFilter = filterBuilder.In(x => x.ReceiverId, memberIds);
+        var senderFilter = filterBuilder.In(x => x.SenderId, memberIds);
 
-        var documents = await Collection
+        var filter = filterBuilder.And(
+            filterBuilder.Or(receiverFilter, senderFilter));
+
+        var documents = await _groupTransfersCollection
             .Find(filter)
             .ToListAsync(ct);
 
-        return documents.Select(Mapper.ToEntity).ToList();
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
 
     public async Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct)
     {
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
-            FilterBuilder.Or(
-                FilterBuilder.Eq(x => x.ReceiverId, memberId),
-                FilterBuilder.Eq(x => x.SenderId, memberId)));
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
 
-        return await Collection.Find(filter).AnyAsync(ct);
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.Or(
+                filterBuilder.Eq(x => x.ReceiverId, memberId),
+                filterBuilder.Eq(x => x.SenderId, memberId)));
+
+        return await _groupTransfersCollection.Find(filter).AnyAsync(ct);
     }
 
-    public async Task<List<Transfer>> Search(
+    public async Task<List<GroupTransfer>> Search(
         string groupId,
         string? searchTerm,
         DateTime? minTime,
@@ -101,36 +176,39 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         DateTime? maxCreated,
         CancellationToken ct)
     {
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+        var sortBuilder = Builders<GroupTransferMongoDbDocument>.Sort;
+
         var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? FilterBuilder.Or(
-                FilterBuilder.Lt(x => x.Occurred, maxOccurred),
-                FilterBuilder.And(
-                    FilterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    FilterBuilder.Lt(x => x.Created, maxCreated)))
-            : FilterBuilder.Empty;
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
 
         var receiversFilter = !receiverIds.IsNullOrEmpty()
-            ? FilterBuilder.In(x => x.ReceiverId, receiverIds)
-            : FilterBuilder.Empty;
+            ? filterBuilder.In(x => x.ReceiverId, receiverIds)
+            : filterBuilder.Empty;
 
         var sendersFilter = !senderIds.IsNullOrEmpty()
-            ? FilterBuilder.In(x => x.SenderId, senderIds)
-            : FilterBuilder.Empty;
+            ? filterBuilder.In(x => x.SenderId, senderIds)
+            : filterBuilder.Empty;
 
         var minTimeFilter = minTime is not null
-            ? FilterBuilder.Gte(x => x.Occurred, minTime)
-            : FilterBuilder.Empty;
+            ? filterBuilder.Gte(x => x.Occurred, minTime)
+            : filterBuilder.Empty;
 
         var maxTimeFilter = maxTime is not null
-            ? FilterBuilder.Lte(x => x.Occurred, maxTime)
-            : FilterBuilder.Empty;
+            ? filterBuilder.Lte(x => x.Occurred, maxTime)
+            : filterBuilder.Empty;
 
         var descriptionFilter = searchTerm is not null
-            ? FilterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
-            : FilterBuilder.Empty;
+            ? filterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : filterBuilder.Empty;
 
-        var filter = FilterBuilder.And(
-            FilterBuilder.Eq(x => x.GroupId, groupId),
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
             receiversFilter,
             sendersFilter,
             minTimeFilter,
@@ -138,12 +216,99 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             descriptionFilter,
             paginationFilter);
 
-        var sort = SortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
 
-        return await Collection
+        var documents = await _groupTransfersCollection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
+
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<NonGroupTransfer>> SearchNonGroup(
+        string? searchTerm,
+        DateTime? minTime,
+        DateTime? maxTime,
+        string[]? receiverIds,
+        string[]? senderIds,
+        int pageSize,
+        DateTime? maxOccurred,
+        DateTime? maxCreated,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupTransferMongoDbDocument>.Sort;
+
+        var paginationFilter = maxOccurred is not null && maxCreated is not null
+            ? filterBuilder.Or(
+                filterBuilder.Lt(x => x.Occurred, maxOccurred),
+                filterBuilder.And(
+                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
+                    filterBuilder.Lt(x => x.Created, maxCreated)))
+            : filterBuilder.Empty;
+
+        var receiversFilter = !receiverIds.IsNullOrEmpty()
+            ? filterBuilder.In(x => x.ReceiverId, receiverIds)
+            : filterBuilder.Empty;
+
+        var sendersFilter = !senderIds.IsNullOrEmpty()
+            ? filterBuilder.In(x => x.SenderId, senderIds)
+            : filterBuilder.Empty;
+
+        var minTimeFilter = minTime is not null
+            ? filterBuilder.Gte(x => x.Occurred, minTime)
+            : filterBuilder.Empty;
+
+        var maxTimeFilter = maxTime is not null
+            ? filterBuilder.Lte(x => x.Occurred, maxTime)
+            : filterBuilder.Empty;
+
+        var descriptionFilter = searchTerm is not null
+            ? filterBuilder.Regex(x => x.Description, new BsonRegularExpression(searchTerm, "i"))
+            : filterBuilder.Empty;
+
+        var filter = filterBuilder.And(
+            receiversFilter,
+            sendersFilter,
+            minTimeFilter,
+            maxTimeFilter,
+            descriptionFilter,
+            paginationFilter);
+
+        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+
+        var documents = await _nonGroupTransfersCollection
+            .Find(filter)
+            .Sort(sort)
+            .Limit(pageSize)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (NonGroupTransfer)Mapper.ToEntity(d)).ToList();
+    }
+
+    public async Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
+        var sortBuilder = Builders<NonGroupTransferMongoDbDocument>.Sort;
+
+        var filter = filterBuilder.Or(
+            filterBuilder.Eq(x => x.SenderId, userId),
+            filterBuilder.Eq(x => x.ReceiverId, userId));
+
+        var sort = sortBuilder.Descending(x => x.Created);
+
+        var documents = await _nonGroupTransfersCollection
+            .Find(filter)
+            .Sort(sort)
+            .ToListAsync(ct);
+
+        var senderIds = documents.Select(x => x.SenderId);
+        var receiverIds = documents.Select(x => x.ReceiverId);
+
+        return senderIds.Concat(receiverIds)
+            .Distinct()
+            .ToList();
     }
 }

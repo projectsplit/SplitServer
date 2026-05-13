@@ -32,6 +32,9 @@ builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
+builder.Services.AddSingleton<NonGroupService>();
+builder.Services.AddSingleton<UserLabelService>();
+builder.Services.AddSingleton< BudgetService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();
@@ -48,6 +51,8 @@ builder.Services.AddSingleton<IJoinCodesRepository, JoinCodesMongoDbRepository>(
 builder.Services.AddSingleton<ICurrencyExchangeRatesRepository, CurrencyExchangeRatesMongoDbRepository>();
 builder.Services.AddSingleton<IUserActivityRepository, UserActivityMongoDbRepository>();
 builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDbRepository>();
+builder.Services.AddSingleton<IUserLabelsRepository, UserLabelsMongoDbRepository>();
+builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
 
 builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();

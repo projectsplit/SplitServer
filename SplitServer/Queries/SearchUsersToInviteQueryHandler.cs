@@ -6,13 +6,13 @@ using SplitServer.Services;
 
 namespace SplitServer.Queries;
 
-public class SearchUserToInviteQueryHandler : IRequestHandler<SearchUserToInviteQuery, Result<SearchUserToInviteResponse>>
+public class SearchUsersToInviteQueryHandler : IRequestHandler<SearchUsersToInviteQuery, Result<SearchUsersToInviteResponse>>
 {
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IInvitationsRepository _invitationsRepository;
 
-    public SearchUserToInviteQueryHandler(
+    public SearchUsersToInviteQueryHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IInvitationsRepository invitationsRepository)
@@ -22,20 +22,20 @@ public class SearchUserToInviteQueryHandler : IRequestHandler<SearchUserToInvite
         _invitationsRepository = invitationsRepository;
     }
 
-    public async Task<Result<SearchUserToInviteResponse>> Handle(SearchUserToInviteQuery query, CancellationToken ct)
+    public async Task<Result<SearchUsersToInviteResponse>> Handle(SearchUsersToInviteQuery query, CancellationToken ct)
     {
         var userMaybe = await _usersRepository.GetById(query.UserId, ct);
 
         if (userMaybe.HasNoValue)
         {
-            return Result.Failure<SearchUserToInviteResponse>($"User with id {query.UserId} was not found");
+            return Result.Failure<SearchUsersToInviteResponse>($"User with id {query.UserId} was not found");
         }
 
         var groupMaybe = await _groupsRepository.GetById(query.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure<SearchUserToInviteResponse>($"Group with id {query.GroupId} was not found");
+            return Result.Failure<SearchUsersToInviteResponse>($"Group with id {query.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;
@@ -48,11 +48,11 @@ public class SearchUserToInviteQueryHandler : IRequestHandler<SearchUserToInvite
 
         var invitations = await _invitationsRepository.GetByReceiverIds(users.Select(x => x.Id).ToList(), query.GroupId, ct);
 
-        return new SearchUserToInviteResponse
+        return new SearchUsersToInviteResponse
         {
             Users = users
                 .Select(
-                    x => new SearchUserToInviteResponseItem
+                    x => new SearchUsersToInviteResponseItem
                     {
                         UserId = x.Id,
                         Username = x.Username,

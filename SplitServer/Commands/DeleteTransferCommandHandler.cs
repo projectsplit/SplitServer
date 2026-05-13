@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 
 namespace SplitServer.Commands;
@@ -38,11 +39,16 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
 
         var transfer = transferMaybe.Value;
 
-        var groupMaybe = await _groupsRepository.GetById(transfer.GroupId, ct);
+        if (transfer is not GroupTransfer groupTransfer)
+        {
+            return Result.Failure($"Transfer with id {command.TransferId} was not found");
+        }
+
+        var groupMaybe = await _groupsRepository.GetById(groupTransfer.GroupId, ct);
 
         if (groupMaybe.HasNoValue)
         {
-            return Result.Failure($"Group with id {transfer.GroupId} was not found");
+            return Result.Failure($"Group with id {groupTransfer.GroupId} was not found");
         }
 
         var group = groupMaybe.Value;

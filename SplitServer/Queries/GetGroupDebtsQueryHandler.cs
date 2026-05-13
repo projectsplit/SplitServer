@@ -55,22 +55,34 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
             return Result.Failure<GetGroupDebtsResponse>("User must be a group member");
         }
 
-        var groupExpenses = await _expensesRepository.GetAllByGroupId(group.Id, ct);
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
+        var userTimeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? DefaultValues.TimeZone
+            : DefaultValues.TimeZone;
+
+        var groupExpenses = await _expensesRepository.GetGroupExpensesByGroupId(group.Id, ct);
         var groupTransfers = await _transfersRepository.GetAllByGroupId(group.Id, ct);
 
-        var totalSpentByMember = GroupService.GetTotalSpent(group, groupExpenses);
+        var filteredExpensesList = GroupService.CalculateFilteredExpensesList(query, groupExpenses, userTimeZoneId);
+        var filteredTransfersList = GroupService.CalculateFilteredTransfersList(query, groupTransfers, userTimeZoneId);
+
+        var totalSpentByMember = GroupService.GetTotalSpent(group, filteredExpensesList);
+        var totalSent = GroupService.GetTotalSent(group, filteredTransfersList);
+        var totalReceived = GroupService.GetTotalReceived(group, filteredTransfersList);
 
         return new GetGroupDebtsResponse
         {
-            Debts = GroupService.GetDebts(group, groupExpenses, groupTransfers),
+            Debts = GroupService.GetDebts(groupExpenses, groupTransfers),
             TotalSpent = totalSpentByMember,
-            ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByMember, ct),
-            TotalSent = GroupService.GetTotalSent(group, groupTransfers),
-            TotalReceived = GroupService.GetTotalReceived(group, groupTransfers),
+            ConvertedTotalSpent = await GetConvertedTotal(query.UserId, totalSpentByMember, ct),
+            TotalSent = totalSent,
+            ConvertedTotalSent = await GetConvertedTotal(query.UserId, totalSent, ct),
+            TotalReceived = totalReceived,
+            ConvertedTotalReceived = await GetConvertedTotal(query.UserId, totalReceived, ct),
         };
     }
 
-    private async Task<Dictionary<string, decimal>> GetConvertedTotalSpent(
+    private async Task<Dictionary<string, decimal>> GetConvertedTotal(
         string userId,
         Dictionary<string, Dictionary<string, decimal>> totalSpentByMember,
         CancellationToken ct)
@@ -84,12 +96,11 @@ public class GetGroupDebtsQueryHandler : IRequestHandler<GetGroupDebtsQuery, Res
         return totalSpentByMember.ToDictionary(
             memberPair => memberPair.Key,
             memberPair => memberPair.Value
-                .Select(
-                    currencyPair => _currencyExchangeRateService.Convert(
-                        currencyPair.Value,
-                        currencyPair.Key,
-                        rates,
-                        preferredCurrency))
+                .Select(currencyPair => _currencyExchangeRateService.Convert(
+                    currencyPair.Value,
+                    currencyPair.Key,
+                    rates,
+                    preferredCurrency))
                 .Sum());
     }
 }

@@ -45,7 +45,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         var now = DateTime.UtcNow;
         var transferId = Guid.NewGuid().ToString();
 
-        var newTransfer = new Transfer
+        var newTransfer = new GroupTransfer
         {
             Id = transferId,
             Created = now,

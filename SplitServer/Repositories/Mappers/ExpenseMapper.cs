@@ -8,41 +8,105 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
 {
     public Expense ToEntity(ExpenseMongoDbDocument document)
     {
-        return new Expense
+        return document switch
         {
-            Id = document.Id,
-            Created = document.Created,
-            Updated = document.Updated,
-            GroupId = document.GroupId,
-            CreatorId = document.CreatorId,
-            Amount = document.Amount,
-            Occurred = document.Occurred,
-            Description = document.Description,
-            Currency = document.Currency,
-            Payments = document.Payments,
-            Shares = document.Shares,
-            Labels = document.Labels,
-            Location = document.Location?.ToLocation()
+            GroupExpenseMongoDbDocument d => new GroupExpense
+            {
+                Id = d.Id,
+                Created = d.Created,
+                Updated = d.Updated,
+                Occurred = d.Occurred,
+                CreatorId = d.CreatorId,
+                Amount = d.Amount,
+                Description = d.Description,
+                Currency = d.Currency,
+                Location = d.Location?.ToLocation(),
+                GroupId = d.GroupId,
+                Payments = d.Payments,
+                Shares = d.Shares,
+                Labels = d.Labels,
+            },
+            NonGroupExpenseMongoDbDocument d => new NonGroupExpense
+            {
+                Id = d.Id,
+                Created = d.Created,
+                Updated = d.Updated,
+                Occurred = d.Occurred,
+                CreatorId = d.CreatorId,
+                Amount = d.Amount,
+                Description = d.Description,
+                Currency = d.Currency,
+                Location = d.Location?.ToLocation(),
+                Payments = d.Payments,
+                Shares = d.Shares,
+                Labels = d.Labels,
+            },
+            PersonalExpenseMongoDbDocument d => new PersonalExpense
+            {
+                Id = d.Id,
+                Created = d.Created,
+                Updated = d.Updated,
+                Occurred = d.Occurred,
+                CreatorId = d.CreatorId,
+                Amount = d.Amount,
+                Description = d.Description,
+                Currency = d.Currency,
+                Labels = d.Labels,
+                Location = d.Location?.ToLocation()
+            },
+            _ => throw new NotSupportedException($"Mapping for document type '{document.GetType().Name}' is not implemented.")
         };
     }
 
     public ExpenseMongoDbDocument ToDocument(Expense entity)
     {
-        return new ExpenseMongoDbDocument
+        return entity switch
         {
-            Id = entity.Id,
-            Created = entity.Created,
-            Updated = entity.Updated,
-            GroupId = entity.GroupId,
-            CreatorId = entity.CreatorId,
-            Amount = entity.Amount,
-            Occurred = entity.Occurred,
-            Description = entity.Description,
-            Currency = entity.Currency,
-            Payments = entity.Payments,
-            Shares = entity.Shares,
-            Labels = entity.Labels,
-            Location = entity.Location?.ToMongoDbLocation()
+            GroupExpense e => new GroupExpenseMongoDbDocument
+            {
+                Id = e.Id,
+                Created = e.Created,
+                Updated = e.Updated,
+                Occurred = e.Occurred,
+                CreatorId = e.CreatorId,
+                Amount = e.Amount,
+                Description = e.Description,
+                Currency = e.Currency,
+                Location = e.Location?.ToMongoDbLocation(),
+                GroupId = e.GroupId,
+                Payments = e.Payments,
+                Shares = e.Shares,
+                Labels = e.Labels,
+            },
+            NonGroupExpense e => new NonGroupExpenseMongoDbDocument
+            {
+                Id = e.Id,
+                Created = e.Created,
+                Updated = e.Updated,
+                Occurred = e.Occurred,
+                CreatorId = e.CreatorId,
+                Amount = e.Amount,
+                Description = e.Description,
+                Currency = e.Currency,
+                Location = e.Location?.ToMongoDbLocation(),
+                Payments = e.Payments,
+                Shares = e.Shares,
+                Labels = e.Labels,
+            },
+            PersonalExpense e => new PersonalExpenseMongoDbDocument
+            {
+                Id = e.Id,
+                Created = e.Created,
+                Updated = e.Updated,
+                Occurred = e.Occurred,
+                CreatorId = e.CreatorId,
+                Amount = e.Amount,
+                Description = e.Description,
+                Currency = e.Currency,
+                Labels = e.Labels,
+                Location = e.Location?.ToMongoDbLocation()
+            },
+            _ => throw new NotSupportedException($"Mapping for entity type '{entity.GetType().Name}' is not implemented.")
         };
     }
 }

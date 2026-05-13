@@ -47,7 +47,7 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
             .Find(filter)
             .ToListAsync(ct);
     }
-    
+
     public async Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct)
     {
         var search = SearchBuilder.Autocomplete(
@@ -56,8 +56,7 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
             fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 });
 
         var filter = FilterBuilder.And(
-            FilterBuilder.ElemMatch(x => x.Members, x => x.UserId == userId),
-            FilterBuilder.Eq(x => x.IsArchived, false));
+            FilterBuilder.ElemMatch(x => x.Members, x => x.UserId == userId));
 
         var pipelineDefinition = PipelineBuilder
             .Search(search)

@@ -39,7 +39,7 @@ public class RemoveGroupLabelCommandHandler : IRequestHandler<RemoveGroupLabelCo
 
         if (await _expensesRepository.LabelIsInUse(command.GroupId, command.LabelId, ct))
         {
-            return Result.Failure("Label is in use");
+            return Result.Failure("Label is in use and cannot be deleted");
         }
 
         return await _groupsRepository.Update(

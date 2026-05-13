@@ -58,7 +58,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
 
         var expenseId = Guid.NewGuid().ToString();
 
-        var newExpense = new Expense
+        var newExpense = new GroupExpense
         {
             Id = expenseId,
             Created = now,

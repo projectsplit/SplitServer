@@ -8,4 +8,12 @@ public class GetGroupDebtsQuery : IRequest<Result<GetGroupDebtsResponse>>
 {
     public required string UserId { get; init; }
     public required string GroupId { get; init; }
+    public string? SearchTerm { get; init; }
+    public DateTime? After { get; init; }
+    public DateTime? Before { get; init; }
+    public string[]? ParticipantIds { get; init; }
+    public string[]? PayerIds { get; init; }
+    public string[]? LabelIds { get; init; }
+    public string[]? ReceiverIds { get; init; }
+    public string[]? SenderIds { get; init; }
 }

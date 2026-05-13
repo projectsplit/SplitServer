@@ -45,5 +45,5 @@ jobs:
               -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
               -e ASPNETCORE_ENVIRONMENT=Test \
               --restart always \
-              ${{ env.DOCKER_REPO }}:$TAG
+              ${{ env.DOCKER_REPO }}:$DOCKER_TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi

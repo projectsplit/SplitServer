@@ -10,4 +10,5 @@ public class GetGroupsWithDetailsQuery : IRequest<Result<GetGroupsWithDetailsRes
     public required bool? IsArchived { get; init; }
     public required int PageSize { get; init; }
     public required string? Next { get; init; }
+    public required string? Keyword { get; init; }
 }

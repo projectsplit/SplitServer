@@ -45,7 +45,7 @@ public class GetAllGroupsTotalBalancesQueryHandler :
         var membersByGroup = groups.ToDictionary(x => x.Id, x => x.Members.First(m => m.UserId == query.UserId));
         var memberIds = membersByGroup.Select(m => m.Value.Id).ToList();
 
-        var expenses = await _expensesRepository.GetAllByMemberIds(memberIds, ct);
+        var expenses = await _expensesRepository.GetGroupExpensesByMemberIds(memberIds, ct: ct);
         var transfers = await _transfersRepository.GetAllByMemberIds(memberIds, ct);
 
         var balancesByCurrency = new Dictionary<string, decimal>();

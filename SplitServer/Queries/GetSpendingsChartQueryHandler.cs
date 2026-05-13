@@ -68,7 +68,9 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
         var membersByGroup = groups.ToDictionary(x => x.Id, x => x.Members.First(m => m.UserId == query.UserId));
         var memberIds = membersByGroup.Select(m => m.Value.Id).ToList();
 
-        var expenses = await _expensesRepository.GetAllByMemberIds(memberIds, utcStartDate, utcEndDate, ct);
+        var groupExpenses = await _expensesRepository.GetGroupExpensesByMemberIds(memberIds, utcStartDate, utcEndDate, ct);
+        var nonGroupExpenses = await _expensesRepository.GetNonGroupExpensesByUserId(query.UserId, utcStartDate, utcEndDate, ct);
+        var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId, memberIds, ct, utcStartDate, utcEndDate);
 
         var currentUtcDateTime = utcStartDate;
         var currentUserDate = query.StartDate;
@@ -82,7 +84,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                 ? TimeSpan.FromDays(1)
                 : TimeSpan.FromDays(DateTime.DaysInMonth(currentUserDate.Year, currentUserDate.Month));
 
-            var shareSum = expenses
+            var groupShareSum = groupExpenses
                 .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
                 .Sum(x =>
                 {
@@ -90,7 +92,7 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                     return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, query.Currency);
                 });
 
-            var paymentSum = expenses
+            var groupPaymentSum = groupExpenses
                 .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
                 .Sum(x =>
                 {
@@ -98,8 +100,36 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                     return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
                 });
 
-            shareSumSoFar += shareSum;
-            paymentSumSoFar += paymentSum;
+            var nonGroupShareSum = nonGroupExpenses
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
+                .Sum(x =>
+                {
+                    var shareAmount = x.Shares.FirstOrDefault(s => s.UserId == query.UserId)?.Amount ?? 0;
+                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, query.Currency);
+                });
+
+            var nonGroupPaymentSum = nonGroupExpenses
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
+                .Sum(x =>
+                {
+                    var paymentAmount = x.Payments.FirstOrDefault(p => p.UserId == query.UserId)?.Amount ?? 0;
+                    return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
+                });
+
+            var personalExpensesSum = personalExpenses.OfType<PersonalExpense>()
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
+                .Sum(x =>
+                {
+                    var amount = x.Amount;
+                    return _currencyExchangeRateService.Convert(amount, x.Currency, rates, query.Currency);
+                });
+
+
+            var shareSum = groupShareSum + nonGroupShareSum;
+            var paymentSum = groupPaymentSum + nonGroupPaymentSum;
+
+            shareSumSoFar += groupShareSum + nonGroupShareSum + personalExpensesSum;
+            paymentSumSoFar += groupPaymentSum + nonGroupPaymentSum;
 
             var responseItem = new GetSpendingsChartResponseItem
             {

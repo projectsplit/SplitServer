@@ -12,11 +12,66 @@ public static class UserEndpoints
     {
         app.MapGet("/me", GetAuthenticatedUserHandler);
         app.MapPut("/activity/last-viewed-notification", SetLastViewedNotificationTimestampHandler);
-        app.MapPut("/activity/recent-group", SetRecentGroupHandler);
+        app.MapPut("/activity/recent-context", SetRecentContextHandler);
+        app.MapPut("/activity/show-budget-info", SetShowBudgetInfoHandler);
         app.MapPut("/preferences/time-zone", SetTimeZoneHandler);
         app.MapPut("/preferences/currency", SetCurrencyHandler);
         app.MapGet("/username/{username}", GetUsernameStatusHandler);
         app.MapPut("/username", EditUsernameHandler);
+        app.MapGet("/search-non-group-expense-users", SearchNonGroupExpenseUsersHandler);
+        app.MapGet("/search-non-group-transfer-users", SearchNonGroupTransferUsersHandler);
+        app.MapGet("/search-all-users", SearchAllUsersHandler);
+        app.MapGet("/user-labels", GetAllUserLabels);
+        app.MapGet("/user-group-labels", GetUserAndGroupsLabels);
+        app.MapPost("/delete-user-label", DeleteUserLabel);
+    }
+
+    private static async Task<IResult> GetAllUserLabels(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetUserLabelsQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> DeleteUserLabel(
+        IMediator mediator,
+        HttpContext httpContext,
+        DeleteUserLabelRequest request,
+        CancellationToken ct)
+    {
+        var query = new DeleteUserLabelCommand
+        {
+            UserId = httpContext.GetUserId(),
+            LabelId = request.LabelId
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+
+    private static async Task<IResult> GetUserAndGroupsLabels(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new GetUserAndGroupsLabelsQuery
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
     private static async Task<IResult> GetAuthenticatedUserHandler(
@@ -51,16 +106,33 @@ public static class UserEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
-    private static async Task<IResult> SetRecentGroupHandler(
-        SetRecentGroupRequest request,
+    private static async Task<IResult> SetShowBudgetInfoHandler(
+        SetShowBudgetInfoRequest request,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new SetRecentGroupCommand
+        var command = new SetShowBudgetInfoCommand
         {
             UserId = httpContext.GetUserId(),
-            GroupId = request.GroupId
+            ShowBudgetInfo = request.ShowBudgetInfo
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> SetRecentContextHandler(
+        SetRecentContextRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new SetRecentContextCommand
+        {
+            UserId = httpContext.GetUserId(),
+            ContextId = request.ContextId
         };
 
         var result = await mediator.Send(command, ct);
@@ -132,6 +204,57 @@ public static class UserEndpoints
         };
 
         var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchNonGroupExpenseUsersHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchNonGroupExpenseUsersQuery
+        {
+            UserId = httpContext.GetUserId(),
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchNonGroupTransferUsersHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchNonGroupTransferUsersQuery
+        {
+            UserId = httpContext.GetUserId(),
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> SearchAllUsersHandler(
+        string? keyword,
+        int pageSize,
+        string? next,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var query = new SearchAllUsersQuery
+        {
+            UserId = httpContext.GetUserId(),
+            PageSize = pageSize,
+            Keyword = keyword,
+            Next = next
+        };
+
+        var result = await mediator.Send(query, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
