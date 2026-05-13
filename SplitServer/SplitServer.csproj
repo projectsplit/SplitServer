@@ -4,10 +4,11 @@
     <Nullable>enable</Nullable>
     <WarningsAsErrors>nullable</WarningsAsErrors>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>2605.3</Version>
+    <Version>2605.5</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CSharpFunctionalExtensions" Version="3.2.0"/>
+    <PackageReference Include="MailKit" Version="4.7.1.1"/>
     <PackageReference Include="MediatR" Version="12.5.0"/>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.14"/>
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.3"/>
