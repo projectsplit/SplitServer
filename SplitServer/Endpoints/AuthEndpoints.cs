@@ -173,5 +173,6 @@ public static class AuthEndpoints
         authService.DeleteRefreshTokenCookie(httpContext);
 
         return Results.Ok();
+        
     }
 }
