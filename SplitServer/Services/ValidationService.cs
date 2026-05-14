@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using CSharpFunctionalExtensions;
+﻿using CSharpFunctionalExtensions;
 using NMoneys;
 using SplitServer.Models;
 
@@ -13,9 +12,9 @@ public class ValidationService
     public const int UsernameMaxLength = 16;
     public const int EmailMaxLength = 254;
 
-    private static readonly Regex EmailRegex = new(
+    private static readonly System.Text.RegularExpressions.Regex EmailRegex = new(
         @"^[^\s@]+@[^\s@]+\.[^\s@]+$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        System.Text.RegularExpressions.RegexOptions.Compiled | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
     public HashSet<char> UsernameAllowedChars { get; } = new("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.");
 
