@@ -12,4 +12,5 @@ public class GetAuthenticatedUserResponse
     public required Coordinates TimeZoneCoordinates { get; init; }
     public required bool? ShowBudgetInfo { get; init; }
     public required string? RecentContextId { get; init; }
+    public required bool PushNotificationsEnabled { get; init; }
 }

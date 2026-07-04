@@ -11,15 +11,18 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
     private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
+    private readonly PushNotificationService _pushNotificationService;
 
     public CreateManyTransfersCommandHandler(
         ITransfersRepository transfersRepository,
         ValidationService validationService,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        PushNotificationService pushNotificationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result> Handle(CreateManyTransfersCommand command, CancellationToken ct)
@@ -62,6 +65,29 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             })
             .ToList();
 
-        return await _transfersRepository.InsertMany(transfers, ct);
+        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+
+        if (writeResult.IsFailure)
+        {
+            return writeResult;
+        }
+
+        var (user, _, _) = permissionResult.Value;
+
+        var participantMemberIds = command.Transfers
+            .SelectMany(x => new[] { x.SenderId, x.ReceiverId })
+            .ToHashSet();
+
+        var participantUserIds = group.Members
+            .Where(m => participantMemberIds.Contains(m.Id) && m.UserId != command.UserId)
+            .Select(m => m.UserId);
+
+        _pushNotificationService.NotifyInBackground(
+            participantUserIds,
+            group.Name,
+            $"{user.Username} settled up.",
+            $"/shared/{command.GroupId}/debts");
+
+        return Result.Success();
     }
 }

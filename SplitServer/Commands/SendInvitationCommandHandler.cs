@@ -10,13 +10,16 @@ public class SendInvitationCommandHandler : IRequestHandler<SendInvitationComman
 {
     private readonly PermissionService _permissionService;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly PushNotificationService _pushNotificationService;
 
     public SendInvitationCommandHandler(
         IInvitationsRepository invitationsRepository,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        PushNotificationService pushNotificationService)
     {
         _invitationsRepository = invitationsRepository;
         _permissionService = permissionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result> Handle(SendInvitationCommand command, CancellationToken ct)
@@ -70,6 +73,20 @@ public class SendInvitationCommandHandler : IRequestHandler<SendInvitationComman
             GuestId = command.GuestId,
         };
 
-        return await _invitationsRepository.Insert(newInvitation, ct);
+        var insertResult = await _invitationsRepository.Insert(newInvitation, ct);
+
+        if (insertResult.IsFailure)
+        {
+            return insertResult;
+        }
+
+        var (user, _, _) = permissionResult.Value;
+
+        _pushNotificationService.NotifyInBackground(
+            [command.ReceiverId],
+            "Group invitation",
+            $"{user.Username} invited you to join \"{group.Name}\".");
+
+        return Result.Success();
     }
 }

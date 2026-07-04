@@ -33,6 +33,8 @@ builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
 builder.Services.AddSingleton<NonGroupService>();
+builder.Services.AddSingleton<ConnectionService>();
+builder.Services.AddSingleton<PushNotificationService>();
 builder.Services.AddSingleton<UserLabelService>();
 builder.Services.AddSingleton< BudgetService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
@@ -53,11 +55,14 @@ builder.Services.AddSingleton<IUserActivityRepository, UserActivityMongoDbReposi
 builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDbRepository>();
 builder.Services.AddSingleton<IUserLabelsRepository, UserLabelsMongoDbRepository>();
 builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
+builder.Services.AddSingleton<IPushSubscriptionsRepository, PushSubscriptionsMongoDbRepository>();
+builder.Services.AddSingleton<IUserConnectionsRepository, UserConnectionsMongoDbRepository>();
 
 builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
 builder.Configure<OpenExchangeRatesSettings>();
 builder.Configure<ErrorHandlingSettings>();
+builder.Configure<PushNotificationsSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
 builder.Services.AddAuthentication(authSettings);

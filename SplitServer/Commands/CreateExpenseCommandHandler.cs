@@ -13,17 +13,20 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
     private readonly GroupService _groupService;
+    private readonly PushNotificationService _pushNotificationService;
 
     public CreateExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        GroupService groupService)
+        GroupService groupService,
+        PushNotificationService pushNotificationService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
         _groupService = groupService;
         _permissionService = permissionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateExpenseCommand command, CancellationToken ct)
@@ -81,6 +84,23 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
         {
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
+
+        var (user, _, _) = permissionResult.Value;
+
+        // Only notify group members that are part of the expense, not the whole group
+        var participantMemberIds = command.Payments.Select(x => x.MemberId)
+            .Concat(command.Shares.Select(x => x.MemberId))
+            .ToHashSet();
+
+        var participantUserIds = group.Members
+            .Where(m => participantMemberIds.Contains(m.Id) && m.UserId != command.UserId)
+            .Select(m => m.UserId);
+
+        _pushNotificationService.NotifyInBackground(
+            participantUserIds,
+            group.Name,
+            $"{user.Username} added \"{command.Description}\" ({command.Amount} {command.Currency}).",
+            $"/shared/{command.GroupId}/expenses");
 
         return new CreateExpenseResponse
         {

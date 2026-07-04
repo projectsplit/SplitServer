@@ -8,20 +8,26 @@ namespace SplitServer.Commands;
 public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExpenseCommand, Result>
 {
     private readonly IExpensesRepository _expensesRepository;
+    private readonly IUsersRepository _usersRepository;
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
     private readonly UserLabelService _userLabelService;
+    private readonly ConnectionService _connectionService;
 
     public EditNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
+        IUsersRepository usersRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        UserLabelService userLabelService)
+        UserLabelService userLabelService,
+        ConnectionService connectionService)
     {
         _expensesRepository = expensesRepository;
+        _usersRepository = usersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
         _userLabelService = userLabelService;
+        _connectionService = connectionService;
     }
 
     public async Task<Result> Handle(EditNonGroupExpenseCommand command, CancellationToken ct)
@@ -44,6 +50,20 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
         if (expenseValidationResult.IsFailure)
         {
             return expenseValidationResult;
+        }
+
+        var participantUserIds = command.Payments.Select(x => x.UserId)
+            .Concat(command.Shares.Select(x => x.UserId))
+            .ToList();
+
+        var notConnectedUserIds = await _connectionService.GetNotConnectedUserIds(command.UserId, participantUserIds, ct);
+
+        if (notConnectedUserIds.Count > 0)
+        {
+            var notConnectedUsers = await _usersRepository.GetByIds(notConnectedUserIds, ct);
+            var usernames = string.Join(", ", notConnectedUsers.Select(x => x.Username));
+
+            return Result.Failure($"You are not connected with: {usernames}. Send them a connection request first.");
         }
 
         var now = DateTime.UtcNow;

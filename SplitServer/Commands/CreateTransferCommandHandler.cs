@@ -12,15 +12,18 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
     private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
+    private readonly PushNotificationService _pushNotificationService;
 
     public CreateTransferCommandHandler(
         ITransfersRepository transfersRepository,
         ValidationService validationService,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        PushNotificationService pushNotificationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result<CreateTransferResponse>> Handle(CreateTransferCommand command, CancellationToken ct)
@@ -66,6 +69,18 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         {
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
+
+        var (user, _, _) = permissionResult.Value;
+
+        var participantUserIds = group.Members
+            .Where(m => (m.Id == command.SenderId || m.Id == command.ReceiverId) && m.UserId != command.UserId)
+            .Select(m => m.UserId);
+
+        _pushNotificationService.NotifyInBackground(
+            participantUserIds,
+            group.Name,
+            $"{user.Username} recorded a transfer of {command.Amount} {command.Currency}.",
+            $"/shared/{command.GroupId}/transfers");
 
         return new CreateTransferResponse
         {

@@ -12,6 +12,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IUserActivityRepository _userActivityRepository;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly IUserConnectionsRepository _userConnectionsRepository;
     private readonly TimeZoneService _timeZoneService;
 
     public GetAuthenticatedUserQueryHandler(
@@ -19,12 +20,14 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         IUserActivityRepository userActivityRepository,
         IUserPreferencesRepository userPreferencesRepository,
         IInvitationsRepository invitationsRepository,
+        IUserConnectionsRepository userConnectionsRepository,
         TimeZoneService timeZoneService)
     {
         _usersRepository = usersRepository;
         _userActivityRepository = userActivityRepository;
         _userPreferencesRepository = userPreferencesRepository;
         _invitationsRepository = invitationsRepository;
+        _userConnectionsRepository = userConnectionsRepository;
         _timeZoneService = timeZoneService;
     }
 
@@ -47,6 +50,9 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
 
         var notificationsCount = await _invitationsRepository.CountByReceiverIdAndMinCreated(query.UserId, lastViewedNotification, ct);
 
+        var connectionRequestsCount =
+            await _userConnectionsRepository.CountPendingByReceiverIdAndMinCreated(query.UserId, lastViewedNotification, ct);
+
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
 
         var currency = userPreferencesMaybe.HasValue
@@ -57,17 +63,19 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             : DefaultValues.TimeZone;
         var recentContextId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentContextId : null;
         var showBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : null;
+        var pushNotificationsEnabled = userPreferencesMaybe.HasValue && userPreferencesMaybe.Value.PushNotificationsEnabled == true;
 
         return new GetAuthenticatedUserResponse
         {
             UserId = user.Id,
             Username = user.Username,
-            HasNewerNotifications = notificationsCount > 0,
+            HasNewerNotifications = notificationsCount > 0 || connectionRequestsCount > 0,
             Currency = currency,
             TimeZone = timeZone,
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
             RecentContextId = recentContextId,
-            ShowBudgetInfo = showBudgetInfo
+            ShowBudgetInfo = showBudgetInfo,
+            PushNotificationsEnabled = pushNotificationsEnabled
         };
     }
 }

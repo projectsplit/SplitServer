@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Repositories;
 using SplitServer.Services;
@@ -9,13 +9,16 @@ public class EditGroupNameCommandHandler : IRequestHandler<EditGroupNameCommand,
 {
     private readonly PermissionService _permissionService;
     private readonly IGroupsRepository _groupsRepository;
+    private readonly PushNotificationService _pushNotificationService;
 
     public EditGroupNameCommandHandler(
         PermissionService permissionService,
-        IGroupsRepository groupsRepository)
+        IGroupsRepository groupsRepository,
+        PushNotificationService pushNotificationService)
     {
         _permissionService = permissionService;
         _groupsRepository = groupsRepository;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result> Handle(EditGroupNameCommand command, CancellationToken ct)
@@ -27,7 +30,7 @@ public class EditGroupNameCommandHandler : IRequestHandler<EditGroupNameCommand,
             return permissionResult;
         }
 
-        var (_, group, _) = permissionResult.Value;
+        var (user, group, _) = permissionResult.Value;
 
         if (string.IsNullOrWhiteSpace(command.Name))
         {
@@ -40,6 +43,26 @@ public class EditGroupNameCommandHandler : IRequestHandler<EditGroupNameCommand,
             Updated = DateTime.UtcNow
         };
 
-        return await _groupsRepository.Update(updatedGroup, ct);
+        var updateResult = await _groupsRepository.Update(updatedGroup, ct);
+
+        if (updateResult.IsFailure)
+        {
+            return updateResult;
+        }
+
+        if (group.Name != command.Name)
+        {
+            var memberUserIds = group.Members
+                .Where(m => m.UserId != command.UserId)
+                .Select(m => m.UserId);
+
+            _pushNotificationService.NotifyInBackground(
+                memberUserIds,
+                "Group renamed",
+                $"{user.Username} renamed \"{group.Name}\" to \"{command.Name}\".",
+                $"/shared/{command.GroupId}/expenses");
+        }
+
+        return Result.Success();
     }
 }

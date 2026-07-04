@@ -9,14 +9,23 @@ namespace SplitServer.Commands;
 public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateManyNonGroupTransfersCommand, Result>
 {
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
+    private readonly ConnectionService _connectionService;
+    private readonly PushNotificationService _pushNotificationService;
 
     public CreateManyNonGroupTransfersCommandHandler(
         ITransfersRepository transfersRepository,
-        ValidationService validationService)
+        IUsersRepository usersRepository,
+        ValidationService validationService,
+        ConnectionService connectionService,
+        PushNotificationService pushNotificationService)
     {
         _transfersRepository = transfersRepository;
+        _usersRepository = usersRepository;
         _validationService = validationService;
+        _connectionService = connectionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result> Handle(CreateManyNonGroupTransfersCommand command, CancellationToken ct)
@@ -34,6 +43,21 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             {
                 return transferValidationResult;
             }
+        }
+
+        var participantUserIds = command.Transfers
+            .SelectMany(x => new[] { x.SenderId, x.ReceiverId })
+            .Distinct()
+            .ToList();
+
+        var notConnectedUserIds = await _connectionService.GetNotConnectedUserIds(command.UserId, participantUserIds, ct);
+
+        if (notConnectedUserIds.Count > 0)
+        {
+            var notConnectedUsers = await _usersRepository.GetByIds(notConnectedUserIds, ct);
+            var usernames = string.Join(", ", notConnectedUsers.Select(x => x.Username));
+
+            return Result.Failure($"You are not connected with: {usernames}. Send them a connection request first.");
         }
 
         var now = DateTime.UtcNow;
@@ -54,6 +78,23 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             })
             .ToList();
 
-        return await _transfersRepository.InsertMany(transfers, ct);
+        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+
+        if (writeResult.IsFailure)
+        {
+            return writeResult;
+        }
+
+        var creatorMaybe = await _usersRepository.GetById(command.UserId, ct);
+
+        var creatorUsername = creatorMaybe.HasValue ? creatorMaybe.Value.Username : "Someone";
+
+        _pushNotificationService.NotifyInBackground(
+            participantUserIds.Where(x => x != command.UserId),
+            "Debt settled",
+            $"{creatorUsername} settled up with you.",
+            "/shared/nongroup/debts");
+
+        return Result.Success();
     }
 }

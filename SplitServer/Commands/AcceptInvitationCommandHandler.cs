@@ -2,6 +2,7 @@
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
@@ -10,15 +11,18 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly PushNotificationService _pushNotificationService;
 
     public AcceptInvitationCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        IInvitationsRepository invitationsRepository)
+        IInvitationsRepository invitationsRepository,
+        PushNotificationService pushNotificationService)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _invitationsRepository = invitationsRepository;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result> Handle(AcceptInvitationCommand command, CancellationToken ct)
@@ -82,6 +86,19 @@ public class AcceptInvitationCommandHandler : IRequestHandler<AcceptInvitationCo
             Updated = now
         };
 
-        return await _groupsRepository.Update(updatedGroup, ct);
+        var updateResult = await _groupsRepository.Update(updatedGroup, ct);
+
+        if (updateResult.IsFailure)
+        {
+            return updateResult;
+        }
+
+        _pushNotificationService.NotifyInBackground(
+            [invitation.SenderId],
+            group.Name,
+            $"{userMaybe.Value.Username} joined the group.",
+            $"/shared/{group.Id}/expenses");
+
+        return Result.Success();
     }
 }

@@ -1,4 +1,4 @@
-﻿using CSharpFunctionalExtensions;
+using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
@@ -10,18 +10,27 @@ namespace SplitServer.Commands;
 public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGroupExpenseCommand, Result<CreateExpenseResponse>>
 {
     private readonly IExpensesRepository _expensesRepository;
+    private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
     private readonly UserLabelService _userLabelService;
+    private readonly ConnectionService _connectionService;
+    private readonly PushNotificationService _pushNotificationService;
 
     public CreateNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
+        IUsersRepository usersRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        UserLabelService userLabelService)
+        UserLabelService userLabelService,
+        ConnectionService connectionService,
+        PushNotificationService pushNotificationService)
     {
         _expensesRepository = expensesRepository;
+        _usersRepository = usersRepository;
         _validationService = validationService;
         _userLabelService = userLabelService;
+        _connectionService = connectionService;
+        _pushNotificationService = pushNotificationService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateNonGroupExpenseCommand command, CancellationToken ct)
@@ -35,6 +44,21 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         if (expenseValidationResult.IsFailure)
         {
             return Result.Failure<CreateExpenseResponse>(expenseValidationResult.Error);
+        }
+
+        var participantUserIds = command.Payments.Select(x => x.UserId)
+            .Concat(command.Shares.Select(x => x.UserId))
+            .ToList();
+
+        var notConnectedUserIds = await _connectionService.GetNotConnectedUserIds(command.UserId, participantUserIds, ct);
+
+        if (notConnectedUserIds.Count > 0)
+        {
+            var notConnectedUsers = await _usersRepository.GetByIds(notConnectedUserIds, ct);
+            var usernames = string.Join(", ", notConnectedUsers.Select(x => x.Username));
+
+            return Result.Failure<CreateExpenseResponse>(
+                $"You are not connected with: {usernames}. Send them a connection request first.");
         }
 
         var now = DateTime.UtcNow;
@@ -70,6 +94,16 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         {
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
+
+        var creatorMaybe = await _usersRepository.GetById(command.UserId, ct);
+
+        var creatorUsername = creatorMaybe.HasValue ? creatorMaybe.Value.Username : "Someone";
+
+        _pushNotificationService.NotifyInBackground(
+            participantUserIds.Where(x => x != command.UserId),
+            "New expense",
+            $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency}) with you.",
+            "/shared/nongroup/expenses");
 
         return new CreateExpenseResponse
         {
