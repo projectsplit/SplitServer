@@ -20,9 +20,7 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
 
     public async Task<Maybe<User>> GetByEmail(string email, CancellationToken ct)
     {
-        var filter = FilterBuilder.Eq(x => x.Email, email);
-
-        return await Collection.Find(filter).SingleOrDefaultAsync(ct);
+        return await Collection.Find(EmailFilter(email)).SingleOrDefaultAsync(ct);
     }
 
     public async Task<Maybe<User>> GetByUsername(string username, CancellationToken ct)
@@ -71,8 +69,20 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
             .AnyAsync(ct);
     }
 
+    public async Task<bool> AnyWithEmail(string email, CancellationToken ct)
+    {
+        return await Collection
+            .Find(EmailFilter(email))
+            .AnyAsync(ct);
+    }
+
     private static FilterDefinition<User> UsernameFilter(string username)
     {
         return FilterBuilder.Regex(x => x.Username, new BsonRegularExpression($"^{Regex.Escape(username)}$", "i"));
+    }
+
+    private static FilterDefinition<User> EmailFilter(string email)
+    {
+        return FilterBuilder.Regex(x => x.Email, new BsonRegularExpression($"^{Regex.Escape(email)}$", "i"));
     }
 }

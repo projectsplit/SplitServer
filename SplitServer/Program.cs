@@ -11,6 +11,7 @@ using SplitServer.Repositories.Implementations;
 using SplitServer.Services;
 using SplitServer.Services.Auth;
 using SplitServer.Services.CurrencyExchangeRate;
+using SplitServer.Services.Email;
 using SplitServer.Services.OpenExchangeRates;
 using SplitServer.Services.TimeZone;
 
@@ -53,6 +54,11 @@ builder.Services.AddSingleton<IUserActivityRepository, UserActivityMongoDbReposi
 builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDbRepository>();
 builder.Services.AddSingleton<IUserLabelsRepository, UserLabelsMongoDbRepository>();
 builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
+builder.Services.AddSingleton<IEmailVerificationCodesRepository, EmailVerificationCodesMongoDbRepository>();
+
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<EmailTokenService>();
+builder.Services.AddSingleton<EmailThrottleService>();
 
 builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
@@ -60,6 +66,17 @@ builder.Configure<OpenExchangeRatesSettings>();
 builder.Configure<ErrorHandlingSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
+var emailSettings = builder.Configure<EmailSettings>();
+
+if (emailSettings.Enabled)
+{
+    builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+}
+else
+{
+    builder.Services.AddSingleton<IEmailSender, NullEmailSender>();
+}
+
 builder.Services.AddAuthentication(authSettings);
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();

@@ -1,8 +1,10 @@
-﻿using MediatR;
+using MediatR;
 using SplitServer.Commands;
+using SplitServer.Extensions;
 using SplitServer.Requests;
 using SplitServer.Responses;
 using SplitServer.Services.Auth;
+using SplitServer.Services.Email;
 
 namespace SplitServer.Endpoints;
 
@@ -12,6 +14,11 @@ public static class AuthEndpoints
     {
         app.MapPost("/password/sign-up", PasswordSignUpHandler);
         app.MapPost("/password/sign-in", PasswordSignInHandler);
+        app.MapPost("/password/forgot", ForgotPasswordHandler);
+        app.MapPost("/password/reset", ResetPasswordHandler);
+        app.MapPost("/username/forgot", ForgotUsernameHandler);
+        app.MapPost("/account/email", SetAccountEmailHandler).RequireAuthorization();
+        app.MapPost("/account/email/verify", VerifyAccountEmailHandler).RequireAuthorization();
         app.MapPost("/external/google/token", GoogleTokenHandler);
         app.MapPost("/refresh", RefreshHandler);
         app.MapPost("/log-out", LogOutHandler);
@@ -56,7 +63,8 @@ public static class AuthEndpoints
         var command = new SignUpWithPasswordCommand
         {
             Password = request.Password,
-            Username = request.Username
+            Username = request.Username,
+            Email = request.Email
         };
 
         var result = await mediator.Send(command, ct);
@@ -105,6 +113,112 @@ public static class AuthEndpoints
         };
 
         return Results.Ok(response);
+    }
+
+    private static async Task<IResult> ForgotPasswordHandler(
+        ForgotPasswordRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        EmailThrottleService throttleService,
+        CancellationToken ct)
+    {
+        var ip = GetClientIp(httpContext);
+
+        if (!throttleService.TryConsume("password-forgot", ip, request.Email ?? ""))
+        {
+            return Results.Ok();
+        }
+
+        await mediator.Send(new RequestPasswordResetCommand { Email = request.Email ?? "" }, ct);
+
+        return Results.Ok();
+    }
+
+    private static async Task<IResult> ResetPasswordHandler(
+        ResetPasswordRequest request,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var command = new ResetPasswordCommand
+        {
+            Token = request.Token,
+            NewPassword = request.NewPassword,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> ForgotUsernameHandler(
+        ForgotUsernameRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        EmailThrottleService throttleService,
+        CancellationToken ct)
+    {
+        var ip = GetClientIp(httpContext);
+
+        if (!throttleService.TryConsume("username-forgot", ip, request.Email ?? ""))
+        {
+            return Results.Ok();
+        }
+
+        await mediator.Send(new RequestUsernameRecoveryCommand { Email = request.Email ?? "" }, ct);
+
+        return Results.Ok();
+    }
+
+    private static async Task<IResult> SetAccountEmailHandler(
+        SetAccountEmailRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        EmailThrottleService throttleService,
+        CancellationToken ct)
+    {
+        var ip = GetClientIp(httpContext);
+        var userId = httpContext.GetUserId();
+
+        if (!throttleService.TryConsume("set-email", ip, userId))
+        {
+            return Results.BadRequest("Too many requests. Please try again later.");
+        }
+
+        var command = new SetAccountEmailCommand
+        {
+            UserId = userId,
+            Email = request.Email,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> VerifyAccountEmailHandler(
+        VerifyAccountEmailRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        EmailThrottleService throttleService,
+        CancellationToken ct)
+    {
+        var ip = GetClientIp(httpContext);
+        var userId = httpContext.GetUserId();
+
+        if (!throttleService.TryConsume("verify-email", ip, userId))
+        {
+            return Results.BadRequest("Too many requests. Please try again later.");
+        }
+
+        var command = new VerifyAccountEmailCommand
+        {
+            UserId = userId,
+            Code = request.Code,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
     private static async Task<IResult> RefreshHandler(
@@ -173,5 +287,10 @@ public static class AuthEndpoints
         authService.DeleteRefreshTokenCookie(httpContext);
 
         return Results.Ok();
+    }
+
+    private static string GetClientIp(HttpContext httpContext)
+    {
+        return httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
     }
 }

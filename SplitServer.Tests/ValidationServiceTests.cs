@@ -62,4 +62,56 @@ public class ValidationServiceTests
 
         Assert.True(result.IsSuccess);
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("plainaddress")]
+    [InlineData("@no-local.com")]
+    [InlineData("no-at-sign.com")]
+    [InlineData("no-tld@example")]
+    [InlineData("spaces in@email.com")]
+    [InlineData("trailing-space@email.com ")]
+    [InlineData("a@b@c.com")]
+    public void ValidateEmail_ShouldReturnFailure_WhenEmailIsInvalid(string email)
+    {
+        var validationService = new ValidationService();
+
+        var result = validationService.ValidateEmail(email);
+
+        Assert.True(result.IsFailure);
+
+        _testOutputHelper.WriteLine(result.Error);
+    }
+
+    [Fact]
+    public void ValidateEmail_ShouldReturnFailure_WhenEmailExceedsMaxLength()
+    {
+        var validationService = new ValidationService();
+
+        var localPart = new string('a', 250);
+        var email = $"{localPart}@example.com";
+
+        var result = validationService.ValidateEmail(email);
+
+        Assert.True(result.IsFailure);
+
+        _testOutputHelper.WriteLine(result.Error);
+    }
+
+    [Theory]
+    [InlineData("user@example.com")]
+    [InlineData("user.name@example.com")]
+    [InlineData("user+tag@example.co.uk")]
+    [InlineData("USER@EXAMPLE.COM")]
+    [InlineData("123@example.io")]
+    [InlineData("a@b.cd")]
+    public void ValidateEmail_ShouldReturnSuccess_WhenEmailIsValid(string email)
+    {
+        var validationService = new ValidationService();
+
+        var result = validationService.ValidateEmail(email);
+
+        Assert.True(result.IsSuccess);
+    }
 }

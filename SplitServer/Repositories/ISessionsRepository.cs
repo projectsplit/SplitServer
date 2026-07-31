@@ -8,4 +8,6 @@ public interface ISessionsRepository : IRepositoryBase<Session>
     Task<Maybe<Session>> GetByRefreshToken(string refreshToken, CancellationToken ct);
 
     Task<Result> DeleteByRefreshToken(string refreshToken, CancellationToken ct);
+
+    Task<Result> DeleteByUserId(string userId, CancellationToken ct);
 }
