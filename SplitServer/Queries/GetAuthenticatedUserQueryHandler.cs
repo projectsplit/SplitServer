@@ -62,6 +62,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         {
             UserId = user.Id,
             Username = user.Username,
+            Email = user.Email,
+            EmailVerified = user.EmailVerified,
             HasNewerNotifications = notificationsCount > 0,
             Currency = currency,
             TimeZone = timeZone,

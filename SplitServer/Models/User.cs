@@ -1,5 +1,8 @@
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace SplitServer.Models;
 
+[BsonIgnoreExtraElements]
 public record User : EntityBase
 {
     public required string? Email { get; init; }
