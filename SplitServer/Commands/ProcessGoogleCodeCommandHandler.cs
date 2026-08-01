@@ -95,6 +95,44 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
             return userMaybe.Value;
         }
 
+        // Signing in with a Google account Google has proven is a claim on this address, whether it
+        // ends in a link or a new account. Hold the lock verification uses across both so the two
+        // paths cannot claim it at once. An unproven address claims nothing, so it takes no lock.
+        using var emailLock = googleUserInfo.EmailVerified
+            ? _lockService.AcquireLock($"verify-email:{googleUserInfo.Email.ToLowerInvariant()}")
+            : null;
+
+        // Only Google having proven the address makes it safe to find an existing account by it.
+        // Linking on an unproven address would hand that account to anyone who can put the address
+        // on a Google profile, so instead we fall through and create an ordinary unverified account.
+        if (googleUserInfo.EmailVerified)
+        {
+            var verifiedOwnerMaybe = await _usersRepository.GetVerifiedByEmail(googleUserInfo.Email, ct);
+
+            if (verifiedOwnerMaybe.HasValue)
+            {
+                // Google has proven this address and the existing account has too, so there is nothing
+                // to create: attach the Google identity to it. A second account would break the
+                // single-owner rule that password reset and username recovery depend on.
+                var existingUser = verifiedOwnerMaybe.Value;
+
+                if (existingUser.GoogleId is not null)
+                {
+                    return Result.Failure<User>("This email is already associated with another account");
+                }
+
+                var linkedUser = existingUser with
+                {
+                    GoogleId = googleUserInfo.Id,
+                    Updated = now,
+                };
+
+                var linkResult = await _usersRepository.Update(linkedUser, ct);
+
+                return linkResult.IsFailure ? linkResult.ConvertFailure<User>() : linkedUser;
+            }
+        }
+
         var userId = Guid.NewGuid().ToString();
 
         var generatedUsername = CreateUsernameFromEmail(googleUserInfo.Email, userId);
@@ -105,7 +143,7 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
             Created = now,
             Updated = now,
             Email = googleUserInfo.Email,
-            EmailVerified = true,
+            EmailVerified = googleUserInfo.EmailVerified,
             HashedPassword = null,
             Username = generatedUsername,
             GoogleId = googleUserInfo.Id,

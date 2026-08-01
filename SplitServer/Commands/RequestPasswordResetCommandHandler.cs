@@ -40,9 +40,9 @@ public class RequestPasswordResetCommandHandler : IRequestHandler<RequestPasswor
             return Result.Success();
         }
 
-        var userMaybe = await _usersRepository.GetByEmail(command.Email, ct);
+        var userMaybe = await _usersRepository.GetVerifiedByEmail(command.Email, ct);
 
-        if (userMaybe.HasNoValue || !userMaybe.Value.EmailVerified)
+        if (userMaybe.HasNoValue)
         {
             return Result.Success();
         }

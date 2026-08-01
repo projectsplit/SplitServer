@@ -1,3 +1,4 @@
+using SplitServer.Models;
 using SplitServer.Services;
 using Xunit.Abstractions;
 
@@ -111,6 +112,47 @@ public class ValidationServiceTests
         var validationService = new ValidationService();
 
         var result = validationService.ValidateEmail(email);
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public void ValidateNonGroupExpense_ShouldReturnFailure_WhenUserIsNeitherPayerNorParticipant()
+    {
+        var validationService = new ValidationService();
+
+        List<Payment> payments = [new Payment { UserId = "A", Amount = 100 }];
+        List<Share> shares = [new Share { UserId = "A", Amount = 50 }, new Share { UserId = "B", Amount = 50 }];
+
+        var result = validationService.ValidateNonGroupExpense(payments, shares, 100, "EUR", "C");
+
+        Assert.True(result.IsFailure);
+
+        _testOutputHelper.WriteLine(result.Error);
+    }
+
+    [Fact]
+    public void ValidateNonGroupExpense_ShouldReturnSuccess_WhenUserIsOnlyAPayer()
+    {
+        var validationService = new ValidationService();
+
+        List<Payment> payments = [new Payment { UserId = "A", Amount = 100 }];
+        List<Share> shares = [new Share { UserId = "B", Amount = 60 }, new Share { UserId = "C", Amount = 40 }];
+
+        var result = validationService.ValidateNonGroupExpense(payments, shares, 100, "EUR", "A");
+
+        Assert.True(result.IsSuccess);
+    }
+
+    [Fact]
+    public void ValidateNonGroupExpense_ShouldReturnSuccess_WhenUserIsOnlyAParticipant()
+    {
+        var validationService = new ValidationService();
+
+        List<Payment> payments = [new Payment { UserId = "A", Amount = 100 }];
+        List<Share> shares = [new Share { UserId = "A", Amount = 50 }, new Share { UserId = "B", Amount = 50 }];
+
+        var result = validationService.ValidateNonGroupExpense(payments, shares, 100, "EUR", "B");
 
         Assert.True(result.IsSuccess);
     }

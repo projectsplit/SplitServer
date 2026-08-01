@@ -39,7 +39,8 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
             command.Payments,
             command.Shares,
             command.Amount,
-            command.Currency);
+            command.Currency,
+            command.UserId);
 
         if (expenseValidationResult.IsFailure)
         {

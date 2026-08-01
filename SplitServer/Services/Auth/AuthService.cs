@@ -138,10 +138,14 @@ public class AuthService
             return Result.Failure<GoogleUserInfo>("Google idToken is not valid");
         }
 
+        var emailVerifiedClaim = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "email_verified")?.Value;
+
         return new GoogleUserInfo
         {
             Id = jwtSecurityToken.Subject,
             Email = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "email")?.Value!,
+            // Absent or unparseable counts as unproven, so a missing claim cannot grant ownership.
+            EmailVerified = bool.TryParse(emailVerifiedClaim, out var emailVerified) && emailVerified,
             Name = jwtSecurityToken.Claims.FirstOrDefault(c => c.Type == "name")?.Value
         };
     }

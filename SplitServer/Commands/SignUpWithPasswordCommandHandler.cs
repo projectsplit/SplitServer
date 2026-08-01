@@ -59,7 +59,11 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             return Result.Failure<AuthenticationResponse>(emailValidationResult.Error);
         }
 
-        if (await _usersRepository.AnyWithEmail(command.Email, ct))
+        // Only a verified email is owned by an account. An address nobody has proven ownership of
+        // stays up for grabs, so it cannot be used to block someone from signing up.
+        var verifiedOwnerMaybe = await _usersRepository.GetVerifiedByEmail(command.Email, ct);
+
+        if (verifiedOwnerMaybe.HasValue)
         {
             return Result.Failure<AuthenticationResponse>("An account with this email already exists");
         }

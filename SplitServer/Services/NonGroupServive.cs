@@ -6,15 +6,153 @@ namespace SplitServer.Services;
 
 public class NonGroupService
 {
+    /// <summary>
+    /// Non group debts are strictly pairwise. Each expense is settled on its own, among its own
+    /// participants only, and the resulting obligations are accumulated into a per counterparty
+    /// ledger. Debts are never simplified across expenses, so two users who never shared an expense
+    /// or a transfer can never end up owing each other, even when a common counterparty links them.
+    /// </summary>
     public static List<NonGroupDebt> GetDebts(
         List<NonGroupExpense> expenses,
         List<NonGroupTransfer> transfers,
         string userId,
         IList<User>? users)
     {
-        var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
+        // Positive balance means userId owes the counterparty, negative means the counterparty owes userId.
+        var balances = new Dictionary<(string Currency, string CounterpartyId), decimal>();
 
-        return currencies.SelectMany(c => GetDebtsForCurrency(c, expenses, transfers, userId, users)).ToList();
+        foreach (var expense in expenses)
+        {
+            foreach (var (debtor, creditor, amount) in SettleExpense(expense))
+            {
+                if (debtor == userId)
+                {
+                    AddToBalance(balances, expense.Currency, creditor, amount);
+                }
+                else if (creditor == userId)
+                {
+                    AddToBalance(balances, expense.Currency, debtor, -amount);
+                }
+            }
+        }
+
+        foreach (var transfer in transfers)
+        {
+            if (transfer.SenderId == userId && transfer.ReceiverId != userId)
+            {
+                AddToBalance(balances, transfer.Currency, transfer.ReceiverId, -transfer.Amount);
+            }
+            else if (transfer.ReceiverId == userId && transfer.SenderId != userId)
+            {
+                AddToBalance(balances, transfer.Currency, transfer.SenderId, transfer.Amount);
+            }
+        }
+
+        return balances
+            .Where(x => x.Value != 0)
+            .Select(x => CreateDebt(userId, x.Key.CounterpartyId, x.Key.Currency, x.Value, users))
+            .OrderBy(x => x.Currency, StringComparer.Ordinal)
+            .ThenBy(x => x.Debtor == userId ? x.CreditorName : x.DebtorName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static void AddToBalance(
+        Dictionary<(string Currency, string CounterpartyId), decimal> balances,
+        string currency,
+        string counterpartyId,
+        decimal amount)
+    {
+        var key = (currency, counterpartyId);
+        balances[key] = balances.GetValueOrDefault(key) + amount;
+    }
+
+    private static NonGroupDebt CreateDebt(
+        string userId,
+        string counterpartyId,
+        string currency,
+        decimal balance,
+        IList<User>? users)
+    {
+        var userOwesCounterparty = balance > 0;
+
+        var debtorId = userOwesCounterparty ? userId : counterpartyId;
+        var creditorId = userOwesCounterparty ? counterpartyId : userId;
+
+        return new NonGroupDebt
+        {
+            Debtor = debtorId,
+            DebtorName = GetUsername(debtorId, users),
+            Creditor = creditorId,
+            CreditorName = GetUsername(creditorId, users),
+            Amount = Math.Abs(balance),
+            Currency = currency
+        };
+    }
+
+    private static string GetUsername(string userId, IList<User>? users)
+    {
+        return users?.FirstOrDefault(u => u.Id == userId)?.Username ?? DeletedUser.Username(userId);
+    }
+
+    /// <summary>
+    /// Settles a single expense in closed form: every participant's net position within that expense
+    /// (share minus payment) is matched against the others, largest debtor against largest creditor.
+    /// Because a validated expense has its shares and payments both summing to its amount, the net
+    /// positions sum to zero and the matching is exact, so no rounding is ever introduced and every
+    /// resulting amount stays a valid amount for the expense currency.
+    /// </summary>
+    private static IEnumerable<(string Debtor, string Creditor, decimal Amount)> SettleExpense(NonGroupExpense expense)
+    {
+        var balances = new Dictionary<string, decimal>();
+
+        foreach (var share in expense.Shares)
+        {
+            balances[share.UserId] = balances.GetValueOrDefault(share.UserId) + share.Amount;
+        }
+
+        foreach (var payment in expense.Payments)
+        {
+            balances[payment.UserId] = balances.GetValueOrDefault(payment.UserId) - payment.Amount;
+        }
+
+        // Ordering is explicit so that the settlement of an expense is identical for every viewer
+        // and does not depend on the order the shares and payments happen to be stored in.
+        var debtors = balances
+            .Where(x => x.Value > 0)
+            .OrderByDescending(x => x.Value)
+            .ThenBy(x => x.Key, StringComparer.Ordinal)
+            .ToList();
+
+        var creditors = balances
+            .Where(x => x.Value < 0)
+            .OrderBy(x => x.Value)
+            .ThenBy(x => x.Key, StringComparer.Ordinal)
+            .ToList();
+
+        var debtorIndex = 0;
+        var creditorIndex = 0;
+        var debtorRemaining = debtors.Select(x => x.Value).ToArray();
+        var creditorRemaining = creditors.Select(x => -x.Value).ToArray();
+
+        while (debtorIndex < debtors.Count && creditorIndex < creditors.Count)
+        {
+            var amount = Math.Min(debtorRemaining[debtorIndex], creditorRemaining[creditorIndex]);
+
+            yield return (debtors[debtorIndex].Key, creditors[creditorIndex].Key, amount);
+
+            debtorRemaining[debtorIndex] -= amount;
+            creditorRemaining[creditorIndex] -= amount;
+
+            if (debtorRemaining[debtorIndex] == 0)
+            {
+                debtorIndex++;
+            }
+
+            if (creditorRemaining[creditorIndex] == 0)
+            {
+                creditorIndex++;
+            }
+        }
     }
 
     public static Dictionary<string, Dictionary<string, decimal>> GetTotalSpent(List<NonGroupExpense> expenses)
@@ -75,143 +213,6 @@ public class NonGroupService
         }
 
         return totalSentByUser;
-    }
-
-    private static List<NonGroupDebt> GetDebtsForCurrency(
-        string currency,
-        List<NonGroupExpense> expenses,
-        List<NonGroupTransfer> transfers,
-        string userId,
-        IList<User>? users)
-    {
-        var debts = new List<NonGroupDebt>();
-
-        // Identify all other users involved in these transactions
-        var expensesUserIds = expenses
-            .Where(e => e.Currency == currency)
-            .SelectMany(e => e.Shares.Select(s => s.UserId).Concat(e.Payments.Select(p => p.UserId)));
-
-        var transfersUserIds = transfers
-            .Where(t => t.Currency == currency)
-            .SelectMany(t => new[] { t.SenderId, t.ReceiverId });
-
-        var otherUserIds = expensesUserIds.Concat(transfersUserIds)
-            .Distinct()
-            .Where(id => id != userId)
-            .ToList();
-
-        foreach (var pairedUserId in otherUserIds)
-        {
-            // Filter expenses where BOTH userId and pairedUserId are participants
-            var pairExpenses = expenses
-                .Where(e => e.Currency == currency && IsInExpense(e, userId) && IsInExpense(e, pairedUserId))
-                .ToList();
-
-            // Filter transfers between userId and pairedUserId
-            var pairTransfers = transfers
-                .Where(t => t.Currency == currency &&
-                            ((t.SenderId == userId && t.ReceiverId == pairedUserId) ||
-                             (t.SenderId == pairedUserId && t.ReceiverId == userId)))
-                .ToList();
-
-            if (!pairExpenses.Any() && !pairTransfers.Any())
-            {
-                continue;
-            }
-
-            // Calculate debts for this specific subset of transactions
-            // This treats the pair (and any unavoidable third parties in those shared expenses) as a system,
-            // but we only extract the debt relevant to the pair.
-            var subsetDebts = CalculateDebtsForSubset(pairExpenses, pairTransfers, currency, users);
-
-            var pairDebt = subsetDebts.FirstOrDefault(d =>
-                (d.Debtor == userId && d.Creditor == pairedUserId) ||
-                (d.Debtor == pairedUserId && d.Creditor == userId));
-
-            if (pairDebt != null)
-            {
-                debts.Add(pairDebt);
-            }
-        }
-
-        return debts;
-    }
-
-    private static bool IsInExpense(NonGroupExpense expense, string userId)
-    {
-        return expense.Shares.Any(s => s.UserId == userId) || expense.Payments.Any(p => p.UserId == userId);
-    }
-
-    private static List<NonGroupDebt> CalculateDebtsForSubset(
-        List<NonGroupExpense> expenses,
-        List<NonGroupTransfer> transfers,
-        string currency,
-        IList<User>? users)
-    {
-        var balances = new Dictionary<string, decimal>();
-
-        foreach (var expense in expenses)
-        {
-            foreach (var share in expense.Shares)
-            {
-                balances[share.UserId] = balances.GetValueOrDefault(share.UserId) + share.Amount;
-            }
-
-            foreach (var payment in expense.Payments)
-            {
-                balances[payment.UserId] = balances.GetValueOrDefault(payment.UserId) - payment.Amount;
-            }
-        }
-
-        foreach (var transfer in transfers)
-        {
-            balances[transfer.ReceiverId] = balances.GetValueOrDefault(transfer.ReceiverId) + transfer.Amount;
-            balances[transfer.SenderId] = balances.GetValueOrDefault(transfer.SenderId) - transfer.Amount;
-        }
-
-        balances = balances.Where(x => x.Value != 0).ToDictionary(x => x.Key, x => x.Value);
-
-        var debts = new List<NonGroupDebt>();
-
-        while (balances.Any(x => x.Value != 0))
-        {
-            var maxDebtor = balances.MaxBy(x => x.Value);
-            var maxCreditor = balances.MinBy(x => x.Value);
-
-            // This should not happen in a zero-sum system, but handling float precision issues or empty states
-            if (maxDebtor.Key == null || maxCreditor.Key == null) break;
-
-            var amount = Math.Min(maxDebtor.Value, -maxCreditor.Value);
-
-            // Round to prevent infinite loops with tiny precision errors? 
-            // Standard decimal should be fine, but good to be safe if amounts are 0.
-            if (amount == 0) break;
-
-            var debtorName = users?.FirstOrDefault(u => u.Id == maxDebtor.Key)?.Username ?? DeletedUser.Username(maxDebtor.Key);
-
-            var creditorName = users?.FirstOrDefault(u => u.Id == maxCreditor.Key)?.Username ?? DeletedUser.Username(maxCreditor.Key);
-
-            var debt = new NonGroupDebt
-            {
-                Debtor = maxDebtor.Key,
-                DebtorName = debtorName,
-                Creditor = maxCreditor.Key,
-                CreditorName = creditorName,
-                Amount = amount,
-                Currency = currency
-            };
-
-            debts.Add(debt);
-
-            balances[maxDebtor.Key] -= amount;
-            balances[maxCreditor.Key] += amount;
-
-            // Cleanup zero balances to keep 'Any' check accurate
-            if (balances[maxDebtor.Key] == 0) balances.Remove(maxDebtor.Key);
-            if (balances[maxCreditor.Key] == 0) balances.Remove(maxCreditor.Key);
-        }
-
-        return debts;
     }
 
     public static List<NonGroupExpense> CalculateFilteredExpensesList(
