@@ -262,13 +262,23 @@ public class ValidationService
         return Result.Success();
     }
 
-    public Result ValidateNonGroupExpense(List<Payment> payments, List<Share> shares, decimal amount, string currency)
+    public Result ValidateNonGroupExpense(
+        List<Payment> payments,
+        List<Share> shares,
+        decimal amount,
+        string currency,
+        string userId)
     {
         var amountValidationResult = ValidateAmount(amount, currency);
 
         if (amountValidationResult.IsFailure)
         {
             return amountValidationResult;
+        }
+
+        if (payments.All(x => x.UserId != userId) && shares.All(x => x.UserId != userId))
+        {
+            return Result.Failure($"User {userId} must be a payer or a participant of the non-group expense");
         }
 
         foreach (var payment in payments)

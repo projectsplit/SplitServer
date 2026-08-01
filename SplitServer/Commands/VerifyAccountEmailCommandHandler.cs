@@ -2,6 +2,7 @@ using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 using SplitServer.Services.Email;
 
 namespace SplitServer.Commands;
@@ -9,19 +10,26 @@ namespace SplitServer.Commands;
 public class VerifyAccountEmailCommandHandler : IRequestHandler<VerifyAccountEmailCommand, Result>
 {
     private const string InvalidOrExpiredError = "Invalid or expired code";
+    // Kept in sync with ALREADY_CLAIMED_MARKER in the webapp's EditEmail component, which uses it
+    // to send the user back to the email step instead of leaving them retrying the code.
+    private const string AlreadyClaimedError =
+        "This email is already associated with another account. Please use a different email address.";
 
     private readonly IUsersRepository _usersRepository;
     private readonly IEmailVerificationCodesRepository _codesRepository;
     private readonly EmailTokenService _tokenService;
+    private readonly LockService _lockService;
 
     public VerifyAccountEmailCommandHandler(
         IUsersRepository usersRepository,
         IEmailVerificationCodesRepository codesRepository,
-        EmailTokenService tokenService)
+        EmailTokenService tokenService,
+        LockService lockService)
     {
         _usersRepository = usersRepository;
         _codesRepository = codesRepository;
         _tokenService = tokenService;
+        _lockService = lockService;
     }
 
     public async Task<Result> Handle(VerifyAccountEmailCommand command, CancellationToken ct)
@@ -65,6 +73,22 @@ public class VerifyAccountEmailCommandHandler : IRequestHandler<VerifyAccountEma
         }
 
         var user = userMaybe.Value;
+
+        if (string.IsNullOrWhiteSpace(user.Email))
+        {
+            return Result.Failure(InvalidOrExpiredError);
+        }
+
+        // Sign-up lets several accounts hold the same unverified email, so this is the point where
+        // exactly one of them takes ownership. The lock keeps two concurrent claims from both winning.
+        using var _ = _lockService.AcquireLock($"verify-email:{user.Email.ToLowerInvariant()}");
+
+        var existingOwnerMaybe = await _usersRepository.GetVerifiedByEmail(user.Email, ct);
+
+        if (existingOwnerMaybe.HasValue && existingOwnerMaybe.Value.Id != user.Id)
+        {
+            return Result.Failure(AlreadyClaimedError);
+        }
 
         var updateUserResult = await _usersRepository.Update(
             user with

@@ -15,7 +15,6 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
 
     public CreateNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
-        PermissionService permissionService,
         ValidationService validationService,
         UserLabelService userLabelService)
     {
@@ -30,7 +29,8 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             command.Payments,
             command.Shares,
             command.Amount,
-            command.Currency);
+            command.Currency,
+            command.UserId);
 
         if (expenseValidationResult.IsFailure)
         {

@@ -18,9 +18,15 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
     {
     }
 
-    public async Task<Maybe<User>> GetByEmail(string email, CancellationToken ct)
+    public async Task<Maybe<User>> GetVerifiedByEmail(string email, CancellationToken ct)
     {
-        return await Collection.Find(EmailFilter(email)).SingleOrDefaultAsync(ct);
+        // Verification enforces a single owner per email, but this sorts rather than using
+        // SingleOrDefault so that pre-existing duplicates resolve to the earliest claim
+        // instead of throwing on every password reset and username recovery.
+        return await Collection
+            .Find(VerifiedEmailFilter(email))
+            .SortBy(x => x.Created)
+            .FirstOrDefaultAsync(ct);
     }
 
     public async Task<Maybe<User>> GetByUsername(string username, CancellationToken ct)
@@ -69,20 +75,15 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
             .AnyAsync(ct);
     }
 
-    public async Task<bool> AnyWithEmail(string email, CancellationToken ct)
-    {
-        return await Collection
-            .Find(EmailFilter(email))
-            .AnyAsync(ct);
-    }
-
     private static FilterDefinition<User> UsernameFilter(string username)
     {
         return FilterBuilder.Regex(x => x.Username, new BsonRegularExpression($"^{Regex.Escape(username)}$", "i"));
     }
 
-    private static FilterDefinition<User> EmailFilter(string email)
+    private static FilterDefinition<User> VerifiedEmailFilter(string email)
     {
-        return FilterBuilder.Regex(x => x.Email, new BsonRegularExpression($"^{Regex.Escape(email)}$", "i"));
+        return FilterBuilder.And(
+            FilterBuilder.Regex(x => x.Email, new BsonRegularExpression($"^{Regex.Escape(email)}$", "i")),
+            FilterBuilder.Eq(x => x.EmailVerified, true));
     }
 }

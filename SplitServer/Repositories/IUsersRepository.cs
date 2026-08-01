@@ -5,7 +5,11 @@ namespace SplitServer.Repositories;
 
 public interface IUsersRepository : IRepositoryBase<User>
 {
-    Task<Maybe<User>> GetByEmail(string email, CancellationToken ct);
+    /// <summary>
+    /// Returns the account that owns this email, i.e. the one that has verified it.
+    /// An unverified email can be held by several accounts at once, so it never identifies an owner.
+    /// </summary>
+    Task<Maybe<User>> GetVerifiedByEmail(string email, CancellationToken ct);
 
     Task<Maybe<User>> GetByUsername(string username, CancellationToken ct);
 
@@ -16,6 +20,4 @@ public interface IUsersRepository : IRepositoryBase<User>
     Task<List<User>> GetLatestUsers(int skip, int pageSize, CancellationToken ct);
 
     Task<bool> AnyWithUsername(string username, CancellationToken ct);
-
-    Task<bool> AnyWithEmail(string email, CancellationToken ct);
 }

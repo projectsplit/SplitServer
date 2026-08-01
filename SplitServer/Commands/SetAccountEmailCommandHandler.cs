@@ -55,7 +55,7 @@ public class SetAccountEmailCommandHandler : IRequestHandler<SetAccountEmailComm
 
         if (!isSameAsCurrent)
         {
-            var emailOwnerMaybe = await _usersRepository.GetByEmail(command.Email, ct);
+            var emailOwnerMaybe = await _usersRepository.GetVerifiedByEmail(command.Email, ct);
 
             if (emailOwnerMaybe.HasValue && emailOwnerMaybe.Value.Id != user.Id)
             {
@@ -65,11 +65,14 @@ public class SetAccountEmailCommandHandler : IRequestHandler<SetAccountEmailComm
 
         var now = DateTime.UtcNow;
 
+        // Only a genuine change makes the address unproven again. This same command backs the
+        // "resend code" button, and clearing the flag there would drop an already-verified user's
+        // claim on their own address, letting another account holding it unverified take it.
         var updateResult = await _usersRepository.Update(
             user with
             {
                 Email = command.Email,
-                EmailVerified = false,
+                EmailVerified = isSameAsCurrent && user.EmailVerified,
                 Updated = now,
             },
             ct);
