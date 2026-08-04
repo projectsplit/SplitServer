@@ -13,17 +13,20 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
     private readonly ITransfersRepository _transfersRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
+    private readonly ConnectionService _connectionService;
     private readonly NotificationService _notificationService;
 
     public CreateManyNonGroupTransfersCommandHandler(
         ITransfersRepository transfersRepository,
         IUsersRepository usersRepository,
         ValidationService validationService,
+        ConnectionService connectionService,
         NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
         _usersRepository = usersRepository;
         _validationService = validationService;
+        _connectionService = connectionService;
         _notificationService = notificationService;
     }
 
@@ -42,6 +45,18 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             {
                 return transferValidationResult;
             }
+        }
+
+        var participantUserIds = command.Transfers
+            .SelectMany(x => new[] { x.SenderId, x.ReceiverId })
+            .Distinct()
+            .ToList();
+
+        var connectionResult = await _connectionService.VerifyCanSplitWith(command.UserId, participantUserIds, ct);
+
+        if (connectionResult.IsFailure)
+        {
+            return connectionResult;
         }
 
         var now = DateTime.UtcNow;

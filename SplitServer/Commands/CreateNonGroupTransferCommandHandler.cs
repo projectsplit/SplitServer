@@ -14,17 +14,20 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
     private readonly ITransfersRepository _transfersRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
+    private readonly ConnectionService _connectionService;
     private readonly NotificationService _notificationService;
 
     public CreateNonGroupTransferCommandHandler(
         ITransfersRepository transfersRepository,
         IUsersRepository usersRepository,
         ValidationService validationService,
+        ConnectionService connectionService,
         NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
         _usersRepository = usersRepository;
         _validationService = validationService;
+        _connectionService = connectionService;
         _notificationService = notificationService;
     }
 
@@ -41,6 +44,16 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
         if (transferValidationResult.IsFailure)
         {
             return transferValidationResult.ConvertFailure<CreateTransferResponse>();
+        }
+
+        var connectionResult = await _connectionService.VerifyCanSplitWith(
+            command.UserId,
+            [command.SenderId, command.ReceiverId],
+            ct);
+
+        if (connectionResult.IsFailure)
+        {
+            return connectionResult.ConvertFailure<CreateTransferResponse>();
         }
 
         var now = DateTime.UtcNow;

@@ -13,6 +13,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly IInvitationsRepository _invitationsRepository;
     private readonly INotificationsRepository _notificationsRepository;
+    private readonly IUserConnectionsRepository _userConnectionsRepository;
     private readonly TimeZoneService _timeZoneService;
 
     public GetAuthenticatedUserQueryHandler(
@@ -21,6 +22,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         IUserPreferencesRepository userPreferencesRepository,
         IInvitationsRepository invitationsRepository,
         INotificationsRepository notificationsRepository,
+        IUserConnectionsRepository userConnectionsRepository,
         TimeZoneService timeZoneService)
     {
         _usersRepository = usersRepository;
@@ -28,6 +30,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         _userPreferencesRepository = userPreferencesRepository;
         _invitationsRepository = invitationsRepository;
         _notificationsRepository = notificationsRepository;
+        _userConnectionsRepository = userConnectionsRepository;
         _timeZoneService = timeZoneService;
     }
 
@@ -52,6 +55,9 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
 
         var activityCount = await _notificationsRepository.CountByUserIdAndMinCreated(query.UserId, lastViewedNotification, ct);
 
+        var connectionRequestsCount =
+            await _userConnectionsRepository.CountPendingByReceiverIdAndMinCreated(query.UserId, lastViewedNotification, ct);
+
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
 
         var currency = userPreferencesMaybe.HasValue
@@ -71,7 +77,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             Username = user.Username,
             Email = user.Email,
             EmailVerified = user.EmailVerified,
-            HasNewerNotifications = invitationsCount > 0 || activityCount > 0,
+            HasNewerNotifications = invitationsCount > 0 || activityCount > 0 || connectionRequestsCount > 0,
             Currency = currency,
             TimeZone = timeZone,
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
