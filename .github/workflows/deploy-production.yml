@@ -17,6 +17,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Debug host resolution
+        run: |
+          HOST='${{ secrets.SERVER_HOST }}'
+          echo "$HOST"
+          getent hosts "$HOST" >/dev/null && echo "resolves=yes" || echo "resolves=no"
 
       - name: SSH into server and deploy
         uses: appleboy/ssh-action@v1.2.0
