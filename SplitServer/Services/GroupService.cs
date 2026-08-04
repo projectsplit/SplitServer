@@ -135,6 +135,26 @@ public class GroupService
             .ToList();
     }
 
+    /// <summary>
+    /// Resolves the accounts to notify about something involving the given members, leaving out the
+    /// user who performed it. Guests can hold payments, shares and transfers but live in
+    /// <see cref="Group.Guests"/> and own no account, so matching against members drops them
+    /// without needing a separate check.
+    /// </summary>
+    public static List<string> GetInvolvedUserIdsToNotify(
+        Group group,
+        IEnumerable<string> memberIds,
+        string actingUserId)
+    {
+        var involvedMemberIds = memberIds.ToHashSet();
+
+        return group.Members
+            .Where(x => involvedMemberIds.Contains(x.Id) && x.UserId != actingUserId)
+            .Select(x => x.UserId)
+            .Distinct()
+            .ToList();
+    }
+
     public async Task<Result> AddLabelsToGroupIfMissing(Group group, List<Label> labels, DateTime now, CancellationToken ct)
     {
         var labelsNotInGroup = labels.Where(x => !group.Labels.Select(xx => xx.Id).Contains(x.Id)).ToList();

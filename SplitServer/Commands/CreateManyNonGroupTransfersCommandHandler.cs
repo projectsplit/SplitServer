@@ -8,15 +8,23 @@ namespace SplitServer.Commands;
 
 public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateManyNonGroupTransfersCommand, Result>
 {
+    private const string NonGroupTransfersUrl = "/shared/nongroup/transfers";
+
     private readonly ITransfersRepository _transfersRepository;
+    private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
+    private readonly NotificationService _notificationService;
 
     public CreateManyNonGroupTransfersCommandHandler(
         ITransfersRepository transfersRepository,
-        ValidationService validationService)
+        IUsersRepository usersRepository,
+        ValidationService validationService,
+        NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
+        _usersRepository = usersRepository;
         _validationService = validationService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(CreateManyNonGroupTransfersCommand command, CancellationToken ct)
@@ -54,6 +62,49 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             })
             .ToList();
 
-        return await _transfersRepository.InsertMany(transfers, ct);
+        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+
+        if (writeResult.IsFailure)
+        {
+            return writeResult;
+        }
+
+        await NotifyCounterparties(command, ct);
+
+        return writeResult;
+    }
+
+    /// <summary>
+    /// One message per counterparty for the whole batch, not one per transfer, so settling up
+    /// cannot turn into a burst of notifications. The creator is dropped even though they are a
+    /// party to every transfer here.
+    /// </summary>
+    private async Task NotifyCounterparties(CreateManyNonGroupTransfersCommand command, CancellationToken ct)
+    {
+        var recipientUserIds = command.Transfers
+            .SelectMany(x => new[] { x.SenderId, x.ReceiverId })
+            .Where(x => x != command.UserId)
+            .Distinct()
+            .ToList();
+
+        if (recipientUserIds.Count == 0)
+        {
+            return;
+        }
+
+        var creatorMaybe = await _usersRepository.GetById(command.UserId, ct);
+
+        var creatorUsername = creatorMaybe.HasValue ? creatorMaybe.Value.Username : "Someone";
+
+        var transferCount = command.Transfers.Count;
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            "New transfer",
+            transferCount == 1
+                ? $"{creatorUsername} recorded a transfer with you"
+                : $"{creatorUsername} recorded {transferCount} transfers with you",
+            NonGroupTransfersUrl,
+            ct);
     }
 }

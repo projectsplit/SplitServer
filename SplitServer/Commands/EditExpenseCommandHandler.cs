@@ -12,17 +12,20 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
     private readonly GroupService _groupService;
+    private readonly NotificationService _notificationService;
 
     public EditExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        GroupService groupService)
+        GroupService groupService,
+        NotificationService notificationService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
         _groupService = groupService;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(EditExpenseCommand command, CancellationToken ct)
@@ -34,7 +37,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             return permissionResult;
         }
 
-        var (_, group, expense, _) = permissionResult.Value;
+        var (user, group, expense, _) = permissionResult.Value;
 
         if (expense is not GroupExpense groupExpense)
         {
@@ -73,6 +76,54 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             Location = command.Location
         };
 
-        return await _expensesRepository.Update(editedExpense, ct);
+        var updateResult = await _expensesRepository.Update(editedExpense, ct);
+
+        if (updateResult.IsFailure)
+        {
+            return updateResult;
+        }
+
+        await NotifyMembersWithChangedAmounts(command, group, groupExpense, user.Username, ct);
+
+        return updateResult;
+    }
+
+    /// <summary>
+    /// Notifies only those whose own money moved, so renaming or relabelling an expense tells
+    /// nobody. Someone removed is still told: their amount effectively went to zero, which changes
+    /// what they are owed just as much as being added does.
+    /// </summary>
+    private async Task NotifyMembersWithChangedAmounts(
+        EditExpenseCommand command,
+        Group group,
+        GroupExpense originalExpense,
+        string editorUsername,
+        CancellationToken ct)
+    {
+        var before = AmountChanges.Snapshot(
+            originalExpense.Payments.Select(x => (x.MemberId, x.Amount)),
+            originalExpense.Shares.Select(x => (x.MemberId, x.Amount)));
+
+        var after = AmountChanges.Snapshot(
+            command.Payments.Select(x => (x.MemberId, x.Amount)),
+            command.Shares.Select(x => (x.MemberId, x.Amount)));
+
+        // Re-denominating leaves every number untouched while changing what all of them mean, so
+        // it counts as a change for everyone on the expense.
+        var changedMemberIds = originalExpense.Currency == command.Currency
+            ? AmountChanges.GetChangedKeys(before, after)
+            : before.Keys.Concat(after.Keys);
+
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            changedMemberIds,
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{editorUsername} edited \"{command.Description}\" ({command.Amount} {command.Currency})",
+            $"/shared/{group.Id}/expenses",
+            ct);
     }
 }

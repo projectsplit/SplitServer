@@ -13,17 +13,20 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
     private readonly GroupService _groupService;
+    private readonly NotificationService _notificationService;
 
     public CreateExpenseCommandHandler(
         IExpensesRepository expensesRepository,
         PermissionService permissionService,
         ValidationService validationService,
-        GroupService groupService)
+        GroupService groupService,
+        NotificationService notificationService)
     {
         _expensesRepository = expensesRepository;
         _validationService = validationService;
         _groupService = groupService;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateExpenseCommand command, CancellationToken ct)
@@ -35,7 +38,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
             return permissionResult.ConvertFailure<CreateExpenseResponse>();
         }
 
-        var (_, group, memberId) = permissionResult.Value;
+        var (user, group, memberId) = permissionResult.Value;
 
         var expenseValidationResult =
             _validationService.ValidateExpense(group, command.Payments, command.Shares, command.Amount, command.Currency);
@@ -82,9 +85,35 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 
+        await NotifyInvolvedMembers(command, group, user.Username, ct);
+
         return new CreateExpenseResponse
         {
             ExpenseId = expenseId
         };
+    }
+
+    /// <summary>
+    /// Notifies only the members carrying a payment or a share, never the whole group: someone the
+    /// expense does not involve has no reason to hear about it. Delivery runs in the background, so
+    /// a push outage can never fail an expense that is already written.
+    /// </summary>
+    private async Task NotifyInvolvedMembers(
+        CreateExpenseCommand command,
+        Group group,
+        string creatorUsername,
+        CancellationToken ct)
+    {
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            command.Payments.Select(x => x.MemberId).Concat(command.Shares.Select(x => x.MemberId)),
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency})",
+            $"/shared/{command.GroupId}/expenses",
+            ct);
     }
 }

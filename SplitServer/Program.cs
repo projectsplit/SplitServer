@@ -34,6 +34,8 @@ builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
 builder.Services.AddSingleton<NonGroupService>();
+builder.Services.AddSingleton<PushNotificationService>();
+builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<UserLabelService>();
 builder.Services.AddSingleton< BudgetService>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
@@ -55,6 +57,8 @@ builder.Services.AddSingleton<IUserPreferencesRepository, UserPreferencesMongoDb
 builder.Services.AddSingleton<IUserLabelsRepository, UserLabelsMongoDbRepository>();
 builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
 builder.Services.AddSingleton<IEmailVerificationCodesRepository, EmailVerificationCodesMongoDbRepository>();
+builder.Services.AddSingleton<IPushSubscriptionsRepository, PushSubscriptionsMongoDbRepository>();
+builder.Services.AddSingleton<INotificationsRepository, NotificationsMongoDbRepository>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<EmailTokenService>();
@@ -64,6 +68,7 @@ builder.Configure<MongoDbSettings>();
 builder.Configure<JoinSettings>();
 builder.Configure<OpenExchangeRatesSettings>();
 builder.Configure<ErrorHandlingSettings>();
+builder.Configure<PushNotificationsSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
 var emailSettings = builder.Configure<EmailSettings>();
@@ -97,6 +102,18 @@ builder.Services.AddCors(
 builder.ConfigureLogging(openTelemetrySettings);
 
 var app = builder.Build();
+
+// Index creation is idempotent, so this just converges the collection on every boot rather than
+// needing a migration step. Never fatal: the app works without the indexes, only slower and
+// without expiry.
+try
+{
+    await app.Services.GetRequiredService<INotificationsRepository>().EnsureIndexes(CancellationToken.None);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Failed to ensure notification indexes");
+}
 
 app.UseSerilogRequestLogging();
 app.UseCors();

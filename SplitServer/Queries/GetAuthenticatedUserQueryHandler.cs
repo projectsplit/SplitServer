@@ -12,6 +12,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IUserActivityRepository _userActivityRepository;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly IInvitationsRepository _invitationsRepository;
+    private readonly INotificationsRepository _notificationsRepository;
     private readonly TimeZoneService _timeZoneService;
 
     public GetAuthenticatedUserQueryHandler(
@@ -19,12 +20,14 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         IUserActivityRepository userActivityRepository,
         IUserPreferencesRepository userPreferencesRepository,
         IInvitationsRepository invitationsRepository,
+        INotificationsRepository notificationsRepository,
         TimeZoneService timeZoneService)
     {
         _usersRepository = usersRepository;
         _userActivityRepository = userActivityRepository;
         _userPreferencesRepository = userPreferencesRepository;
         _invitationsRepository = invitationsRepository;
+        _notificationsRepository = notificationsRepository;
         _timeZoneService = timeZoneService;
     }
 
@@ -45,7 +48,9 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             ? userActivityMaybe.Value.LastViewedNotificationTimestamp ?? DateTime.MinValue
             : DateTime.MinValue;
 
-        var notificationsCount = await _invitationsRepository.CountByReceiverIdAndMinCreated(query.UserId, lastViewedNotification, ct);
+        var invitationsCount = await _invitationsRepository.CountByReceiverIdAndMinCreated(query.UserId, lastViewedNotification, ct);
+
+        var activityCount = await _notificationsRepository.CountByUserIdAndMinCreated(query.UserId, lastViewedNotification, ct);
 
         var userPreferencesMaybe = await _userPreferencesRepository.GetById(query.UserId, ct);
 
@@ -57,6 +62,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             : DefaultValues.TimeZone;
         var recentContextId = userActivityMaybe.HasValue ? userActivityMaybe.Value.RecentContextId : null;
         var showBudgetInfo = userActivityMaybe.HasValue ? userActivityMaybe.Value.ShowBudgetInfo : null;
+        var pushNotificationsEnabled =
+            userPreferencesMaybe.HasValue && userPreferencesMaybe.Value.PushNotificationsEnabled == true;
 
         return new GetAuthenticatedUserResponse
         {
@@ -64,12 +71,13 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             Username = user.Username,
             Email = user.Email,
             EmailVerified = user.EmailVerified,
-            HasNewerNotifications = notificationsCount > 0,
+            HasNewerNotifications = invitationsCount > 0 || activityCount > 0,
             Currency = currency,
             TimeZone = timeZone,
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
             RecentContextId = recentContextId,
-            ShowBudgetInfo = showBudgetInfo
+            ShowBudgetInfo = showBudgetInfo,
+            PushNotificationsEnabled = pushNotificationsEnabled
         };
     }
 }

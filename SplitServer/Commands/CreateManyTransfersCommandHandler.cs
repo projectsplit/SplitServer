@@ -11,15 +11,18 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
     private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
+    private readonly NotificationService _notificationService;
 
     public CreateManyTransfersCommandHandler(
         ITransfersRepository transfersRepository,
         ValidationService validationService,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(CreateManyTransfersCommand command, CancellationToken ct)
@@ -31,7 +34,7 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             return permissionResult;
         }
 
-        var (_, group, _) = permissionResult.Value;
+        var (user, group, _) = permissionResult.Value;
 
         foreach (var t in command.Transfers)
         {
@@ -62,6 +65,44 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             })
             .ToList();
 
-        return await _transfersRepository.InsertMany(transfers, ct);
+        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+
+        if (writeResult.IsFailure)
+        {
+            return writeResult;
+        }
+
+        await NotifyInvolvedMembers(command, group, user.Username, ct);
+
+        return writeResult;
+    }
+
+    /// <summary>
+    /// Settling up writes a batch of transfers at once. Each involved member is told once about the
+    /// batch rather than once per transfer, so a settle-up cannot turn into a burst of
+    /// notifications. That means the text stays deliberately generic: a single message goes to
+    /// everyone, and quoting one transfer's amount would be wrong for most of them.
+    /// </summary>
+    private async Task NotifyInvolvedMembers(
+        CreateManyTransfersCommand command,
+        Group group,
+        string creatorUsername,
+        CancellationToken ct)
+    {
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            command.Transfers.SelectMany(x => new[] { x.SenderId, x.ReceiverId }),
+            command.UserId);
+
+        var transferCount = command.Transfers.Count;
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            transferCount == 1
+                ? $"{creatorUsername} recorded a transfer"
+                : $"{creatorUsername} recorded {transferCount} transfers",
+            $"/shared/{command.GroupId}/transfers",
+            ct);
     }
 }
