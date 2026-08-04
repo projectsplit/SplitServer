@@ -12,15 +12,18 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
     private readonly PermissionService _permissionService;
     private readonly ITransfersRepository _transfersRepository;
     private readonly ValidationService _validationService;
+    private readonly NotificationService _notificationService;
 
     public CreateTransferCommandHandler(
         ITransfersRepository transfersRepository,
         ValidationService validationService,
-        PermissionService permissionService)
+        PermissionService permissionService,
+        NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<CreateTransferResponse>> Handle(CreateTransferCommand command, CancellationToken ct)
@@ -32,7 +35,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
             return permissionResult.ConvertFailure<CreateTransferResponse>();
         }
 
-        var (_, group, memberId) = permissionResult.Value;
+        var (user, group, memberId) = permissionResult.Value;
 
         var transferValidationResult =
             _validationService.ValidateTransfer(group, command.SenderId, command.ReceiverId, command.Amount, command.Currency);
@@ -67,9 +70,35 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
 
+        await NotifyInvolvedMembers(command, group, user.Username, ct);
+
         return new CreateTransferResponse
         {
             TransferId = transferId
         };
+    }
+
+    /// <summary>
+    /// Notifies the two sides of the transfer, minus whoever recorded it — being the sender or the
+    /// receiver does not earn you a notification about your own entry. Delivery runs in the
+    /// background, so a push outage can never fail a transfer that is already written.
+    /// </summary>
+    private async Task NotifyInvolvedMembers(
+        CreateTransferCommand command,
+        Group group,
+        string creatorUsername,
+        CancellationToken ct)
+    {
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            [command.SenderId, command.ReceiverId],
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{creatorUsername} recorded a transfer of {command.Amount} {command.Currency}",
+            $"/shared/{command.GroupId}/transfers",
+            ct);
     }
 }

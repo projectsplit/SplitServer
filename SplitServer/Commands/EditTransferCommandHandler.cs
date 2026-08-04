@@ -10,15 +10,18 @@ public class EditTransferCommandHandler : IRequestHandler<EditTransferCommand, R
     private readonly ITransfersRepository _transfersRepository;
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
+    private readonly NotificationService _notificationService;
 
     public EditTransferCommandHandler(
         ITransfersRepository transfersRepository,
         PermissionService permissionService,
-        ValidationService validationService)
+        ValidationService validationService,
+        NotificationService notificationService)
     {
         _transfersRepository = transfersRepository;
         _validationService = validationService;
         _permissionService = permissionService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(EditTransferCommand command, CancellationToken ct)
@@ -30,7 +33,7 @@ public class EditTransferCommandHandler : IRequestHandler<EditTransferCommand, R
             return permissionResult;
         }
 
-        var (_, group, transfer, _) = permissionResult.Value;
+        var (user, group, transfer, _) = permissionResult.Value;
 
         var transferValidationResult =
             _validationService.ValidateTransfer(group, command.SenderId, command.ReceiverId, command.Amount, command.Currency);
@@ -53,6 +56,39 @@ public class EditTransferCommandHandler : IRequestHandler<EditTransferCommand, R
             Currency = command.Currency
         };
 
-        return await _transfersRepository.Update(editedTransfer, ct);
+        var updateResult = await _transfersRepository.Update(editedTransfer, ct);
+
+        if (updateResult.IsFailure)
+        {
+            return updateResult;
+        }
+
+        // Only money movements are worth a notification, so retitling or redating a transfer tells
+        // nobody. Swapping a party counts: it moves the same amount between different people.
+        var partiesChanged =
+            transfer.SenderId != command.SenderId || transfer.ReceiverId != command.ReceiverId;
+
+        var amountChanged =
+            transfer.Amount != command.Amount || transfer.Currency != command.Currency;
+
+        if (!partiesChanged && !amountChanged)
+        {
+            return updateResult;
+        }
+
+        // Both sides either side of the edit, so a party dropped from the transfer is told as well.
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            [transfer.SenderId, transfer.ReceiverId, command.SenderId, command.ReceiverId],
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{user.Username} edited a transfer of {command.Amount} {command.Currency}",
+            $"/shared/{group.Id}/transfers",
+            ct);
+
+        return updateResult;
     }
 }

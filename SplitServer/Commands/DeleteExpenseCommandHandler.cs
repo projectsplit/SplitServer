@@ -2,6 +2,7 @@
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
+    private readonly NotificationService _notificationService;
 
     public DeleteExpenseCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        IExpensesRepository expensesRepository)
+        IExpensesRepository expensesRepository,
+        NotificationService notificationService)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(DeleteExpenseCommand command, CancellationToken ct)
@@ -58,6 +62,28 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
             return Result.Failure("User must be a group member");
         }
 
-        return await _expensesRepository.Delete(command.ExpenseId, ct);
+        var deleteResult = await _expensesRepository.Delete(command.ExpenseId, ct);
+
+        if (deleteResult.IsFailure)
+        {
+            return deleteResult;
+        }
+
+        // Everyone who was on it: a deletion zeroes their amount, which moves their balance just as
+        // surely as an edit would, and the expense is gone from the list with nothing to explain it.
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            groupExpense.Payments.Select(x => x.MemberId)
+                .Concat(groupExpense.Shares.Select(x => x.MemberId)),
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{userMaybe.Value.Username} deleted \"{groupExpense.Description}\" ({groupExpense.Amount} {groupExpense.Currency})",
+            $"/shared/{group.Id}/expenses",
+            ct);
+
+        return deleteResult;
     }
 }

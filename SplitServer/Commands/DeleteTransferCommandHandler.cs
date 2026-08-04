@@ -2,6 +2,7 @@
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
@@ -10,15 +11,18 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly ITransfersRepository _transfersRepository;
+    private readonly NotificationService _notificationService;
 
     public DeleteTransferCommandHandler(
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        NotificationService notificationService)
     {
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _transfersRepository = transfersRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(DeleteTransferCommand command, CancellationToken ct)
@@ -58,6 +62,25 @@ public class DeleteTransferCommandHandler : IRequestHandler<DeleteTransferComman
             return Result.Failure("User must be a group member");
         }
 
-        return await _transfersRepository.Delete(command.TransferId, ct);
+        var deleteResult = await _transfersRepository.Delete(command.TransferId, ct);
+
+        if (deleteResult.IsFailure)
+        {
+            return deleteResult;
+        }
+
+        var recipientUserIds = GroupService.GetInvolvedUserIdsToNotify(
+            group,
+            [groupTransfer.SenderId, groupTransfer.ReceiverId],
+            command.UserId);
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            group.Name,
+            $"{userMaybe.Value.Username} deleted a transfer of {groupTransfer.Amount} {groupTransfer.Currency}",
+            $"/shared/{group.Id}/transfers",
+            ct);
+
+        return deleteResult;
     }
 }

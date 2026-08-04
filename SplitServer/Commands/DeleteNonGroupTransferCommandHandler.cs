@@ -2,20 +2,26 @@ using CSharpFunctionalExtensions;
 using MediatR;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Commands;
 
 public class DeleteNonGroupTransferCommandHandler : IRequestHandler<DeleteNonGroupTransferCommand, Result>
 {
     private readonly IUsersRepository _usersRepository;
+    private const string NonGroupTransfersUrl = "/shared/nongroup/transfers";
+
     private readonly ITransfersRepository _transfersRepository;
+    private readonly NotificationService _notificationService;
 
     public DeleteNonGroupTransferCommandHandler(
         IUsersRepository usersRepository,
-        ITransfersRepository transfersRepository)
+        ITransfersRepository transfersRepository,
+        NotificationService notificationService)
     {
         _usersRepository = usersRepository;
         _transfersRepository = transfersRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> Handle(DeleteNonGroupTransferCommand command, CancellationToken ct)
@@ -46,6 +52,25 @@ public class DeleteNonGroupTransferCommandHandler : IRequestHandler<DeleteNonGro
             return Result.Failure($"User {command.UserId} must be part of the non-group transfer");
         }
 
-        return await _transfersRepository.Delete(command.TransferId, ct);
+        var deleteResult = await _transfersRepository.Delete(command.TransferId, ct);
+
+        if (deleteResult.IsFailure)
+        {
+            return deleteResult;
+        }
+
+        var recipientUserIds = new[] { transfer.SenderId, transfer.ReceiverId }
+            .Where(x => x != command.UserId)
+            .Distinct()
+            .ToList();
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            "Transfer deleted",
+            $"{userMaybe.Value.Username} deleted a transfer of {transfer.Amount} {transfer.Currency}",
+            NonGroupTransfersUrl,
+            ct);
+
+        return deleteResult;
     }
 }

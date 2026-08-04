@@ -9,18 +9,26 @@ namespace SplitServer.Commands;
 
 public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGroupExpenseCommand, Result<CreateExpenseResponse>>
 {
+    private const string NonGroupExpensesUrl = "/shared/nongroup/expenses";
+
     private readonly IExpensesRepository _expensesRepository;
+    private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
     private readonly UserLabelService _userLabelService;
+    private readonly NotificationService _notificationService;
 
     public CreateNonGroupExpenseCommandHandler(
         IExpensesRepository expensesRepository,
+        IUsersRepository usersRepository,
         ValidationService validationService,
-        UserLabelService userLabelService)
+        UserLabelService userLabelService,
+        NotificationService notificationService)
     {
         _expensesRepository = expensesRepository;
+        _usersRepository = usersRepository;
         _validationService = validationService;
         _userLabelService = userLabelService;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreateNonGroupExpenseCommand command, CancellationToken ct)
@@ -71,9 +79,40 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 
+        await NotifyParticipants(command, ct);
+
         return new CreateExpenseResponse
         {
             ExpenseId = expenseId
         };
+    }
+
+    /// <summary>
+    /// Tells everyone dragged into this expense that it happened. Delivery runs in the background,
+    /// so a push outage can never fail an expense that is already written.
+    /// </summary>
+    private async Task NotifyParticipants(CreateNonGroupExpenseCommand command, CancellationToken ct)
+    {
+        var recipientUserIds = command.Payments.Select(x => x.UserId)
+            .Concat(command.Shares.Select(x => x.UserId))
+            .Where(x => x != command.UserId)
+            .Distinct()
+            .ToList();
+        
+        if (recipientUserIds.Count == 0)
+        {
+            return;
+        }
+
+        var creatorMaybe = await _usersRepository.GetById(command.UserId, ct);
+
+        var creatorUsername = creatorMaybe.HasValue ? creatorMaybe.Value.Username : "Someone";
+
+        await _notificationService.Notify(
+            recipientUserIds,
+            "New expense",
+            $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency}) with you",
+            NonGroupExpensesUrl,
+            ct);
     }
 }
