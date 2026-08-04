@@ -34,6 +34,7 @@ builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
 builder.Services.AddSingleton<GroupService>();
 builder.Services.AddSingleton<NonGroupService>();
+builder.Services.AddSingleton<ConnectionService>();
 builder.Services.AddSingleton<PushNotificationService>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<UserLabelService>();
@@ -59,6 +60,7 @@ builder.Services.AddSingleton<IBudgetsRepository, BudgetsMongoDbRepository>();
 builder.Services.AddSingleton<IEmailVerificationCodesRepository, EmailVerificationCodesMongoDbRepository>();
 builder.Services.AddSingleton<IPushSubscriptionsRepository, PushSubscriptionsMongoDbRepository>();
 builder.Services.AddSingleton<INotificationsRepository, NotificationsMongoDbRepository>();
+builder.Services.AddSingleton<IUserConnectionsRepository, UserConnectionsMongoDbRepository>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<EmailTokenService>();

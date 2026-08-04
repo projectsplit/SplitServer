@@ -16,6 +16,7 @@ public static class EndpointMappings
         app.MapGroup("/analytics").RequireAuthorization().MapAnalyticsEndpoints();
         app.MapGroup("/budgets").RequireAuthorization().MapBudgetsEndpoints();
         app.MapGroup("/notifications").RequireAuthorization().MapNotificationEndpoints();
+        app.MapGroup("/connections").RequireAuthorization().MapConnectionEndpoints();
         app.MapGroup("/health").MapHealthEndpoints();
 
         return app;

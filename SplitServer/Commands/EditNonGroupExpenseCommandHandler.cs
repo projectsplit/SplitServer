@@ -15,6 +15,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
     private readonly PermissionService _permissionService;
     private readonly ValidationService _validationService;
     private readonly UserLabelService _userLabelService;
+    private readonly ConnectionService _connectionService;
     private readonly NotificationService _notificationService;
 
     public EditNonGroupExpenseCommandHandler(
@@ -23,6 +24,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
         PermissionService permissionService,
         ValidationService validationService,
         UserLabelService userLabelService,
+        ConnectionService connectionService,
         NotificationService notificationService)
     {
         _expensesRepository = expensesRepository;
@@ -30,6 +32,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
         _validationService = validationService;
         _permissionService = permissionService;
         _userLabelService = userLabelService;
+        _connectionService = connectionService;
         _notificationService = notificationService;
     }
 
@@ -54,6 +57,19 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
         if (expenseValidationResult.IsFailure)
         {
             return expenseValidationResult;
+        }
+
+        // Everyone already on this expense is part of the editor's non-group history and so counts
+        // as connected; in practice this only ever rejects someone newly added.
+        var participantUserIds = command.Payments.Select(x => x.UserId)
+            .Concat(command.Shares.Select(x => x.UserId))
+            .ToList();
+
+        var connectionResult = await _connectionService.VerifyCanSplitWith(command.UserId, participantUserIds, ct);
+
+        if (connectionResult.IsFailure)
+        {
+            return connectionResult;
         }
 
         var now = DateTime.UtcNow;

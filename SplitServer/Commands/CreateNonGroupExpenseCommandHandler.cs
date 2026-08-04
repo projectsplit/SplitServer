@@ -15,6 +15,7 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
     private readonly UserLabelService _userLabelService;
+    private readonly ConnectionService _connectionService;
     private readonly NotificationService _notificationService;
 
     public CreateNonGroupExpenseCommandHandler(
@@ -22,12 +23,14 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         IUsersRepository usersRepository,
         ValidationService validationService,
         UserLabelService userLabelService,
+        ConnectionService connectionService,
         NotificationService notificationService)
     {
         _expensesRepository = expensesRepository;
         _usersRepository = usersRepository;
         _validationService = validationService;
         _userLabelService = userLabelService;
+        _connectionService = connectionService;
         _notificationService = notificationService;
     }
 
@@ -43,6 +46,17 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         if (expenseValidationResult.IsFailure)
         {
             return Result.Failure<CreateExpenseResponse>(expenseValidationResult.Error);
+        }
+
+        var participantUserIds = command.Payments.Select(x => x.UserId)
+            .Concat(command.Shares.Select(x => x.UserId))
+            .ToList();
+
+        var connectionResult = await _connectionService.VerifyCanSplitWith(command.UserId, participantUserIds, ct);
+
+        if (connectionResult.IsFailure)
+        {
+            return connectionResult.ConvertFailure<CreateExpenseResponse>();
         }
 
         var now = DateTime.UtcNow;
