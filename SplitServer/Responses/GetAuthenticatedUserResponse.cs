@@ -15,7 +15,4 @@ public class GetAuthenticatedUserResponse
     public required bool? ShowBudgetInfo { get; init; }
     public required string? RecentContextId { get; init; }
     public required bool PushNotificationsEnabled { get; init; }
-
-    /// <summary>Drives whether the settings menu offers "Manage recurring expenses" at all.</summary>
-    public required bool HasRecurringExpenses { get; init; }
 }

@@ -18,8 +18,13 @@ public static class RecurrenceCalculator
     /// <summary>A leap year, so 29 February is accepted and clamped later in the years that lack it.</summary>
     private const int LeapYearForValidation = 2024;
 
-    public static Result Validate(RecurrenceSchedule schedule)
+    public static Result Validate(RecurrenceSchedule? schedule)
     {
+        if (schedule is null)
+        {
+            return Result.Failure("This recurring expense has no schedule and cannot run. Edit it to set one, or delete it");
+        }
+
         if (schedule.Hour is < 0 or > 23)
         {
             return Result.Failure("Hour must be between 0 and 23");
@@ -86,7 +91,13 @@ public static class RecurrenceCalculator
 
         if (candidate <= localNow)
         {
-            candidate = StepOnePeriod(candidate, schedule);
+            // One slot forward, not one period. Biweekly is the case that separates the two: its
+            // fortnightly spacing is measured from the first occurrence, so setting one up just
+            // after this week's slot should start it next week, not skip a fortnight. Every later
+            // step uses StepOnePeriod and does space by fourteen days.
+            candidate = schedule.Frequency == RecurrenceFrequency.Biweekly
+                ? candidate.AddDays(7)
+                : StepOnePeriod(candidate, schedule);
         }
 
         return ToUtc(candidate, timeZoneInfo);

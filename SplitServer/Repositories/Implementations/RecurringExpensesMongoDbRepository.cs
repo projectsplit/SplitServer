@@ -34,13 +34,6 @@ public class RecurringExpensesMongoDbRepository :
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
-    public async Task<int> CountByUserId(string userId, CancellationToken ct)
-    {
-        var filter = FilterBuilder.Eq(x => x.UserId, userId);
-
-        return (int)await Collection.CountDocumentsAsync(filter, cancellationToken: ct);
-    }
-
     public async Task<List<RecurringExpense>> GetDue(DateTime nowUtc, int limit, CancellationToken ct)
     {
         var filter = FilterBuilder.And(

@@ -18,7 +18,13 @@ public abstract record RecurringExpense : EntityBase
     public required Location? Location { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
 
-    public required RecurrenceSchedule Schedule { get; init; }
+    /// <summary>
+    /// Nullable only because a stored document can be missing it — an older shape, or a partial
+    /// write. C#'s <c>required</c> binds construction in our own code, not what a driver
+    /// reflects out of the database, so pretending it is always present just moves the failure to
+    /// a null dereference somewhere less convenient. Callers must treat null as "cannot run".
+    /// </summary>
+    public required RecurrenceSchedule? Schedule { get; init; }
 
     /// <summary>
     /// Time zone the schedule is read in, captured when the template was created. The chosen day

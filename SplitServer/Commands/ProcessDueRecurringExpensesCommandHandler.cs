@@ -96,6 +96,26 @@ public class ProcessDueRecurringExpensesCommandHandler
     {
         var now = DateTime.UtcNow;
 
+        // A template with no readable schedule has no next date to compute, and letting that throw
+        // would abort the whole pass — one unusable row would stop every other user's expenses.
+        // Paused instead, which both records why and takes it out of the due query for good.
+        if (template.Schedule is null)
+        {
+            Log.Warning("Recurring expense {RecurringExpenseId} has no schedule and was paused", template.Id);
+
+            var pauseUnusableResult = await _recurringExpensesRepository.Update(
+                template with
+                {
+                    IsPaused = true,
+                    LastRunAt = now,
+                    LastError = "This recurring expense has no schedule. Edit it to set one, or delete it",
+                    Updated = now
+                },
+                ct);
+
+            return pauseUnusableResult.IsFailure ? pauseUnusableResult : Result.Failure("Missing schedule");
+        }
+
         // The occurrence is dated when it was due, not when the worker got to it, so a late run does
         // not misplace the expense in the user's timeline.
         var dueAt = template.NextOccurrence;

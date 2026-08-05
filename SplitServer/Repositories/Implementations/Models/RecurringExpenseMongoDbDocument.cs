@@ -16,7 +16,7 @@ public record RecurringExpenseMongoDbDocument : EntityBase
     public required string Description { get; init; }
     public required MongoDbLocation? Location { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
-    public required RecurrenceSchedule Schedule { get; init; }
+    public RecurrenceSchedule? Schedule { get; init; }
     public required string TimeZoneId { get; init; }
     public required DateTime AnchorDate { get; init; }
     public required DateTime NextOccurrence { get; init; }

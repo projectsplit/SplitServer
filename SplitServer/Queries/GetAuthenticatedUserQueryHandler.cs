@@ -14,7 +14,6 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly IInvitationsRepository _invitationsRepository;
     private readonly INotificationsRepository _notificationsRepository;
     private readonly IUserConnectionsRepository _userConnectionsRepository;
-    private readonly IRecurringExpensesRepository _recurringExpensesRepository;
     private readonly TimeZoneService _timeZoneService;
 
     public GetAuthenticatedUserQueryHandler(
@@ -24,10 +23,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         IInvitationsRepository invitationsRepository,
         INotificationsRepository notificationsRepository,
         IUserConnectionsRepository userConnectionsRepository,
-        IRecurringExpensesRepository recurringExpensesRepository,
         TimeZoneService timeZoneService)
     {
-        _recurringExpensesRepository = recurringExpensesRepository;
         _usersRepository = usersRepository;
         _userActivityRepository = userActivityRepository;
         _userPreferencesRepository = userPreferencesRepository;
@@ -74,8 +71,6 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         var pushNotificationsEnabled =
             userPreferencesMaybe.HasValue && userPreferencesMaybe.Value.PushNotificationsEnabled == true;
 
-        var recurringExpensesCount = await _recurringExpensesRepository.CountByUserId(query.UserId, ct);
-
         return new GetAuthenticatedUserResponse
         {
             UserId = user.Id,
@@ -88,8 +83,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
             RecentContextId = recentContextId,
             ShowBudgetInfo = showBudgetInfo,
-            PushNotificationsEnabled = pushNotificationsEnabled,
-            HasRecurringExpenses = recurringExpensesCount > 0
+            PushNotificationsEnabled = pushNotificationsEnabled
         };
     }
 }

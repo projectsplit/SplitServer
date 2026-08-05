@@ -19,7 +19,8 @@ public record RecurringExpenseResponseItem
     public required string Description { get; init; }
     public required Location? Location { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
-    public required RecurrenceSchedule Schedule { get; init; }
+    /// <summary>Null when the stored template has no readable schedule; the row is then unrunnable.</summary>
+    public required RecurrenceSchedule? Schedule { get; init; }
 
     /// <summary>The first occurrence the schedule resolved to when the template was created.</summary>
     public required DateTime AnchorDate { get; init; }

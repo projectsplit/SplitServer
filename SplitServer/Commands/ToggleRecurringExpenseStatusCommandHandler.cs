@@ -34,7 +34,12 @@ public class ToggleRecurringExpenseStatusCommandHandler : IRequestHandler<Toggle
 
         // Resuming skips whatever came due while paused rather than firing it all at once — a pause
         // the user meant as "not now" must not turn into a pile of expenses when they undo it.
-        var nextOccurrence = template.IsPaused && template.NextOccurrence <= now
+        if (template.IsPaused && template.Schedule is null)
+        {
+            return Result.Failure("This recurring expense has no schedule. Edit it to set one, or delete it");
+        }
+
+        var nextOccurrence = template.IsPaused && template.Schedule is not null && template.NextOccurrence <= now
             ? RecurrenceCalculator.CatchUp(template.NextOccurrence, now, template.Schedule, template.TimeZoneId).NextOccurrence
             : template.NextOccurrence;
 
