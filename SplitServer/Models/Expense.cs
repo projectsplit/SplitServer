@@ -9,6 +9,14 @@ public abstract record Expense : EntityBase
     public required string Currency { get; init; }
     public required Location? Location { get; init; }
     public required List<string> Labels { get; init; }
+
+    /// <summary>
+    /// The template that produced this expense, or null if a user submitted it themselves. Kept so
+    /// an expense can say it is part of a series when opened, and so the series can be found from
+    /// it. Only a marker: the expense is otherwise ordinary and is edited and deleted like any
+    /// other, without touching the schedule.
+    /// </summary>
+    public string? RecurringExpenseId { get; init; }
 }
 
 public record GroupExpense : Expense

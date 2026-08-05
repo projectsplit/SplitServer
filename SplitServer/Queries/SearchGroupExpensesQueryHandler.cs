@@ -157,6 +157,7 @@ public class SearchGroupExpensesQueryHandler : IRequestHandler<SearchGroupExpens
                     Shares = x.Shares,
                     Labels = x.Labels.Select(id => groupLabels.GetValueOrDefault(id, Label.Empty)).ToList(),
                     Location = x.Location,
+                    RecurringExpenseId = x.RecurringExpenseId,
                 })
                 .ToList(),
             Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,

@@ -16,6 +16,7 @@ public record ExpenseMongoDbDocument : EntityBase
     public required string Currency { get; init; }
     public required MongoDbLocation? Location { get; init; }
     public required List<string> Labels { get; init; }
+    public string? RecurringExpenseId { get; init; }
 }
 
 [BsonDiscriminator("group")]

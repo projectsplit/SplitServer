@@ -8,6 +8,7 @@ public static class EndpointMappings
         app.MapGroup("/users").RequireAuthorization().MapUserEndpoints();
         app.MapGroup("/groups").RequireAuthorization().MapGroupEndpoints();
         app.MapGroup("/expenses").RequireAuthorization().MapExpenseEndpoints();
+        app.MapGroup("/recurring-expenses").RequireAuthorization().MapRecurringExpenseEndpoints();
         app.MapGroup("/transfers").RequireAuthorization().MapTransferEndpoints();
         app.MapGroup("/debts").RequireAuthorization().MapDebtEndpoints();
         app.MapGroup("/invitations").RequireAuthorization().MapInvitationEndpoints();
