@@ -50,6 +50,9 @@ jobs:
               -v $(pwd)/appsettings.Production.json:/app/appsettings.Production.json \
               -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
               -e ASPNETCORE_ENVIRONMENT=Production \
+              -e PushNotifications__PublicKey="${{ secrets.VAPID_PUBLIC_KEY }}" \
+              -e PushNotifications__PrivateKey="${{ secrets.VAPID_PRIVATE_KEY }}" \
+              -e PushNotifications__Subject="mailto:noreply@buqs.uk" \
               --restart always \
               ${{ env.DOCKER_REPO }}:$DOCKER_TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi || true
