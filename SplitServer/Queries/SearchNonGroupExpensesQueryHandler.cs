@@ -177,6 +177,7 @@ public class SearchNonGroupExpensesQueryHandler : IRequestHandler<SearchNonGroup
                         })
                         .ToList(),
                     Location = x.Location,
+                    RecurringExpenseId = x.RecurringExpenseId,
                 })
                 .ToList(),
             Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,

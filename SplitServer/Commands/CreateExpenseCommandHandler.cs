@@ -75,7 +75,8 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
             Payments = command.Payments,
             Shares = command.Shares,
             Labels = labelsWithIds.Select(x => x.Id).ToList(),
-            Location = command.Location
+            Location = command.Location,
+            RecurringExpenseId = command.RecurringExpenseId
         };
 
         var writeResult = await _expensesRepository.Insert(newExpense, ct);

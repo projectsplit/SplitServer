@@ -17,4 +17,7 @@ public class CreateNonGroupExpenseCommand : IRequest<Result<CreateExpenseRespons
     public required List<Share> Shares { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
     public required Location? Location { get; init; }
+
+    /// <summary>Set only when a recurring template is materializing an occurrence.</summary>
+    public string? RecurringExpenseId { get; init; }
 }

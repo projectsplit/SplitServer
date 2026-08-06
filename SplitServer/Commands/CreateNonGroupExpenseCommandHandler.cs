@@ -83,7 +83,8 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             Payments = command.Payments,
             Shares = command.Shares,
             Labels = command.Labels.Select(x => x.Text).ToList(),
-            Location = command.Location
+            Location = command.Location,
+            RecurringExpenseId = command.RecurringExpenseId
         };
 
         var writeResult = await _expensesRepository.Insert(newNonGroupExpense, ct);

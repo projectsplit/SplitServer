@@ -123,6 +123,7 @@ public class SearchPersonalExpensesQueryHandler : IRequestHandler<SearchPersonal
                 Description = e.Description,
                 Currency = e.Currency,
                 Location = e.Location,
+                RecurringExpenseId = e.RecurringExpenseId,
                 TransactionType = e switch
                 {
                     PersonalExpense => ExpenseResponseType.Personal,

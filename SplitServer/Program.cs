@@ -39,6 +39,7 @@ builder.Services.AddSingleton<PushNotificationService>();
 builder.Services.AddSingleton<NotificationService>();
 builder.Services.AddSingleton<UserLabelService>();
 builder.Services.AddSingleton< BudgetService>();
+builder.Services.AddSingleton<RecurringExpenseValidator>();
 builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();
@@ -49,6 +50,7 @@ builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
 builder.Services.AddSingleton<ISessionsRepository, SessionsMongoDbRepository>();
 builder.Services.AddSingleton<IGroupsRepository, GroupsMongoDbRepository>();
 builder.Services.AddSingleton<IExpensesRepository, ExpensesMongoDbRepository>();
+builder.Services.AddSingleton<IRecurringExpensesRepository, RecurringExpensesMongoDbRepository>();
 builder.Services.AddSingleton<ITransfersRepository, TransfersMongoDbRepository>();
 builder.Services.AddSingleton<IInvitationsRepository, InvitationsMongoDbRepository>();
 builder.Services.AddSingleton<IJoinCodesRepository, JoinCodesMongoDbRepository>();
@@ -61,6 +63,8 @@ builder.Services.AddSingleton<IEmailVerificationCodesRepository, EmailVerificati
 builder.Services.AddSingleton<IPushSubscriptionsRepository, PushSubscriptionsMongoDbRepository>();
 builder.Services.AddSingleton<INotificationsRepository, NotificationsMongoDbRepository>();
 builder.Services.AddSingleton<IUserConnectionsRepository, UserConnectionsMongoDbRepository>();
+
+builder.Services.AddHostedService<RecurringExpensesWorker>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<EmailTokenService>();
@@ -115,6 +119,15 @@ try
 catch (Exception ex)
 {
     Log.Warning(ex, "Failed to ensure notification indexes");
+}
+
+try
+{
+    await app.Services.GetRequiredService<IRecurringExpensesRepository>().EnsureIndexes(CancellationToken.None);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Failed to ensure recurring expense indexes");
 }
 
 app.UseSerilogRequestLogging();

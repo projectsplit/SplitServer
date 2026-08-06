@@ -57,7 +57,8 @@ public class CreatePersonalExpenseCommandHandler : IRequestHandler<CreatePersona
             Description = command.Description,
             Currency = command.Currency,
             Labels = command.Labels.Select(x => x.Text).ToList(),
-            Location = command.Location
+            Location = command.Location,
+            RecurringExpenseId = command.RecurringExpenseId
         };
 
         var writeResult = await _expensesRepository.Insert(personalExpense, ct);

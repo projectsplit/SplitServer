@@ -9,6 +9,7 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
     private readonly IUsersRepository _usersRepository;
     private readonly IGroupsRepository _groupsRepository;
     private readonly IExpensesRepository _expensesRepository;
+    private readonly IRecurringExpensesRepository _recurringExpensesRepository;
     private readonly ITransfersRepository _transfersRepository;
     private readonly IInvitationsRepository _invitationsRepository;
     private readonly IUserActivityRepository _userActivityRepository;
@@ -17,10 +18,12 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
         IUsersRepository usersRepository,
         IGroupsRepository groupsRepository,
         IExpensesRepository expensesRepository,
+        IRecurringExpensesRepository recurringExpensesRepository,
         ITransfersRepository transfersRepository,
         IInvitationsRepository invitationsRepository,
         IUserActivityRepository userActivityRepository)
     {
+        _recurringExpensesRepository = recurringExpensesRepository;
         _usersRepository = usersRepository;
         _groupsRepository = groupsRepository;
         _expensesRepository = expensesRepository;
@@ -66,6 +69,14 @@ public class DeleteGroupCommandHandler : IRequestHandler<DeleteGroupCommand, Res
         if (deleteExpensesResult.IsFailure)
         {
             return deleteExpensesResult;
+        }
+
+        // Templates pointing at a group that no longer exists could only ever fail, so they go with it.
+        var deleteRecurringExpensesResult = await _recurringExpensesRepository.DeleteByGroupId(group.Id, ct);
+
+        if (deleteRecurringExpensesResult.IsFailure)
+        {
+            return deleteRecurringExpensesResult;
         }
 
         var deleteTransfersResult = await _transfersRepository.DeleteByGroupId(group.Id, ct);

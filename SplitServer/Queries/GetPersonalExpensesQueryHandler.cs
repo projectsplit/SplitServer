@@ -41,24 +41,73 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
 
         var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
 
-        var expenses = await _expensesRepository.GetPersonalByUserId(
-            query.UserId,
-            memberIds,
-            query.PageSize + 1,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            PaginationDirection.Older,
-            false,
-            ct);
-
+        List<Expense> expenses;
         var hasMoreOlder = false;
-        if (expenses.Count > query.PageSize)
-        {
-            hasMoreOlder = true;
-            expenses.RemoveAt(expenses.Count - 1);
-        }
+        bool hasMoreNewer;
 
-        var hasMoreNewer = query.Next != null;
+        if (nextDetails?.IsJumpTo == true)
+        {
+            // Centre the page on the target rather than starting at it, so the expense the user was
+            // sent to has context around it. Same split the group and non-group lists use.
+            var newerTargetCount = query.PageSize / 2;
+
+            var newerItems = await _expensesRepository.GetPersonalByUserId(
+                query.UserId,
+                memberIds,
+                newerTargetCount + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Newer,
+                true,
+                ct);
+
+            hasMoreNewer = newerItems.Count > newerTargetCount;
+
+            if (hasMoreNewer)
+            {
+                newerItems.RemoveAt(0);
+            }
+
+            var olderNeeded = query.PageSize - newerItems.Count;
+
+            var olderItems = await _expensesRepository.GetPersonalByUserId(
+                query.UserId,
+                memberIds,
+                olderNeeded + 1,
+                nextDetails.Occurred,
+                nextDetails.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (olderItems.Count > olderNeeded)
+            {
+                hasMoreOlder = true;
+                olderItems.RemoveAt(olderItems.Count - 1);
+            }
+
+            expenses = newerItems.Concat(olderItems).ToList();
+        }
+        else
+        {
+            expenses = await _expensesRepository.GetPersonalByUserId(
+                query.UserId,
+                memberIds,
+                query.PageSize + 1,
+                nextDetails?.Occurred,
+                nextDetails?.Created,
+                PaginationDirection.Older,
+                false,
+                ct);
+
+            if (expenses.Count > query.PageSize)
+            {
+                hasMoreOlder = true;
+                expenses.RemoveAt(expenses.Count - 1);
+            }
+
+            hasMoreNewer = query.Next != null;
+        }
 
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
 
@@ -71,8 +120,11 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         return new PersonalExpensesResponse
         {
             Expenses = responseItems,
-            Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,
-            Previous = hasMoreNewer ? CreateToken(expenses.First(), false) : null
+            // A page can come back empty — a jump token whose expense has since been deleted, or a
+            // next token landing on the end of the list — and there is then no expense to build a
+            // cursor from.
+            Next = hasMoreOlder && expenses.Count > 0 ? CreateToken(expenses.Last(), false) : null,
+            Previous = hasMoreNewer && expenses.Count > 0 ? CreateToken(expenses.First(), false) : null
         };
     }
 
@@ -108,6 +160,7 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
                 Description = e.Description,
                 Currency = e.Currency,
                 Location = e.Location,
+                RecurringExpenseId = e.RecurringExpenseId,
                 TransactionType = e switch
                 {
                     PersonalExpense => ExpenseResponseType.Personal,

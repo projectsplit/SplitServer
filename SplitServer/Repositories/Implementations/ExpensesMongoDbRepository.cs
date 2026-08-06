@@ -190,6 +190,17 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return result.ToDictionary(x => x.LabelId, x => x.Count);
     }
 
+    public async Task<Result> ClearRecurringExpenseId(string recurringExpenseId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.RecurringExpenseId, recurringExpenseId);
+
+        var update = UpdateBuilder.Unset(x => x.RecurringExpenseId);
+
+        var result = await Collection.UpdateManyAsync(filter, update, cancellationToken: ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to clear recurring expense references");
+    }
+
     public async Task<Result> DeleteByGroupId(string groupId, CancellationToken ct)
     {
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;

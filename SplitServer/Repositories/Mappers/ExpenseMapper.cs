@@ -25,6 +25,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Payments = d.Payments,
                 Shares = d.Shares,
                 Labels = d.Labels,
+                RecurringExpenseId = d.RecurringExpenseId,
             },
             NonGroupExpenseMongoDbDocument d => new NonGroupExpense
             {
@@ -40,6 +41,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Payments = d.Payments,
                 Shares = d.Shares,
                 Labels = d.Labels,
+                RecurringExpenseId = d.RecurringExpenseId,
             },
             PersonalExpenseMongoDbDocument d => new PersonalExpense
             {
@@ -52,6 +54,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Description = d.Description,
                 Currency = d.Currency,
                 Labels = d.Labels,
+                RecurringExpenseId = d.RecurringExpenseId,
                 Location = d.Location?.ToLocation()
             },
             _ => throw new NotSupportedException($"Mapping for document type '{document.GetType().Name}' is not implemented.")
@@ -77,6 +80,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Payments = e.Payments,
                 Shares = e.Shares,
                 Labels = e.Labels,
+                RecurringExpenseId = e.RecurringExpenseId,
             },
             NonGroupExpense e => new NonGroupExpenseMongoDbDocument
             {
@@ -92,6 +96,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Payments = e.Payments,
                 Shares = e.Shares,
                 Labels = e.Labels,
+                RecurringExpenseId = e.RecurringExpenseId,
             },
             PersonalExpense e => new PersonalExpenseMongoDbDocument
             {
@@ -104,6 +109,7 @@ public class ExpenseMapper : IMapper<Expense, ExpenseMongoDbDocument>
                 Description = e.Description,
                 Currency = e.Currency,
                 Labels = e.Labels,
+                RecurringExpenseId = e.RecurringExpenseId,
                 Location = e.Location?.ToMongoDbLocation()
             },
             _ => throw new NotSupportedException($"Mapping for entity type '{entity.GetType().Name}' is not implemented.")

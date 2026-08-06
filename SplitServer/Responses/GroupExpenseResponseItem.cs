@@ -18,4 +18,7 @@ public record GroupExpenseResponseItem
     public required List<GroupShare> Shares { get; init; }
     public required List<Label> Labels { get; init; }
     public required Location? Location { get; init; }
+
+    /// <summary>Non-null when the expense was produced by a recurring template.</summary>
+    public string? RecurringExpenseId { get; init; }
 }
