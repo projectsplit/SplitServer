@@ -39,8 +39,16 @@ public class ToggleRecurringExpenseStatusCommandHandler : IRequestHandler<Toggle
             return Result.Failure("This recurring expense has no schedule. Edit it to set one, or delete it");
         }
 
-        var nextOccurrence = template.IsPaused && template.Schedule is not null && template.NextOccurrence <= now
-            ? RecurrenceCalculator.CatchUp(template.NextOccurrence, now, template.Schedule, template.TimeZoneId).NextOccurrence
+        // The skip applies only to pauses the user chose. A template that paused itself after a
+        // failed run still owes the slot that failed — its date was never a choice to skip — so it
+        // stays due and the next pass backfills that one occurrence, dated when it was promised.
+        var skipMissedOnResume = template.IsPaused
+            && template.Schedule is not null
+            && template.NextOccurrence <= now
+            && template.LastError is null;
+
+        var nextOccurrence = skipMissedOnResume
+            ? RecurrenceCalculator.CatchUp(template.NextOccurrence, now, template.Schedule!, template.TimeZoneId).NextOccurrence
             : template.NextOccurrence;
 
         return await _recurringExpensesRepository.Update(

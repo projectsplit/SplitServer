@@ -53,7 +53,8 @@ public static class RecurringExpenseEndpoints
             NonGroupPayments = request.NonGroupPayments,
             NonGroupShares = request.NonGroupShares,
             Labels = request.Labels,
-            Location = request.Location
+            Location = request.Location,
+            LinkExpenseId = request.LinkExpenseId
         };
 
         var result = await mediator.Send(command, ct);

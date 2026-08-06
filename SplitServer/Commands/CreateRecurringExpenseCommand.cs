@@ -20,4 +20,5 @@ public class CreateRecurringExpenseCommand : IRequest<Result<CreateRecurringExpe
     public required List<Share>? NonGroupShares { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
     public required Location? Location { get; init; }
+    public string? LinkExpenseId { get; init; }
 }

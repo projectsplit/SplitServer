@@ -34,6 +34,12 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
+    /// <summary>
+    /// Unmarks every expense a deleted series produced. They stay as ordinary expenses — real
+    /// spending that happened — but stop claiming to belong to a schedule that no longer exists.
+    /// </summary>
+    Task<Result> ClearRecurringExpenseId(string recurringExpenseId, CancellationToken ct);
+
     Task<List<GroupExpense>> GetGroupExpensesByMemberIds(
         List<string> memberIds,
         DateTime? startDate = null,

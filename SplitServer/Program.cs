@@ -121,6 +121,15 @@ catch (Exception ex)
     Log.Warning(ex, "Failed to ensure notification indexes");
 }
 
+try
+{
+    await app.Services.GetRequiredService<IRecurringExpensesRepository>().EnsureIndexes(CancellationToken.None);
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "Failed to ensure recurring expense indexes");
+}
+
 app.UseSerilogRequestLogging();
 app.UseCors();
 app.UseMiddleware<ExceptionHandlerMiddleware>();

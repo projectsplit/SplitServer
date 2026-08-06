@@ -28,6 +28,19 @@ public record RecurringExpenseResponseItem
     public required bool IsPaused { get; init; }
     public required string? LastError { get; init; }
 
+    /// <summary>
+    /// The zone the schedule's wall clock fields are read in. Exposed so a client whose user has
+    /// since moved zones can tell that "at 09:00" means 09:00 somewhere else.
+    /// </summary>
+    public required string TimeZoneId { get; init; }
+
+    /// <summary>
+    /// When the template last produced — or last tried to produce — an expense. Unlike
+    /// LastExpenseId this survives the expense being deleted, so it is the truthful "has this ever
+    /// run" signal.
+    /// </summary>
+    public required DateTime? LastRunAt { get; init; }
+
     public required List<GroupPayment>? Payments { get; init; }
     public required List<GroupShare>? Shares { get; init; }
     public required List<Payment>? NonGroupPayments { get; init; }

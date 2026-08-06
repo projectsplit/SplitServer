@@ -4,6 +4,12 @@ using SplitServer.Requests;
 
 namespace SplitServer.Repositories.Implementations.Models;
 
+// Inherited by the subtypes below, so a stored document carrying a field this class no longer
+// declares is read rather than throwing. Without it a single document left over from an earlier
+// shape fails the whole query with a FormatException, which surfaces as a 500 on every request for
+// the list — and, because the error escapes before the CORS middleware runs, as a misleading CORS
+// error in the browser.
+[BsonIgnoreExtraElements(true)]
 [BsonDiscriminator(Required = true)]
 [BsonKnownTypes(typeof(GroupRecurringExpenseMongoDbDocument))]
 [BsonKnownTypes(typeof(NonGroupRecurringExpenseMongoDbDocument))]
@@ -26,6 +32,7 @@ public record RecurringExpenseMongoDbDocument : EntityBase
     public required string? LastError { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("group")]
 public record GroupRecurringExpenseMongoDbDocument : RecurringExpenseMongoDbDocument
 {
@@ -34,6 +41,7 @@ public record GroupRecurringExpenseMongoDbDocument : RecurringExpenseMongoDbDocu
     public required List<GroupShare> Shares { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("non_group")]
 public record NonGroupRecurringExpenseMongoDbDocument : RecurringExpenseMongoDbDocument
 {
@@ -41,5 +49,6 @@ public record NonGroupRecurringExpenseMongoDbDocument : RecurringExpenseMongoDbD
     public required List<Share> Shares { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("personal")]
 public record PersonalRecurringExpenseMongoDbDocument : RecurringExpenseMongoDbDocument;

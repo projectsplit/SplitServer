@@ -3,6 +3,9 @@ using SplitServer.Models;
 
 namespace SplitServer.Repositories.Implementations.Models;
 
+// Same reasoning as the recurring templates: this collection has just gained a field, and one
+// document written by a different build must not be able to fail every expense query.
+[BsonIgnoreExtraElements(true)]
 [BsonDiscriminator(Required = true)]
 [BsonKnownTypes(typeof(GroupExpenseMongoDbDocument))]
 [BsonKnownTypes(typeof(NonGroupExpenseMongoDbDocument))]
@@ -19,6 +22,7 @@ public record ExpenseMongoDbDocument : EntityBase
     public string? RecurringExpenseId { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("group")]
 public record GroupExpenseMongoDbDocument : ExpenseMongoDbDocument
 {
@@ -27,6 +31,7 @@ public record GroupExpenseMongoDbDocument : ExpenseMongoDbDocument
     public required List<GroupShare> Shares { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("non_group")]
 public record NonGroupExpenseMongoDbDocument : ExpenseMongoDbDocument
 {
@@ -34,5 +39,6 @@ public record NonGroupExpenseMongoDbDocument : ExpenseMongoDbDocument
     public required List<Share> Shares { get; init; }
 }
 
+[BsonIgnoreExtraElements]
 [BsonDiscriminator("personal")]
 public record PersonalExpenseMongoDbDocument : ExpenseMongoDbDocument;

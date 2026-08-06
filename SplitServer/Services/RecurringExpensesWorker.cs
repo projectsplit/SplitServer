@@ -12,7 +12,12 @@ namespace SplitServer.Services;
 /// </summary>
 public class RecurringExpensesWorker : BackgroundService
 {
-    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(5);
+    /// <summary>
+    /// Schedules carry a minute, so this is the coarsest tick that can still honour one. Each pass
+    /// is a single filtered read over the templates collection — one row per schedule, not per
+    /// expense — served by the (IsPaused, NextOccurrence) index, so asking every minute stays cheap.
+    /// </summary>
+    private static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
 
     /// <summary>
     /// Late enough that the first pass does not compete with startup, early enough that a restart

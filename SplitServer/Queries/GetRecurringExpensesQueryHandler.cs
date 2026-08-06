@@ -102,6 +102,8 @@ public class GetRecurringExpensesQueryHandler : IRequestHandler<GetRecurringExpe
             NextOccurrence = template.NextOccurrence,
             IsPaused = template.IsPaused,
             LastError = template.LastError,
+            TimeZoneId = template.TimeZoneId,
+            LastRunAt = template.LastRunAt,
             Payments = groupTemplate?.Payments,
             Shares = groupTemplate?.Shares,
             NonGroupPayments = nonGroupTemplate?.Payments,

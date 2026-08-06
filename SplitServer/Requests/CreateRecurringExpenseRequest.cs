@@ -17,4 +17,11 @@ public class CreateRecurringExpenseRequest
     public List<Share>? NonGroupShares { get; init; }
     public required List<LabelRequestItem> Labels { get; init; }
     public required Location? Location { get; init; }
+
+    /// <summary>
+    /// An existing expense this schedule was created from, which gets stamped as belonging to the
+    /// new series. Without it the expense the user turned into a series would not know it is part
+    /// of one, and editing it again would offer to make it recurring a second time.
+    /// </summary>
+    public string? LinkExpenseId { get; init; }
 }

@@ -12,15 +12,21 @@ public class CreateRecurringExpenseCommandHandler
 {
     private readonly IRecurringExpensesRepository _recurringExpensesRepository;
     private readonly IUserPreferencesRepository _userPreferencesRepository;
+    private readonly IExpensesRepository _expensesRepository;
+    private readonly PermissionService _permissionService;
     private readonly RecurringExpenseValidator _validator;
 
     public CreateRecurringExpenseCommandHandler(
         IRecurringExpensesRepository recurringExpensesRepository,
         IUserPreferencesRepository userPreferencesRepository,
+        IExpensesRepository expensesRepository,
+        PermissionService permissionService,
         RecurringExpenseValidator validator)
     {
         _recurringExpensesRepository = recurringExpensesRepository;
         _userPreferencesRepository = userPreferencesRepository;
+        _expensesRepository = expensesRepository;
+        _permissionService = permissionService;
         _validator = validator;
     }
 
@@ -64,6 +70,22 @@ public class CreateRecurringExpenseCommandHandler
             return validationResult.ConvertFailure<CreateRecurringExpenseResponse>();
         }
 
+        // Resolved before the template is written, not after. Refusing the link once the schedule
+        // is already stored would leave a series behind that the user was told had failed.
+        Expense? expenseToLink = null;
+
+        if (command.LinkExpenseId is not null)
+        {
+            var linkableResult = await ResolveLinkableExpense(command.LinkExpenseId, command.UserId, ct);
+
+            if (linkableResult.IsFailure)
+            {
+                return linkableResult.ConvertFailure<CreateRecurringExpenseResponse>();
+            }
+
+            expenseToLink = linkableResult.Value;
+        }
+
         var writeResult = await _recurringExpensesRepository.Insert(template, ct);
 
         if (writeResult.IsFailure)
@@ -71,10 +93,72 @@ public class CreateRecurringExpenseCommandHandler
             return writeResult.ConvertFailure<CreateRecurringExpenseResponse>();
         }
 
+        if (expenseToLink is not null)
+        {
+            var stampResult = await _expensesRepository.Update(
+                WithSeries(expenseToLink, template.Id, now),
+                ct);
+
+            if (stampResult.IsFailure)
+            {
+                // The user is about to be told this failed, so the template must not stay behind
+                // quietly producing expenses. Best effort: if the delete fails too, the retry path
+                // at least sees the leftover rather than a phantom.
+                await _recurringExpensesRepository.Delete(template.Id, ct);
+
+                return stampResult.ConvertFailure<CreateRecurringExpenseResponse>();
+            }
+        }
+
         return new CreateRecurringExpenseResponse
         {
             RecurringExpenseId = template.Id,
             FirstOccurrence = firstOccurrence
+        };
+    }
+
+    /// <summary>
+    /// Resolves the expense a user is turning into a series, if they are allowed to act on it —
+    /// the id arrives from the client, so owning the new schedule is not on its own permission to
+    /// stamp an arbitrary expense with it.
+    /// </summary>
+    /// <remarks>
+    /// Defers to the same checks the matching edit-expense command uses, rather than restating
+    /// them. Whoever may edit an expense may set it repeating, and those rules are not the obvious
+    /// ones: a non-group expense is editable by any payer or participant, not just whoever created
+    /// it, and a group expense records its creator as a member id, which never equals a user id.
+    /// </remarks>
+    private async Task<Result<Expense>> ResolveLinkableExpense(
+        string expenseId,
+        string userId,
+        CancellationToken ct)
+    {
+        var expenseMaybe = await _expensesRepository.GetById(expenseId, ct);
+
+        if (expenseMaybe.HasNoValue)
+        {
+            return Result.Failure<Expense>($"Expense with id {expenseId} was not found");
+        }
+
+        return expenseMaybe.Value switch
+        {
+            GroupExpense => (await _permissionService.VerifyExpenseAction(userId, expenseId, ct))
+                .Map(x => x.expense),
+            NonGroupExpense => (await _permissionService.VerifyNonGroupExpenseAction(userId, expenseId, ct))
+                .Map(x => (Expense)x.expense),
+            _ => (await _permissionService.VerifyPersonalExpenseAction(userId, expenseId, ct))
+                .Map(x => x.expense)
+        };
+    }
+
+    private static Expense WithSeries(Expense expense, string recurringExpenseId, DateTime now)
+    {
+        return expense switch
+        {
+            GroupExpense e => e with { RecurringExpenseId = recurringExpenseId, Updated = now },
+            NonGroupExpense e => e with { RecurringExpenseId = recurringExpenseId, Updated = now },
+            PersonalExpense e => e with { RecurringExpenseId = recurringExpenseId, Updated = now },
+            _ => expense
         };
     }
 

@@ -13,13 +13,16 @@ namespace SplitServer.Commands;
 public class EditRecurringExpenseCommandHandler : IRequestHandler<EditRecurringExpenseCommand, Result>
 {
     private readonly IRecurringExpensesRepository _recurringExpensesRepository;
+    private readonly IUserPreferencesRepository _userPreferencesRepository;
     private readonly RecurringExpenseValidator _validator;
 
     public EditRecurringExpenseCommandHandler(
         IRecurringExpensesRepository recurringExpensesRepository,
+        IUserPreferencesRepository userPreferencesRepository,
         RecurringExpenseValidator validator)
     {
         _recurringExpensesRepository = recurringExpensesRepository;
+        _userPreferencesRepository = userPreferencesRepository;
         _validator = validator;
     }
 
@@ -41,11 +44,24 @@ public class EditRecurringExpenseCommandHandler : IRequestHandler<EditRecurringE
 
         var now = DateTime.UtcNow;
 
+        // Re-read rather than kept from creation: the schedule the user is looking at is labelled
+        // with their current zone, so that is the zone the edited schedule must be read in.
+        var userPreferencesMaybe = await _userPreferencesRepository.GetById(command.UserId, ct);
+
+        var timeZoneId = userPreferencesMaybe.HasValue
+            ? userPreferencesMaybe.Value.TimeZone ?? template.TimeZoneId
+            : template.TimeZoneId;
+
         // A changed schedule is re-resolved from scratch: moving rent from the 1st to the 15th has
-        // to land on the 15th, not on whatever the old schedule had already queued up.
-        var nextOccurrence = command.Schedule == template.Schedule
+        // to land on the 15th, not on whatever the old schedule had already queued up. A changed
+        // zone re-resolves too — the same wall clock time is a different instant there. What is
+        // deliberately kept is the slot of a run that failed, so fixing the template backfills the
+        // occurrence that failed instead of dropping it.
+        var scheduleUnchanged = command.Schedule == template.Schedule && timeZoneId == template.TimeZoneId;
+
+        var nextOccurrence = scheduleUnchanged
             ? template.NextOccurrence
-            : RecurrenceCalculator.GetFirstOccurrence(now, command.Schedule, template.TimeZoneId);
+            : RecurrenceCalculator.GetFirstOccurrence(now, command.Schedule, timeZoneId);
 
         var updated = ApplyPayload(template, command) with
         {
@@ -55,9 +71,13 @@ public class EditRecurringExpenseCommandHandler : IRequestHandler<EditRecurringE
             Location = command.Location,
             Labels = command.Labels,
             Schedule = command.Schedule,
+            TimeZoneId = timeZoneId,
             NextOccurrence = nextOccurrence,
             Updated = now,
-            // An edit is the user's answer to whatever went wrong, so let it run again.
+            // An edit is the user's answer to whatever went wrong, so a template that paused itself
+            // after a failed run starts running again. A pause the user chose stays a pause — they
+            // said stop, and editing the amount is not saying start.
+            IsPaused = template.IsPaused && template.LastError is null,
             LastError = null
         };
 

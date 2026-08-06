@@ -80,9 +80,33 @@ public class RecurrenceCalculatorTests
     }
 
     [Fact]
-    public void A_schedule_set_up_at_exactly_its_own_slot_waits_for_the_next_one()
+    public void A_slot_in_the_current_minute_starts_now_rather_than_a_cycle_later()
     {
-        var now = AthensLocal(2026, 3, 10, 9);
+        // Picking the time it already is means "start now". The seconds that have elapsed within
+        // that minute must not push the whole series to tomorrow.
+        var now = AthensLocal(2026, 3, 10, 9).AddSeconds(40);
+
+        var first = RecurrenceCalculator.GetFirstOccurrence(now, Daily(9), Athens);
+
+        Assert.Equal(AthensLocal(2026, 3, 10, 9), first);
+    }
+
+    [Fact]
+    public void A_weekly_slot_in_the_current_minute_starts_today()
+    {
+        // 10 March 2026 is a Tuesday, and the schedule is for Tuesdays. Setting it up during its
+        // own minute should start today, not defer a week.
+        var now = AthensLocal(2026, 3, 10, 9).AddSeconds(40);
+
+        var first = RecurrenceCalculator.GetFirstOccurrence(now, Weekly(DayOfWeek.Tuesday), Athens);
+
+        Assert.Equal(AthensLocal(2026, 3, 10, 9), first);
+    }
+
+    [Fact]
+    public void A_slot_a_minute_ago_still_defers()
+    {
+        var now = AthensLocal(2026, 3, 10, 9, 1);
 
         var first = RecurrenceCalculator.GetFirstOccurrence(now, Daily(9), Athens);
 

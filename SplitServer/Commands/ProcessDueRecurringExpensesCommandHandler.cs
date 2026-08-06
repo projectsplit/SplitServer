@@ -103,7 +103,7 @@ public class ProcessDueRecurringExpensesCommandHandler
         {
             Log.Warning("Recurring expense {RecurringExpenseId} has no schedule and was paused", template.Id);
 
-            var pauseUnusableResult = await _recurringExpensesRepository.Update(
+            var pauseUnusableResult = await _recurringExpensesRepository.UpdateIfUnchanged(
                 template with
                 {
                     IsPaused = true,
@@ -111,9 +111,14 @@ public class ProcessDueRecurringExpensesCommandHandler
                     LastError = "This recurring expense has no schedule. Edit it to set one, or delete it",
                     Updated = now
                 },
+                template.Updated,
                 ct);
 
-            return pauseUnusableResult.IsFailure ? pauseUnusableResult : Result.Failure("Missing schedule");
+            // A concurrent write is fine here: whatever the user just did supersedes this pause,
+            // and if the template is still unrunnable the next pass pauses the fresh copy.
+            return pauseUnusableResult.IsFailure
+                ? Result.Failure(pauseUnusableResult.Error)
+                : Result.Failure("Missing schedule");
         }
 
         // The occurrence is dated when it was due, not when the worker got to it, so a late run does
@@ -156,21 +161,28 @@ public class ProcessDueRecurringExpensesCommandHandler
             // Pausing rather than retrying forever. The causes are permanent until the user acts —
             // the group was deleted, a member was removed, a connection was revoked — and the manage
             // list shows the reason next to a resume they can use once it is sorted out.
-            var pauseResult = await _recurringExpensesRepository.Update(
+            //
+            // NextOccurrence deliberately stays at the slot that failed. The expense was promised
+            // for that date; once the user fixes the cause and the template runs again, it is
+            // created then rather than silently never existing.
+            var pauseResult = await _recurringExpensesRepository.UpdateIfUnchanged(
                 template with
                 {
                     IsPaused = true,
-                    NextOccurrence = nextOccurrence,
                     LastRunAt = now,
                     LastError = occurrenceResult.Error,
                     Updated = now
                 },
+                template.Updated,
                 ct);
 
-            return pauseResult.IsFailure ? pauseResult : Result.Failure(occurrenceResult.Error);
+            // On a concurrent write the pause is dropped, not forced: the user's edit may be the
+            // very fix, and the next pass retries against their version and pauses it only if it
+            // still fails.
+            return pauseResult.IsFailure ? Result.Failure(pauseResult.Error) : Result.Failure(occurrenceResult.Error);
         }
 
-        return await _recurringExpensesRepository.Update(
+        var advanceResult = await _recurringExpensesRepository.UpdateIfUnchanged(
             template with
             {
                 NextOccurrence = nextOccurrence,
@@ -179,6 +191,74 @@ public class ProcessDueRecurringExpensesCommandHandler
                 LastError = null,
                 Updated = now
             },
+            template.Updated,
             ct);
+
+        if (advanceResult.IsFailure)
+        {
+            return Result.Failure(advanceResult.Error);
+        }
+
+        return advanceResult.Value
+            ? Result.Success()
+            : await RecordOccurrenceOnFreshTemplate(template.Id, occurrenceResult.Value, dueAt, now, ct);
+    }
+
+    /// <summary>
+    /// The expense for this slot exists; what failed was recording that on the template, because a
+    /// user write landed while the occurrence was being created. Their write wins on every field —
+    /// this only makes the template agree the slot fired, so the next pass does not fire it twice.
+    /// </summary>
+    private async Task<Result> RecordOccurrenceOnFreshTemplate(
+        string templateId,
+        string expenseId,
+        DateTime dueAt,
+        DateTime now,
+        CancellationToken ct)
+    {
+        const int maxAttempts = 3;
+
+        for (var attempt = 0; attempt < maxAttempts; attempt++)
+        {
+            var freshMaybe = await _recurringExpensesRepository.GetById(templateId, ct);
+
+            if (freshMaybe.HasNoValue)
+            {
+                // Deleted mid-run. The expense stands — it was due when the pass started — and
+                // there is no template left to advance.
+                return Result.Success();
+            }
+
+            var fresh = freshMaybe.Value;
+
+            // An edit that re-resolved the schedule already points past the slot; only a next
+            // occurrence still at or before the one just materialized needs pushing forward.
+            var nextOccurrence = fresh.Schedule is not null && fresh.NextOccurrence <= dueAt
+                ? RecurrenceCalculator.CatchUp(dueAt, now, fresh.Schedule, fresh.TimeZoneId).NextOccurrence
+                : fresh.NextOccurrence;
+
+            var recordResult = await _recurringExpensesRepository.UpdateIfUnchanged(
+                fresh with
+                {
+                    NextOccurrence = nextOccurrence,
+                    LastExpenseId = expenseId,
+                    LastRunAt = now,
+                    Updated = now
+                },
+                fresh.Updated,
+                ct);
+
+            if (recordResult.IsFailure)
+            {
+                return Result.Failure(recordResult.Error);
+            }
+
+            if (recordResult.Value)
+            {
+                return Result.Success();
+            }
+        }
+
+        return Result.Failure($"Recurring expense {templateId} kept changing while its occurrence was being recorded");
     }
 }

@@ -79,17 +79,29 @@ public static class RecurrenceCalculator
     }
 
     /// <summary>
-    /// The earliest slot matching the schedule that falls strictly after <paramref name="nowUtc"/>.
-    /// Strictly, so setting something up at exactly its own slot does not fire in the same instant.
+    /// The earliest slot matching the schedule that has not already gone by.
     /// </summary>
+    /// <remarks>
+    /// Compared at minute granularity, because that is all a schedule carries. A slot in the
+    /// current minute counts as still to come and fires on the next pass, rather than being pushed
+    /// a whole day or week out — someone setting up "daily at 09:11" at 09:11:40 means starting
+    /// now, and treating that as missed by forty seconds would defer them until tomorrow.
+    /// </remarks>
     public static DateTime GetFirstOccurrence(DateTime nowUtc, RecurrenceSchedule schedule, string timeZoneId)
     {
         var timeZoneInfo = ResolveTimeZone(timeZoneId);
         var localNow = TimeZoneInfo.ConvertTimeFromUtc(nowUtc, timeZoneInfo);
+        var currentMinute = new DateTime(
+            localNow.Year,
+            localNow.Month,
+            localNow.Day,
+            localNow.Hour,
+            localNow.Minute,
+            0);
 
         var candidate = BuildCandidate(localNow, schedule);
 
-        if (candidate <= localNow)
+        if (candidate < currentMinute)
         {
             // One slot forward, not one period. Biweekly is the case that separates the two: its
             // fortnightly spacing is measured from the first occurrence, so setting one up just

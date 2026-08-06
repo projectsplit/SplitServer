@@ -11,10 +11,14 @@ namespace SplitServer.Commands;
 public class DeleteRecurringExpenseCommandHandler : IRequestHandler<DeleteRecurringExpenseCommand, Result>
 {
     private readonly IRecurringExpensesRepository _recurringExpensesRepository;
+    private readonly IExpensesRepository _expensesRepository;
 
-    public DeleteRecurringExpenseCommandHandler(IRecurringExpensesRepository recurringExpensesRepository)
+    public DeleteRecurringExpenseCommandHandler(
+        IRecurringExpensesRepository recurringExpensesRepository,
+        IExpensesRepository expensesRepository)
     {
         _recurringExpensesRepository = recurringExpensesRepository;
+        _expensesRepository = expensesRepository;
     }
 
     public async Task<Result> Handle(DeleteRecurringExpenseCommand command, CancellationToken ct)
@@ -31,6 +35,15 @@ public class DeleteRecurringExpenseCommandHandler : IRequestHandler<DeleteRecurr
             return Result.Failure("This recurring expense does not belong to user");
         }
 
-        return await _recurringExpensesRepository.Delete(command.RecurringExpenseId, ct);
+        var deleteResult = await _recurringExpensesRepository.Delete(command.RecurringExpenseId, ct);
+
+        if (deleteResult.IsFailure)
+        {
+            return deleteResult;
+        }
+
+        // Done after the delete rather than before: if the delete fails the expenses keep pointing
+        // at a schedule that is still there, which is the truthful state.
+        return await _expensesRepository.ClearRecurringExpenseId(command.RecurringExpenseId, ct);
     }
 }
