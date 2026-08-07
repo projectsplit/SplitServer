@@ -23,7 +23,7 @@ public class BudgetService
 
     public Result<(DateTime startDate, DateTime endDate)> CalculateDates(Budget budget, string timeZoneId)
     {
-        var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+         var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
         var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz).Date;
 
         if (budget.Frequency == BudgetFrequency.Custom)
