@@ -1,17 +1,17 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using Serilog;
 using SplitServer.Responses;
 using SplitServer.Services.Auth;
 
 namespace SplitServer.Commands;
 
-public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCodeCommand, Result<AuthenticationResponse>>
+public class ProcessGoogleIdTokenCommandHandler
+    : IRequestHandler<ProcessGoogleIdTokenCommand, Result<AuthenticationResponse>>
 {
     private readonly AuthService _authService;
     private readonly GoogleAccountService _googleAccountService;
 
-    public ProcessGoogleCodeCommandHandler(
+    public ProcessGoogleIdTokenCommandHandler(
         AuthService authService,
         GoogleAccountService googleAccountService)
     {
@@ -19,11 +19,11 @@ public class ProcessGoogleCodeCommandHandler : IRequestHandler<ProcessGoogleCode
         _googleAccountService = googleAccountService;
     }
 
-    public async Task<Result<AuthenticationResponse>> Handle(ProcessGoogleCodeCommand command, CancellationToken ct)
+    public async Task<Result<AuthenticationResponse>> Handle(ProcessGoogleIdTokenCommand command, CancellationToken ct)
     {
-        Log.Information("Consuming google auth code: {0}", command.Code);
-
-        var googleUserInfoResult = await _authService.GetGoogleUserInfo(command.Code, ct);
+        // Deliberately not logged: unlike a single-use auth code, an id token stays replayable
+        // against this endpoint until it expires, so it must not reach the log.
+        var googleUserInfoResult = await _authService.ValidateGoogleIdToken(command.IdToken, ct);
 
         if (googleUserInfoResult.IsFailure)
         {

@@ -20,9 +20,16 @@ public class SubscribeToPushCommandHandler : IRequestHandler<SubscribeToPushComm
 
     public async Task<Result> Handle(SubscribeToPushCommand command, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(command.Endpoint) ||
-            string.IsNullOrWhiteSpace(command.P256dh) ||
-            string.IsNullOrWhiteSpace(command.Auth))
+        if (string.IsNullOrWhiteSpace(command.Endpoint))
+        {
+            return Result.Failure("Push subscription is incomplete");
+        }
+
+        // Only Web Push carries its own encryption keys. Requiring them of an FCM device would reject
+        // every Android registration, and not requiring them of a browser would store a subscription
+        // that cannot be encrypted for and so fails silently at send time.
+        if (command.Kind == PushDeviceKind.WebPush &&
+            (string.IsNullOrWhiteSpace(command.P256dh) || string.IsNullOrWhiteSpace(command.Auth)))
         {
             return Result.Failure("Push subscription is incomplete");
         }
@@ -59,6 +66,7 @@ public class SubscribeToPushCommandHandler : IRequestHandler<SubscribeToPushComm
             Updated = now,
             UserId = command.UserId,
             Endpoint = command.Endpoint,
+            Kind = command.Kind,
             P256dh = command.P256dh,
             Auth = command.Auth,
         };

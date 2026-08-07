@@ -20,6 +20,7 @@ public static class AuthEndpoints
         app.MapPost("/account/email", SetAccountEmailHandler).RequireAuthorization();
         app.MapPost("/account/email/verify", VerifyAccountEmailHandler).RequireAuthorization();
         app.MapPost("/external/google/token", GoogleTokenHandler);
+        app.MapPost("/external/google/id-token", GoogleIdTokenHandler);
         app.MapPost("/refresh", RefreshHandler);
         app.MapPost("/log-out", LogOutHandler);
     }
@@ -34,6 +35,40 @@ public static class AuthEndpoints
         var command = new ProcessGoogleCodeCommand
         {
             Code = request.Code
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        if (result.IsFailure)
+        {
+            return Results.BadRequest(result.Error);
+        }
+
+        authService.AppendRefreshTokenCookie(httpContext, result.Value.RefreshToken);
+
+        var response = new PasswordSignInResponse
+        {
+            AccessToken = result.Value.AccessToken
+        };
+
+        return Results.Ok(response);
+    }
+
+    /// <summary>
+    /// The Android app's sign-in entry point. Google's native sheet returns an id token rather than
+    /// an auth code, so there is nothing to exchange and no client secret involved; the token is
+    /// verified against Google's keys server-side before it is worth anything.
+    /// </summary>
+    private static async Task<IResult> GoogleIdTokenHandler(
+        GoogleIdTokenRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        AuthService authService,
+        CancellationToken ct)
+    {
+        var command = new ProcessGoogleIdTokenCommand
+        {
+            IdToken = request.IdToken
         };
 
         var result = await mediator.Send(command, ct);

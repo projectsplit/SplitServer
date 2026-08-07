@@ -116,8 +116,19 @@ public class AuthService
         }
 
         var tokenResponse = await tokenHttpResponse.Content.ReadFromJsonAsync<GoogleTokenResponse>(ct);
-        var idToken = tokenResponse!.IdToken;
 
+        return await ValidateGoogleIdToken(tokenResponse!.IdToken, ct);
+    }
+
+    /// <summary>
+    /// Verifies a Google id token and reads the identity out of it. The Android app signs in through
+    /// Google's native sheet, which hands back an id token directly with no code to exchange, so this
+    /// is reached both from the browser flow above and straight from the native endpoint. It is the
+    /// only thing standing between a caller-supplied string and an account, so the signature, issuer,
+    /// audience and lifetime all have to be checked here rather than trusted from the caller.
+    /// </summary>
+    public async Task<Result<GoogleUserInfo>> ValidateGoogleIdToken(string idToken, CancellationToken ct)
+    {
         var validationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,

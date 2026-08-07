@@ -18,6 +18,11 @@ public static class EndpointMappings
         app.MapGroup("/budgets").RequireAuthorization().MapBudgetsEndpoints();
         app.MapGroup("/notifications").RequireAuthorization().MapNotificationEndpoints();
         app.MapGroup("/connections").RequireAuthorization().MapConnectionEndpoints();
+        app.MapGroup("/donations").RequireAuthorization().MapDonationEndpoints();
+
+        // Anonymous by design: the caller is Stripe, and a signature on the body stands in for a token.
+        app.MapGroup("/stripe").MapStripeWebhookEndpoints();
+
         app.MapGroup("/health").MapHealthEndpoints();
 
         return app;

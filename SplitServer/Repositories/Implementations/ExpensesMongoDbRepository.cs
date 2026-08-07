@@ -601,4 +601,14 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         return payerIds.Concat(participantIds).Distinct().ToList();
     }
+
+    public async Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.CreatorId, creatorId);
+
+        return await Collection.CountDocumentsAsync(
+            filter,
+            new CountOptions { Limit = limit },
+            ct);
+    }
 }
