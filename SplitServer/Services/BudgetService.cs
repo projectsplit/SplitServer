@@ -1,4 +1,5 @@
 using CSharpFunctionalExtensions;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services.CurrencyExchangeRate;
@@ -21,6 +22,10 @@ public class BudgetService
         _currencyExchangeRateService = currencyExchangeRateService;
     }
 
+    /// <summary>
+    /// Returns the current cycle as wall clock times in the user's zone. These are display and
+    /// day counting values; anything that touches stored expenses needs <see cref="CalculateUtcDates"/>.
+    /// </summary>
     public Result<(DateTime startDate, DateTime endDate)> CalculateDates(Budget budget, string timeZoneId)
     {
          var tz = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
@@ -87,9 +92,28 @@ public class BudgetService
         return Result.Failure<(DateTime startDate, DateTime endDate)>("Unsupported budget frequency");
     }
 
-    public async Task<Result<decimal>> GetSpentAmount(Budget budget, string timeZoneId, CancellationToken ct)
+    /// <summary>
+    /// The cycle as UTC instants, which is what expenses are stored as. Without this the window is
+    /// shifted by the user's offset, so a cycle that starts at local midnight only starts counting
+    /// expenses once UTC catches up.
+    /// </summary>
+    public Result<(DateTime startDate, DateTime endDate)> CalculateUtcDates(Budget budget, string timeZoneId)
     {
         var datesResult = CalculateDates(budget, timeZoneId);
+
+        if (datesResult.IsFailure)
+        {
+            return datesResult;
+        }
+
+        var (startDate, endDate) = datesResult.Value;
+
+        return (startDate.ToUtc(timeZoneId), endDate.ToUtc(timeZoneId));
+    }
+
+    public async Task<Result<decimal>> GetSpentAmount(Budget budget, string timeZoneId, CancellationToken ct)
+    {
+        var datesResult = CalculateUtcDates(budget, timeZoneId);
         if (datesResult.IsFailure)
         {
             return Result.Failure<decimal>(datesResult.Error);
