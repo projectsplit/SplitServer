@@ -56,30 +56,42 @@ public class GetUserTotalsQueryHandler : IRequestHandler<GetUserTotalsQuery, Res
         return new GetUserTotalsResponse
         {
             TotalSpent = totalSpentByCurrency,
-            ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, totalSpentByCurrency, ct),
+            ConvertedTotalSpent = await GetConvertedTotalSpent(query.UserId, filteredExpensesList, memberIds, ct),
         };
     }
 
+    /// <summary>
+    /// Converts expense by expense rather than converting the per-currency subtotals, because each
+    /// one is worth what its currency was worth on the day it happened. Two expenses in the same
+    /// currency months apart do not share a rate, so there is no subtotal to convert.
+    /// </summary>
     private async Task<Dictionary<string, decimal>> GetConvertedTotalSpent(
         string userId,
-        Dictionary<string, Dictionary<string, decimal>> totalSpentByMember,
+        List<Expense> expenses,
+        List<string> memberIds,
         CancellationToken ct)
     {
-        var ratesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
-        var rates = ratesResult.GetValueOrDefault();
-
         var preferredCurrencyMaybe = await _userPreferencesRepository.GetById(userId, ct);
         var preferredCurrency = preferredCurrencyMaybe.GetValueOrDefault()?.Currency ?? DefaultValues.Currency;
 
-        return totalSpentByMember.ToDictionary(
-            memberPair => memberPair.Key,
-            memberPair => memberPair.Value
-                .Select(currencyPair => _currencyExchangeRateService.Convert(
-                    currencyPair.Value,
-                    currencyPair.Key,
-                    rates,
-                    preferredCurrency))
-                .Sum());
+        var ratesResult = await _currencyExchangeRateService.GetRatesForDates(
+            expenses.Select(x => DateOnly.FromDateTime(x.Occurred)).Distinct().ToList(),
+            ct);
+
+        if (ratesResult.IsFailure)
+        {
+            return new Dictionary<string, decimal> { { userId, 0m } };
+        }
+
+        var rates = ratesResult.Value;
+
+        var total = expenses.Sum(x => rates.Convert(
+            GetUserShareAmount(x, userId, memberIds),
+            x.Currency,
+            preferredCurrency,
+            DateOnly.FromDateTime(x.Occurred)));
+
+        return new Dictionary<string, decimal> { { userId, total } };
     }
 
     private static List<Expense> CalculateFilteredExpensesList(GetUserTotalsQuery query, List<Expense> expenses, string userTimeZoneId)

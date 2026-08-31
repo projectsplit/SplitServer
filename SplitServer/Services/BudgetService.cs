@@ -125,14 +125,10 @@ public class BudgetService
         var membersByGroup = groups.ToDictionary(x => x.Id, x => x.Members.First(m => m.UserId == budget.UserId));
         var allMemberIds = membersByGroup.Values.Select(m => m.Id).ToList();
 
-        var currencyRatesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
-        if (currencyRatesResult.IsFailure)
-        {
-            return currencyRatesResult.ConvertFailure<decimal>();
-        }
-        var rates = currencyRatesResult.Value;
-
-        decimal totalSpent = 0;
+        // Each scope contributes the amounts it is responsible for and conversion happens once at
+        // the end. Every expense is converted at the rate of the day it happened, so the days in
+        // play have to be known before any rates can be loaded.
+        var spentAmounts = new List<(decimal Amount, string Currency, DateTime Occurred)>();
 
         if (budget.Scope.HasFlag(BudgetScope.Group))
         {
@@ -152,24 +148,24 @@ public class BudgetService
             if (groupMemberIdsToConsider.Count != 0)
             {
                 var groupExpenses = await _expensesRepository.GetGroupExpensesByMemberIds(groupMemberIdsToConsider, startDate, endDate, ct);
-                var groupSpent = groupExpenses.Sum(x =>
-                {
-                    var shareAmount = x.Shares.FirstOrDefault(s => groupMemberIdsToConsider.Contains(s.MemberId))?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, budget.Currency);
-                });
-                totalSpent += groupSpent;
+
+                spentAmounts.AddRange(
+                    groupExpenses.Select(x => (
+                        x.Shares.FirstOrDefault(s => groupMemberIdsToConsider.Contains(s.MemberId))?.Amount ?? 0,
+                        x.Currency,
+                        x.Occurred)));
             }
         }
 
         if (budget.Scope.HasFlag(BudgetScope.NonGroup))
         {
             var nonGroupExpenses = await _expensesRepository.GetNonGroupExpensesByUserId(budget.UserId, startDate, endDate, ct);
-            var nonGroupSpent = nonGroupExpenses.Sum(x =>
-            {
-                var shareAmount = x.Shares.FirstOrDefault(s => s.UserId == budget.UserId)?.Amount ?? 0;
-                return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, budget.Currency);
-            });
-            totalSpent += nonGroupSpent;
+
+            spentAmounts.AddRange(
+                nonGroupExpenses.Select(x => (
+                    x.Shares.FirstOrDefault(s => s.UserId == budget.UserId)?.Amount ?? 0,
+                    x.Currency,
+                    x.Occurred)));
         }
 
         if (budget.Scope.HasFlag(BudgetScope.Personal))
@@ -177,22 +173,33 @@ public class BudgetService
             var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(budget.UserId, allMemberIds, ct, startDate, endDate);
             var skipGroup = budget.Scope.HasFlag(BudgetScope.Group);
             var skipNonGroup = budget.Scope.HasFlag(BudgetScope.NonGroup);
-            var personalSpent = personalExpenses.Sum(x =>
-            {
-                var shareAmount = x switch
-                {
-                    GroupExpense when skipGroup => 0m,
-                    NonGroupExpense when skipNonGroup => 0m,
-                    PersonalExpense pe => pe.Amount,
-                    NonGroupExpense nge => nge.Shares.FirstOrDefault(s => s.UserId == budget.UserId)?.Amount ?? 0,
-                    GroupExpense ge => ge.Shares.FirstOrDefault(s => allMemberIds.Contains(s.MemberId))?.Amount ?? 0,
-                    _ => 0m
-                };
-                return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, budget.Currency);
-            });
-            totalSpent += personalSpent;
+
+            spentAmounts.AddRange(
+                personalExpenses.Select(x => (
+                    x switch
+                    {
+                        GroupExpense when skipGroup => 0m,
+                        NonGroupExpense when skipNonGroup => 0m,
+                        PersonalExpense pe => pe.Amount,
+                        NonGroupExpense nge => nge.Shares.FirstOrDefault(s => s.UserId == budget.UserId)?.Amount ?? 0,
+                        GroupExpense ge => ge.Shares.FirstOrDefault(s => allMemberIds.Contains(s.MemberId))?.Amount ?? 0,
+                        _ => 0m
+                    },
+                    x.Currency,
+                    x.Occurred)));
         }
 
-        return totalSpent;
+        var ratesResult = await _currencyExchangeRateService.GetRatesForDates(
+            spentAmounts.Select(x => DateOnly.FromDateTime(x.Occurred)).Distinct().ToList(),
+            ct);
+
+        if (ratesResult.IsFailure)
+        {
+            return ratesResult.ConvertFailure<decimal>();
+        }
+
+        var rates = ratesResult.Value;
+
+        return spentAmounts.Sum(x => rates.Convert(x.Amount, x.Currency, budget.Currency, DateOnly.FromDateTime(x.Occurred)));
     }
 }

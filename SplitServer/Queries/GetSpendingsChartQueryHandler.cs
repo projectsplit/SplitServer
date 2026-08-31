@@ -53,7 +53,29 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
 
         var currency = currencyResult.Value;
 
-        var currencyRatesResult = await _currencyExchangeRateService.GetLatestStoredRates(ct);
+        var utcStartDate = query.StartDate.ToUtc(userTimeZoneId);
+        var utcEndDate = query.EndDate.EndOfDay().ToUtc(userTimeZoneId);
+
+        // Current membership only. Leaving a group hands the member id to a guest the group owns
+        // from then on, and the expenses behind it stop counting towards the person who left —
+        // reclaiming that guest slot on the way back in is what makes them count again.
+        var groups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
+        var memberIds = groups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
+
+        var groupExpenses = await _expensesRepository.GetGroupExpensesByMemberIds(memberIds, utcStartDate, utcEndDate, ct);
+        var nonGroupExpenses = await _expensesRepository.GetNonGroupExpensesByUserId(query.UserId, utcStartDate, utcEndDate, ct);
+        var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId, memberIds, ct, utcStartDate, utcEndDate);
+
+        // Rates are loaded after the expenses so only the days that carry one are asked for.
+        var expenseDates = groupExpenses.Select(x => x.Occurred)
+            .Concat(nonGroupExpenses.Select(x => x.Occurred))
+            .Concat(personalExpenses.Select(x => x.Occurred))
+            .Select(DateOnly.FromDateTime)
+            .Distinct()
+            .ToList();
+
+        var currencyRatesResult = await _currencyExchangeRateService.GetRatesForDates(expenseDates, ct);
+
         if (currencyRatesResult.IsFailure)
         {
             return currencyRatesResult.ConvertFailure<GetSpendingsChartResponse>();
@@ -61,75 +83,80 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
 
         var rates = currencyRatesResult.Value;
 
-        var utcStartDate = query.StartDate.ToUtc(userTimeZoneId);
-        var utcEndDate = query.EndDate.EndOfDay().ToUtc(userTimeZoneId);
-
-        var groups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
-        var membersByGroup = groups.ToDictionary(x => x.Id, x => x.Members.First(m => m.UserId == query.UserId));
-        var memberIds = membersByGroup.Select(m => m.Value.Id).ToList();
-
-        var groupExpenses = await _expensesRepository.GetGroupExpensesByMemberIds(memberIds, utcStartDate, utcEndDate, ct);
-        var nonGroupExpenses = await _expensesRepository.GetNonGroupExpensesByUserId(query.UserId, utcStartDate, utcEndDate, ct);
-        var personalExpenses = await _expensesRepository.GetPersonalExpensesByUserId(query.UserId, memberIds, ct, utcStartDate, utcEndDate);
-
         var currentUtcDateTime = utcStartDate;
         var currentUserDate = query.StartDate;
         var shareSumSoFar = 0m;
         var paymentSumSoFar = 0m;
+        var lentSumSoFar = 0m;
+        var borrowedSumSoFar = 0m;
         var responseItems = new List<GetSpendingsChartResponseItem>();
 
         while (currentUtcDateTime <= utcEndDate)
         {
-            var timeIncrement = granularity is Granularity.Daily
-                ? TimeSpan.FromDays(1)
-                : TimeSpan.FromDays(DateTime.DaysInMonth(currentUserDate.Year, currentUserDate.Month));
+            // The next boundary is stepped in the user's own calendar and only then converted, so
+            // consecutive buckets meet exactly. Adding a fixed 24 hours to the UTC instant instead
+            // would disagree with where the following bucket starts on the days a clock change
+            // makes 23 or 25 hours long, dropping an hour of expenses in autumn and counting one
+            // twice in spring.
+            var nextUserDate = granularity is Granularity.Daily
+                ? currentUserDate.AddDays(1)
+                : currentUserDate.AddMonths(1);
 
-            var groupShareSum = groupExpenses
-                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
-                .Sum(x =>
-                {
-                    var shareAmount = x.Shares.FirstOrDefault(s => memberIds.Contains(s.MemberId))?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, query.Currency);
-                });
+            var bucketEnd = nextUserDate.ToUtc(userTimeZoneId);
 
-            var groupPaymentSum = groupExpenses
-                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
-                .Sum(x =>
-                {
-                    var paymentAmount = x.Payments.FirstOrDefault(s => memberIds.Contains(s.MemberId))?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
-                });
+            // Each expense keeps its share and payment paired up, because lending and borrowing are
+            // decided per expense. Summing shares and payments separately first and subtracting
+            // would cancel a covered expense against one the user fronted in the same bucket,
+            // understating both sides and making the result depend on the chosen granularity.
+            var groupAmounts = groupExpenses
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < bucketEnd)
+                .Select(x => (
+                    Share: rates.Convert(
+                        x.Shares.FirstOrDefault(s => memberIds.Contains(s.MemberId))?.Amount ?? 0,
+                        x.Currency,
+                        query.Currency,
+                        DateOnly.FromDateTime(x.Occurred)),
+                    Payment: rates.Convert(
+                        x.Payments.FirstOrDefault(p => memberIds.Contains(p.MemberId))?.Amount ?? 0,
+                        x.Currency,
+                        query.Currency,
+                        DateOnly.FromDateTime(x.Occurred))));
 
-            var nonGroupShareSum = nonGroupExpenses
-                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
-                .Sum(x =>
-                {
-                    var shareAmount = x.Shares.FirstOrDefault(s => s.UserId == query.UserId)?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(shareAmount, x.Currency, rates, query.Currency);
-                });
+            var nonGroupAmounts = nonGroupExpenses
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < bucketEnd)
+                .Select(x => (
+                    Share: rates.Convert(
+                        x.Shares.FirstOrDefault(s => s.UserId == query.UserId)?.Amount ?? 0,
+                        x.Currency,
+                        query.Currency,
+                        DateOnly.FromDateTime(x.Occurred)),
+                    Payment: rates.Convert(
+                        x.Payments.FirstOrDefault(p => p.UserId == query.UserId)?.Amount ?? 0,
+                        x.Currency,
+                        query.Currency,
+                        DateOnly.FromDateTime(x.Occurred))));
 
-            var nonGroupPaymentSum = nonGroupExpenses
-                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
-                .Sum(x =>
-                {
-                    var paymentAmount = x.Payments.FirstOrDefault(p => p.UserId == query.UserId)?.Amount ?? 0;
-                    return _currencyExchangeRateService.Convert(paymentAmount, x.Currency, rates, query.Currency);
-                });
+            var sharedAmounts = groupAmounts.Concat(nonGroupAmounts).ToList();
 
             var personalExpensesSum = personalExpenses.OfType<PersonalExpense>()
-                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < currentUtcDateTime + timeIncrement)
-                .Sum(x =>
-                {
-                    var amount = x.Amount;
-                    return _currencyExchangeRateService.Convert(amount, x.Currency, rates, query.Currency);
-                });
+                .Where(x => x.Occurred >= currentUtcDateTime && x.Occurred < bucketEnd)
+                .Sum(x => rates.Convert(x.Amount, x.Currency, query.Currency, DateOnly.FromDateTime(x.Occurred)));
 
+            // Personal expenses belong in what the user spent, so they are in the share sum and in
+            // its running total both. Keeping them out of one and not the other used to mean the
+            // accumulative figure was not the running sum of the per-bucket one.
+            var shareSum = sharedAmounts.Sum(x => x.Share) + personalExpensesSum;
+            var paymentSum = sharedAmounts.Sum(x => x.Payment);
 
-            var shareSum = groupShareSum + nonGroupShareSum;
-            var paymentSum = groupPaymentSum + nonGroupPaymentSum;
+            // Personal expenses are the user's own money on themselves, so they are neither lent
+            // nor borrowed and are deliberately left out of both sums.
+            var lentSum = sharedAmounts.Sum(x => Math.Max(0m, x.Payment - x.Share));
+            var borrowedSum = sharedAmounts.Sum(x => Math.Max(0m, x.Share - x.Payment));
 
-            shareSumSoFar += groupShareSum + nonGroupShareSum + personalExpensesSum;
-            paymentSumSoFar += groupPaymentSum + nonGroupPaymentSum;
+            shareSumSoFar += shareSum;
+            paymentSumSoFar += paymentSum;
+            lentSumSoFar += lentSum;
+            borrowedSumSoFar += borrowedSum;
 
             var responseItem = new GetSpendingsChartResponseItem
             {
@@ -137,14 +164,18 @@ public class GetSpendingsChartQueryHandler : IRequestHandler<GetSpendingsChartQu
                 AccumulativeShareAmount = Math.Round(shareSumSoFar, currency.SignificantDecimalDigits),
                 PaymentAmount = Math.Round(paymentSum, currency.SignificantDecimalDigits),
                 AccumulativePaymentAmount = Math.Round(paymentSumSoFar, currency.SignificantDecimalDigits),
+                LentAmount = Math.Round(lentSum, currency.SignificantDecimalDigits),
+                AccumulativeLentAmount = Math.Round(lentSumSoFar, currency.SignificantDecimalDigits),
+                BorrowedAmount = Math.Round(borrowedSum, currency.SignificantDecimalDigits),
+                AccumulativeBorrowedAmount = Math.Round(borrowedSumSoFar, currency.SignificantDecimalDigits),
                 From = currentUserDate,
-                To = currentUserDate + timeIncrement - TimeSpan.FromTicks(1)
+                To = nextUserDate - TimeSpan.FromTicks(1)
             };
 
             responseItems.Add(responseItem);
 
-            currentUserDate += timeIncrement;
-            currentUtcDateTime = currentUserDate.ToUtc(userTimeZoneId);
+            currentUserDate = nextUserDate;
+            currentUtcDateTime = bucketEnd;
         }
 
         return new GetSpendingsChartResponse
