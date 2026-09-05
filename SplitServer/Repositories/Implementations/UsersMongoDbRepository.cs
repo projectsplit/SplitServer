@@ -41,15 +41,18 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
         return await Collection.Find(filter).SingleOrDefaultAsync(ct);
     }
 
-    public async Task<List<User>> SearchByUsername(string keyword, int skip, int pageSize, CancellationToken ct)
+    public async Task<List<User>> SearchByUsername(string keyword, UserIdScope scope, int skip, int pageSize, CancellationToken ct)
     {
         var search = SearchBuilder.Autocomplete(
             x => x.Username,
             new SingleSearchQueryDefinition(keyword),
             fuzzy: new SearchFuzzyOptions { MaxEdits = 1, PrefixLength = 4 });
 
+        // The scope has to be matched after $search rather than folded into it: $search only runs
+        // as the first stage of a pipeline, so narrowing by id is a stage of its own.
         var pipelineDefinition = PipelineBuilder
             .Search(search)
+            .Match(ScopeFilter(scope))
             .Skip(skip)
             .Limit(pageSize);
 
@@ -58,10 +61,10 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
             .ToListAsync(ct);
     }
 
-    public async Task<List<User>> GetLatestUsers(int skip, int pageSize, CancellationToken ct)
+    public async Task<List<User>> GetLatestUsers(UserIdScope scope, int skip, int pageSize, CancellationToken ct)
     {
         return await Collection
-            .Find(FilterBuilder.Empty)
+            .Find(ScopeFilter(scope))
             .SortByDescending(x => x.Created)
             .Skip(skip)
             .Limit(pageSize)
@@ -73,6 +76,16 @@ public class UsersMongoDbRepository : MongoDbRepositoryBase<User, User>, IUsersR
         return await Collection
             .Find(UsernameFilter(username))
             .AnyAsync(ct);
+    }
+
+    private static FilterDefinition<User> ScopeFilter(UserIdScope scope)
+    {
+        return scope.Kind switch
+        {
+            UserIdScopeKind.Only => FilterBuilder.In(x => x.Id, scope.Ids),
+            UserIdScopeKind.Except => FilterBuilder.Nin(x => x.Id, scope.Ids),
+            _ => FilterBuilder.Empty
+        };
     }
 
     private static FilterDefinition<User> UsernameFilter(string username)

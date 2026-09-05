@@ -43,8 +43,8 @@ public class SearchUsersToInviteQueryHandler : IRequestHandler<SearchUsersToInvi
         var skip = Next.Parse<SkipNext>(query.Next)?.Skip ?? 0;
 
         var users = query.Keyword is null || query.Keyword.Length < 2
-            ? await _usersRepository.GetLatestUsers(skip, query.PageSize, ct)
-            : await _usersRepository.SearchByUsername(query.Keyword, skip, query.PageSize, ct);
+            ? await _usersRepository.GetLatestUsers(UserIdScope.All, skip, query.PageSize, ct)
+            : await _usersRepository.SearchByUsername(query.Keyword, UserIdScope.All, skip, query.PageSize, ct);
 
         var invitations = await _invitationsRepository.GetByReceiverIds(users.Select(x => x.Id).ToList(), query.GroupId, ct);
 

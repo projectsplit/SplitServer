@@ -83,7 +83,9 @@ public class RemoveGroupMemberCommandHandler : IRequestHandler<RemoveGroupMember
         var newGuest = new Guest
         {
             Id = memberToRemove.Id,
-            Name = userToRemove?.Username is not null ? $"{userToRemove.Username}-guest" : $"{memberToRemove.Id.Take(8)}-guest",
+            Name = userToRemove?.Username is not null
+                ? $"{userToRemove.Username}-guest"
+                : $"{new string(memberToRemove.Id.Take(8).ToArray())}-guest",
             Joined = memberToRemove.Joined
         };
 

@@ -43,6 +43,38 @@ public class CurrencyExchangeRateService
         return ratesMaybe.Value;
     }
 
+    /// <summary>
+    /// Loads what is needed to convert a set of expenses at the rate each one was worth on the day
+    /// it happened. Pass the days the expenses actually fall on: the quotes for those days are
+    /// fetched in one query, plus a single earlier quote to stand in for any day that has none of
+    /// its own.
+    /// </summary>
+    public async Task<Result<PeriodExchangeRates>> GetRatesForDates(IReadOnlyCollection<DateOnly> dates, CancellationToken ct)
+    {
+        // Still the last resort for a day older than every quote on record, and the reason an empty
+        // rates collection remains a failure rather than a silently wrong answer.
+        var mostRecentMaybe = await _currencyExchangeRatesRepository.GetLatest(ct);
+
+        if (mostRecentMaybe.HasNoValue)
+        {
+            return Result.Failure<PeriodExchangeRates>("No currency exchange rates found");
+        }
+
+        if (dates.Count == 0)
+        {
+            return new PeriodExchangeRates([], mostRecentMaybe.Value);
+        }
+
+        var onTheDay = await _currencyExchangeRatesRepository.GetByDates(dates, ct);
+        var anchorMaybe = await _currencyExchangeRatesRepository.GetLatestOnOrBefore(dates.Min(), ct);
+
+        var rates = anchorMaybe.HasValue
+            ? onTheDay.Append(anchorMaybe.Value)
+            : onTheDay;
+
+        return new PeriodExchangeRates(rates, mostRecentMaybe.Value);
+    }
+
     public async Task<Result<CurrencyExchangeRates>> GetStoredOrStoreRates(DateOnly date, CancellationToken ct)
     {
         var storedRates = await _currencyExchangeRatesRepository.GetByDate(date, ct);
