@@ -632,6 +632,13 @@ file class FakeExpensesRepository : IExpensesRepository
         return Task.FromResult(InWindow(matches, startDate, endDate).ToList());
     }
 
+    /// <summary>
+    /// Only the donation prompt asks this, and nothing in these tests goes near it. Answering zero
+    /// rather than throwing keeps the fake usable if the handler ever grows a call to it.
+    /// </summary>
+    public Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct) =>
+        Task.FromResult(0L);
+
     private static IEnumerable<T> InWindow<T>(IEnumerable<T> expenses, DateTime? startDate, DateTime? endDate)
         where T : Expense
     {

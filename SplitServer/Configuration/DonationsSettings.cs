@@ -1,7 +1,9 @@
+using SplitServer.Models;
+
 namespace SplitServer.Configuration;
 
 /// <summary>
-/// How much to ask for, and how rarely. Every number that decides whether a person sees the
+/// What to offer, and how rarely to ask. Every number that decides whether a person sees the
 /// donation prompt lives here so the cadence can be loosened or tightened without a deploy of new
 /// logic, and so the policy can be read in one place rather than inferred from scattered checks.
 /// </summary>
@@ -9,52 +11,45 @@ public class DonationsSettings : ISettings
 {
     public string SectionName { get; init; } = "Donations";
 
-    /// <summary>
-    /// ISO currency everything is charged in. Amounts below are in its minor unit, which assumes a
-    /// two-decimal currency — Stripe's zero-decimal currencies (JPY and friends) would need the
-    /// conversion factor to become a setting too.
-    /// </summary>
-    public string Currency { get; set; } = "usd";
-
-    /// <summary>The pre-selected amount. An anchor, not a floor: any amount within the bounds is accepted.</summary>
-    public long SuggestedAmountMinor { get; set; } = 1200;
-
-    private static readonly long[] DefaultPresetAmountsMinor = [500, 1200, 2500, 5000];
+    private static readonly DonationProduct[] DefaultProducts =
+    [
+        new() { ProductId = "support_small", Kind = DonationKind.OneTime, NominalAmountMinor = 500 },
+        new() { ProductId = "support_medium", Kind = DonationKind.OneTime, NominalAmountMinor = 1200 },
+        new() { ProductId = "support_large", Kind = DonationKind.OneTime, NominalAmountMinor = 2500 },
+        new() { ProductId = "support_monthly", Kind = DonationKind.Monthly, NominalAmountMinor = 300, BasePlanId = "monthly" },
+    ];
 
     /// <summary>
-    /// One-tap amounts offered alongside the free-text field. Read through
-    /// <see cref="ResolvePresetAmountsMinor"/> rather than directly.
+    /// The tiers on offer, each one an in-app product that must also exist in the Play Console under
+    /// the same id. Read through <see cref="ResolveProducts"/> rather than directly.
     /// </summary>
     /// <remarks>
-    /// Empty by default, and it has to stay that way. Configuration binding does not replace an
-    /// array that already holds values — it reads the current one through this property, copies it,
-    /// and appends whatever is configured on the end. Giving this an inline default of the four
-    /// amounts and also listing those four in appsettings.json produced all eight, and the prompt
-    /// drew two rows of buttons. A fallback in the getter does not help either: the binder calls
-    /// the getter, so it would append to the fallback. Every scalar setting on this class can carry
-    /// an inline default safely; an array cannot.
+    /// Empty by default, and it has to stay that way. Configuration binding does not replace a
+    /// collection that already holds values — it reads the current one through this property, copies
+    /// it, and appends whatever is configured on the end, so an inline default plus a configured
+    /// list yields both. Every scalar setting on this class can carry an inline default safely; a
+    /// collection cannot.
     /// </remarks>
-    public long[] PresetAmountsMinor { get; set; } = [];
+    public DonationProduct[] Products { get; set; } = [];
 
     /// <summary>
-    /// The amounts to actually offer: whatever is configured, or the built-in defaults if the
+    /// The products to actually offer: whatever is configured, or the built-in defaults if the
     /// setting is absent. A method rather than a property so the config binder never sees it.
     /// </summary>
-    public long[] ResolvePresetAmountsMinor() =>
-        PresetAmountsMinor.Length > 0
-            // Offering the same amount twice is never intended, and two buttons sharing a value
-            // collide on their React key in the browser and highlight together.
-            ? PresetAmountsMinor.Distinct().ToArray()
-            : DefaultPresetAmountsMinor;
+    public DonationProduct[] ResolveProducts() =>
+        Products.Length > 0
+            // Two entries sharing a product id would collide on their React key in the client and
+            // make the ledger's product lookup ambiguous.
+            ? Products.DistinctBy(x => x.ProductId).ToArray()
+            : DefaultProducts;
 
     /// <summary>
-    /// Stripe rejects charges under roughly $0.50, and fees eat most of anything near that, so
-    /// there is no point letting someone through with less.
+    /// ISO currency the nominal amounts below are expressed in. Play charges in the buyer's own
+    /// currency at prices set per country in the Play Console, so this is not what anyone pays — it
+    /// is the yardstick the ledger records tiers against. What the buyer actually sees is the
+    /// localised price string Play returns on the device.
     /// </summary>
-    public long MinAmountMinor { get; set; } = 100;
-
-    /// <summary>A ceiling on a voluntary gift, mostly to catch a misplaced decimal point before the card does.</summary>
-    public long MaxAmountMinor { get; set; } = 100_000;
+    public string NominalCurrency { get; set; } = "usd";
 
     /// <summary>
     /// How long an account must exist before it is ever asked. Asking someone who has not yet got
@@ -82,9 +77,4 @@ public class DonationsSettings : ISettings
 
     /// <summary>How long someone who has given is left alone. Anyone with a live monthly gift is never asked at all.</summary>
     public int PostDonationCooldownDays { get; set; } = 365;
-
-    /// <summary>Where Stripe returns people, appended to the configured client URL.</summary>
-    public string SuccessPath { get; set; } = "/?donation=success";
-
-    public string CancelPath { get; set; } = "/?donation=cancelled";
 }

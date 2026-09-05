@@ -88,11 +88,4 @@ public class DonationPromptPolicy
 
         return _settings.FirstCooldownDays * (1 << doublings);
     }
-
-    public bool IsAmountAllowed(long amountMinor) =>
-        amountMinor >= _settings.MinAmountMinor && amountMinor <= _settings.MaxAmountMinor;
-
-    public string AmountOutOfRangeMessage() =>
-        $"Amount must be between {_settings.MinAmountMinor} and {_settings.MaxAmountMinor} " +
-        $"{_settings.Currency.ToUpperInvariant()} minor units";
 }

@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.AspNetCore.Http.Json;
 using Serilog;
 using SplitServer.Configuration;
@@ -47,7 +47,9 @@ builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();
 builder.Services.AddSingleton<TimeZoneService>();
 builder.Services.AddSingleton<DonationPromptPolicy>();
-builder.Services.AddSingleton<StripeDonationService>();
+builder.Services.AddSingleton<DonationCatalog>();
+builder.Services.AddSingleton<GooglePlayBillingService>();
+builder.Services.AddSingleton<DonationRecorder>();
 
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
@@ -82,7 +84,7 @@ builder.Configure<JoinSettings>();
 builder.Configure<OpenExchangeRatesSettings>();
 builder.Configure<ErrorHandlingSettings>();
 builder.Configure<PushNotificationsSettings>();
-builder.Configure<StripeSettings>();
+builder.Configure<GooglePlaySettings>();
 builder.Configure<DonationsSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();

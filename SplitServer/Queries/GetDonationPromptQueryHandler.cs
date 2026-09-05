@@ -1,7 +1,5 @@
 using CSharpFunctionalExtensions;
 using MediatR;
-using Microsoft.Extensions.Options;
-using SplitServer.Configuration;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
@@ -15,23 +13,23 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
     private readonly IDonationPromptStatesRepository _donationPromptStatesRepository;
     private readonly IExpensesRepository _expensesRepository;
     private readonly DonationPromptPolicy _policy;
-    private readonly StripeDonationService _stripeDonationService;
-    private readonly DonationsSettings _settings;
+    private readonly GooglePlayBillingService _play;
+    private readonly DonationCatalog _catalog;
 
     public GetDonationPromptQueryHandler(
         IUsersRepository usersRepository,
         IDonationPromptStatesRepository donationPromptStatesRepository,
         IExpensesRepository expensesRepository,
         DonationPromptPolicy policy,
-        StripeDonationService stripeDonationService,
-        IOptions<DonationsSettings> settings)
+        GooglePlayBillingService play,
+        DonationCatalog catalog)
     {
         _usersRepository = usersRepository;
         _donationPromptStatesRepository = donationPromptStatesRepository;
         _expensesRepository = expensesRepository;
         _policy = policy;
-        _stripeDonationService = stripeDonationService;
-        _settings = settings.Value;
+        _play = play;
+        _catalog = catalog;
     }
 
     public async Task<Result<GetDonationPromptResponse>> Handle(GetDonationPromptQuery query, CancellationToken ct)
@@ -48,7 +46,7 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
         var stateMaybe = await _donationPromptStatesRepository.GetById(query.UserId, ct);
         var state = stateMaybe.GetValueOrDefault(() => DonationPromptState.CreateEmpty(query.UserId, now));
 
-        var block = _stripeDonationService.IsConfigured
+        var block = _play.IsConfigured
             ? _policy.EvaluateWithoutEngagement(state, userMaybe.Value.Created, now)
             : DonationPromptBlock.NotConfigured;
 
@@ -78,12 +76,16 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
         return new GetDonationPromptResponse
         {
             ShouldAsk = block == DonationPromptBlock.None,
-            IsAvailable = _stripeDonationService.IsConfigured,
-            Currency = _settings.Currency,
-            SuggestedAmountMinor = _settings.SuggestedAmountMinor,
-            PresetAmountsMinor = _settings.ResolvePresetAmountsMinor(),
-            MinAmountMinor = _settings.MinAmountMinor,
-            MaxAmountMinor = _settings.MaxAmountMinor,
+            IsAvailable = _play.IsConfigured,
+            Products = _catalog.Products
+                .Select(
+                    x => new DonationProductResponse
+                    {
+                        ProductId = x.ProductId,
+                        Kind = (int)x.Kind,
+                        BasePlanId = x.BasePlanId,
+                    })
+                .ToArray(),
             HasDonated = state.LastDonatedAt is not null,
             HasActiveMonthly = state.HasActiveMonthly,
         };

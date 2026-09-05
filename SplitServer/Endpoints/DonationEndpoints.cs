@@ -13,7 +13,7 @@ public static class DonationEndpoints
         app.MapGet("/prompt", GetDonationPromptHandler);
         app.MapPost("/prompt/shown", RecordDonationPromptShownHandler);
         app.MapPost("/prompt/dismiss", DismissDonationPromptHandler);
-        app.MapPost("/checkout-session", CreateCheckoutSessionHandler);
+        app.MapPost("/purchase", RegisterPurchaseHandler);
     }
 
     private static async Task<IResult> GetDonationPromptHandler(
@@ -63,21 +63,21 @@ public static class DonationEndpoints
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
-    private static async Task<IResult> CreateCheckoutSessionHandler(
-        CreateDonationCheckoutSessionRequest request,
+    private static async Task<IResult> RegisterPurchaseHandler(
+        RegisterDonationPurchaseRequest request,
         IMediator mediator,
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var command = new CreateDonationCheckoutSessionCommand
+        var command = new RegisterDonationPurchaseCommand
         {
             UserId = httpContext.GetUserId(),
-            AmountMinor = request.AmountMinor,
-            Monthly = request.Monthly,
+            ProductId = request.ProductId,
+            PurchaseToken = request.PurchaseToken,
         };
 
         var result = await mediator.Send(command, ct);
 
-        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 }

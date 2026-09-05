@@ -164,61 +164,76 @@ public class DonationPromptPolicyTests
         Assert.False(policy.NeedsEngagementCheck(State(engagementReachedAt: Now.AddYears(-1))));
     }
 
-    [Theory]
-    [InlineData(99, false)]
-    [InlineData(100, true)]
-    [InlineData(1200, true)]
-    [InlineData(100_000, true)]
-    [InlineData(100_001, false)]
-    public void Accepts_only_amounts_within_the_configured_bounds(long amountMinor, bool expected)
-    {
-        Assert.Equal(expected, CreatePolicy().IsAmountAllowed(amountMinor));
-    }
-
     /// <summary>
-    /// Binding an array does not overwrite one that already has values in it, it appends to it. A
-    /// default of four amounts plus four in appsettings.json therefore produced eight, and the
+    /// Binding a collection does not overwrite one that already has values in it, it appends to it.
+    /// A default of four products plus four in appsettings.json therefore produced eight, and the
     /// prompt drew two rows of buttons. Exercised through the real binder rather than by
     /// constructing the settings directly, because the defect lives in the binding, not the type.
     /// </summary>
     [Fact]
-    public void Configured_preset_amounts_replace_the_defaults_instead_of_appending_to_them()
+    public void Configured_products_replace_the_defaults_instead_of_appending_to_them()
     {
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(
                 new Dictionary<string, string?>
                 {
-                    ["Donations:PresetAmountsMinor:0"] = "500",
-                    ["Donations:PresetAmountsMinor:1"] = "1200",
-                    ["Donations:PresetAmountsMinor:2"] = "2500",
-                    ["Donations:PresetAmountsMinor:3"] = "5000",
+                    ["Donations:Products:0:ProductId"] = "support_small",
+                    ["Donations:Products:0:Kind"] = "0",
+                    ["Donations:Products:0:NominalAmountMinor"] = "500",
+                    ["Donations:Products:1:ProductId"] = "support_monthly",
+                    ["Donations:Products:1:Kind"] = "1",
+                    ["Donations:Products:1:NominalAmountMinor"] = "300",
+                    ["Donations:Products:1:BasePlanId"] = "monthly",
                 })
             .Build();
 
         var settings = new DonationsSettings();
         configuration.GetSection(settings.SectionName).Bind(settings);
 
-        Assert.Equal(new long[] { 500, 1200, 2500, 5000 }, settings.ResolvePresetAmountsMinor());
+        Assert.Equal(
+            new[] { "support_small", "support_monthly" },
+            settings.ResolveProducts().Select(x => x.ProductId));
     }
 
     [Fact]
-    public void Falls_back_to_default_preset_amounts_when_none_are_configured()
+    public void Falls_back_to_default_products_when_none_are_configured()
     {
         var settings = new DonationsSettings();
 
         new ConfigurationBuilder().Build().GetSection(settings.SectionName).Bind(settings);
 
-        Assert.Equal(new long[] { 500, 1200, 2500, 5000 }, settings.ResolvePresetAmountsMinor());
+        Assert.NotEmpty(settings.ResolveProducts());
     }
 
+    /// <summary>
+    /// Play refuses to bill a subscription without knowing which base plan to bill, and the failure
+    /// surfaces on the device rather than at startup, so a missing id would only be found by someone
+    /// trying to give.
+    /// </summary>
     [Fact]
-    public void Suggested_amount_is_one_of_the_presets()
+    public void Every_monthly_product_names_a_base_plan()
     {
-        // The prompt badges the suggested amount on whichever preset matches it. They are separate
-        // settings, so nothing stops them drifting apart and the badge quietly vanishing.
-        var settings = new DonationsSettings();
+        var monthly = new DonationsSettings()
+            .ResolveProducts()
+            .Where(x => x.Kind == DonationKind.Monthly);
 
-        Assert.Contains(settings.SuggestedAmountMinor, settings.ResolvePresetAmountsMinor());
+        Assert.All(monthly, x => Assert.False(string.IsNullOrWhiteSpace(x.BasePlanId)));
+    }
+
+    /// <summary>
+    /// The catalogue is the only thing standing between the donation ledger and any other in-app
+    /// product this app might ever sell, so an id that is not on it has to come back as nothing.
+    /// </summary>
+    [Fact]
+    public void Catalog_only_recognises_configured_products()
+    {
+        var settings = new DonationsSettings();
+        var catalog = new DonationCatalog(Options.Create(settings));
+
+        var known = settings.ResolveProducts()[0].ProductId;
+
+        Assert.NotNull(catalog.Find(known));
+        Assert.Null(catalog.Find("some_other_product"));
     }
 
     [Fact]
