@@ -1,3 +1,4 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using CSharpFunctionalExtensions;
@@ -28,9 +29,7 @@ public class GooglePlayBillingService
 
     private const int ProductPending = 2;
 
-    /// <summary>Google's numbering for the acknowledgement and consumption states.</summary>
-    private const int NotYetAcknowledged = 0;
-
+    /// <summary>Google's numbering for <c>ProductPurchase.consumptionState</c>.</summary>
     private const int AlreadyConsumed = 1;
 
     /// <summary>
@@ -119,7 +118,6 @@ public class GooglePlayBillingService
                 OrderId = purchase.OrderId,
                 IsPaid = purchase.PurchaseState == ProductPurchased,
                 IsPending = purchase.PurchaseState == ProductPending,
-                NeedsAcknowledgement = purchase.AcknowledgementState == NotYetAcknowledged,
                 IsConsumed = purchase.ConsumptionState == AlreadyConsumed,
                 UserId = purchase.ObfuscatedExternalAccountId,
                 PurchasedAt = purchase.PurchaseTimeMillis is { } millis
@@ -127,7 +125,7 @@ public class GooglePlayBillingService
                     : null,
             };
         }
-        catch (GoogleApiException ex)
+        catch (GoogleApiException ex) when (IsPermanent(ex))
         {
             // The message can name the package or the service account, so it is logged and not returned.
             Log.Error(ex, "Google Play rejected a lookup of product {ProductId}", productId);
@@ -171,7 +169,7 @@ public class GooglePlayBillingService
                 LinkedPurchaseToken = purchase.LinkedPurchaseToken,
             };
         }
-        catch (GoogleApiException ex)
+        catch (GoogleApiException ex) when (IsPermanent(ex))
         {
             Log.Error(ex, "Google Play rejected a subscription lookup");
 
@@ -199,7 +197,7 @@ public class GooglePlayBillingService
 
             return Result.Success();
         }
-        catch (GoogleApiException ex)
+        catch (GoogleApiException ex) when (IsPermanent(ex))
         {
             Log.Error(ex, "Failed to acknowledge Google Play product {ProductId}", productId);
 
@@ -231,7 +229,7 @@ public class GooglePlayBillingService
 
             return Result.Success();
         }
-        catch (GoogleApiException ex)
+        catch (GoogleApiException ex) when (IsPermanent(ex))
         {
             Log.Error(ex, "Failed to consume Google Play product {ProductId}", productId);
 
@@ -258,13 +256,30 @@ public class GooglePlayBillingService
 
             return Result.Success();
         }
-        catch (GoogleApiException ex)
+        catch (GoogleApiException ex) when (IsPermanent(ex))
         {
             Log.Error(ex, "Failed to acknowledge Google Play subscription {ProductId}", productId);
 
             return Result.Failure("Could not acknowledge the subscription");
         }
     }
+
+    /// <summary>
+    /// Whether Google's answer is one that will never change.
+    ///
+    /// The distinction decides whether a caller may give up. A token Play does not recognise is
+    /// permanent and comes back as a failed <c>Result</c>; anything else — a 5xx, a timeout, an
+    /// expired credential — is left to propagate, so the endpoint answers 500 and whoever sent the
+    /// request tries again. Treating the two alike is how a Google outage turns into silently lost
+    /// renewals: Pub/Sub only redelivers what it was not told was handled.
+    /// </summary>
+    private static bool IsPermanent(GoogleApiException ex) =>
+        ex.HttpStatusCode is HttpStatusCode.BadRequest
+            or HttpStatusCode.NotFound
+            or HttpStatusCode.Gone
+            // The service account has lost its Play Console grant. Retrying cannot fix that, and
+            // hammering Google until someone notices makes it no better.
+            or HttpStatusCode.Forbidden;
 
     /// <summary>
     /// A malformed service account must not take the whole application down — every unrelated
@@ -322,8 +337,6 @@ public record PlayProductPurchase
     /// notification rather than credited now.
     /// </summary>
     public required bool IsPending { get; init; }
-
-    public required bool NeedsAcknowledgement { get; init; }
 
     public required bool IsConsumed { get; init; }
 
