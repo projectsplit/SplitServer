@@ -49,11 +49,9 @@ public class GetGroupsWithDetailsQueryHandler : IRequestHandler<GetGroupsWithDet
             return Result.Failure<GetGroupsWithDetailsResponse>($"User with id {query.UserId} was not found");
         }
 
-        var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
-
         var skip = Next.Parse<SkipNext>(query.Next)?.Skip ?? 0;
         var groups = query.Keyword is null || query.Keyword.Length < 2
-            ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct)
+            ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, Next.Parse<NextGroupPageDetails>(query.Next)?.Created, ct)
             : await _groupsRepository.SearchByGroupName(query.UserId, query.Keyword, skip, query.PageSize, ct);
 
         var userMemberIds = groups
