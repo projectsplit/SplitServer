@@ -8,4 +8,6 @@ public interface IBudgetsRepository : IRepositoryBase<Budget>
     Task<List<Budget>> GetAllByUserId(string userId, CancellationToken ct);
 
     Task<Result> DeactivateAllByUserId(string userId, CancellationToken ct);
+
+    Task<Result> DeleteByUserId(string userId, CancellationToken ct);
 }

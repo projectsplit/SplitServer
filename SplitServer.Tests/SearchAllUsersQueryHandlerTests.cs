@@ -250,6 +250,7 @@ file class FakeUserConnectionsRepository : IUserConnectionsRepository
     public Task<List<UserConnection>> GetAllBetweenUsers(string userId, IList<string> otherUserIds, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<UserConnection>> GetPendingByReceiverId(string receiverId, int pageSize, DateTime maxCreatedDate, CancellationToken ct) => throw new NotSupportedException();
     public Task<long> CountPendingByReceiverIdAndMinCreated(string receiverId, DateTime minCreatedDate, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByUserId(string userId, CancellationToken ct) => throw new NotSupportedException();
     public Task<Maybe<UserConnection>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<IList<UserConnection>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Insert(UserConnection entity, CancellationToken ct) => throw new NotSupportedException();

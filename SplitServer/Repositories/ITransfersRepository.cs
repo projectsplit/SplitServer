@@ -48,4 +48,6 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
         CancellationToken ct);
 
     Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct);
+
+    Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct);
 }

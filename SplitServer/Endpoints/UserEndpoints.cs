@@ -11,6 +11,7 @@ public static class UserEndpoints
     public static void MapUserEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/me", GetAuthenticatedUserHandler);
+        app.MapPost("/delete-account", DeleteAccountHandler);
         app.MapPut("/activity/last-viewed-notification", SetLastViewedNotificationTimestampHandler);
         app.MapPut("/activity/recent-context", SetRecentContextHandler);
         app.MapPut("/activity/show-budget-info", SetShowBudgetInfoHandler);
@@ -86,7 +87,26 @@ public static class UserEndpoints
 
         var result = await mediator.Send(query, ct);
 
-        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
+        // The one way this fails is the account behind a still-valid token no longer existing —
+        // deleted here, or from another device. 401 rather than 400, because 401 is what makes the
+        // app sign out; a 400 left it holding a token for nobody, failing every request until the
+        // token happened to expire.
+        return result.IsFailure ? Results.Unauthorized() : Results.Ok(result.Value);
+    }
+
+    private static async Task<IResult> DeleteAccountHandler(
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var command = new DeleteAccountCommand
+        {
+            UserId = httpContext.GetUserId()
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
     }
 
     private static async Task<IResult> SetLastViewedNotificationTimestampHandler(

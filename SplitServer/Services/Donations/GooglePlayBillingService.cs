@@ -44,6 +44,23 @@ public class GooglePlayBillingService
         "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
     ];
 
+    /// <summary>
+    /// Subscription states in which Play will never take another payment. Wider than "not active":
+    /// a subscription on hold or paused is not paying today but will start again by itself.
+    /// </summary>
+    private static readonly HashSet<string> EndedSubscriptionStates =
+    [
+        "SUBSCRIPTION_STATE_CANCELED",
+        "SUBSCRIPTION_STATE_EXPIRED",
+    ];
+
+    /// <summary>
+    /// Google's name for a cancellation the subscriber asked for: renewal stops, the current period
+    /// is honoured, and they can resubscribe. The alternative revokes access on the spot, which is
+    /// for a developer withdrawing a product rather than a person leaving.
+    /// </summary>
+    private const string StopRenewals = "USER_REQUESTED_STOP_RENEWALS";
+
     private readonly GooglePlaySettings _settings;
     private readonly AndroidPublisherService? _publisher;
 
@@ -159,6 +176,7 @@ public class GooglePlayBillingService
                 ProductId = lineItem?.ProductId,
                 State = purchase.SubscriptionState ?? string.Empty,
                 IsActive = ActiveSubscriptionStates.Contains(purchase.SubscriptionState ?? string.Empty),
+                HasEnded = EndedSubscriptionStates.Contains(purchase.SubscriptionState ?? string.Empty),
                 NeedsAcknowledgement = purchase.AcknowledgementState == "ACKNOWLEDGEMENT_STATE_PENDING",
                 UserId = purchase.ExternalAccountIdentifiers?.ObfuscatedExternalAccountId,
                 ExpiresAt = lineItem?.ExpiryTimeDateTimeOffset?.UtcDateTime,
@@ -265,6 +283,42 @@ public class GooglePlayBillingService
     }
 
     /// <summary>
+    /// Stops a monthly gift renewing. What has already been paid for runs to the end of its period;
+    /// nothing is refunded and nothing is taken again.
+    /// </summary>
+    /// <remarks>
+    /// Only deleting an account calls this. Everywhere else a monthly gift is ended by the person
+    /// themselves in Google Play, which is the one place they would think to look for it.
+    /// </remarks>
+    public async Task<Result> CancelSubscription(string purchaseToken, CancellationToken ct)
+    {
+        if (_publisher is null)
+        {
+            return Result.Failure("Donations are not available");
+        }
+
+        try
+        {
+            var request = new CancelSubscriptionPurchaseRequest
+            {
+                CancellationContext = new CancellationContext { CancellationType = StopRenewals },
+            };
+
+            await _publisher.Purchases.Subscriptionsv2
+                .Cancel(request, _settings.PackageName, purchaseToken)
+                .ExecuteAsync(ct);
+
+            return Result.Success();
+        }
+        catch (GoogleApiException ex) when (IsPermanent(ex))
+        {
+            Log.Error(ex, "Failed to cancel a Google Play subscription");
+
+            return Result.Failure("Could not cancel the subscription");
+        }
+    }
+
+    /// <summary>
     /// Whether Google's answer is one that will never change.
     ///
     /// The distinction decides whether a caller may give up. A token Play does not recognise is
@@ -357,6 +411,12 @@ public record PlaySubscriptionPurchase
     public required string State { get; init; }
 
     public required bool IsActive { get; init; }
+
+    /// <summary>
+    /// True once Play will never charge for this again. Not the opposite of
+    /// <see cref="IsActive"/>: a subscription on hold is neither.
+    /// </summary>
+    public required bool HasEnded { get; init; }
 
     public required bool NeedsAcknowledgement { get; init; }
 

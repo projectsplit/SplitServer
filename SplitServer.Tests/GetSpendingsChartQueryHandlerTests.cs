@@ -662,6 +662,8 @@ file class FakeExpensesRepository : IExpensesRepository
     public Task<List<Expense>> SearchPersonalByUserId(string userId, List<string> memberIds, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? labels, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<SplitServer.Models.NonGroupExpense>> SearchNonGroup(string userId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? participantIds, string[]? payerIds, string[]? labelIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeletePersonalByCreatorId(string creatorId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Maybe<Expense>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<IList<Expense>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Insert(Expense entity, CancellationToken ct) => throw new NotSupportedException();

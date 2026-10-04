@@ -24,4 +24,11 @@ public class DonationSubscriptionsMongoDbRepository :
 
         return await Collection.Find(filter).AnyAsync(ct);
     }
+
+    public async Task<List<DonationSubscription>> GetByUserId(string userId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.UserId, userId);
+
+        return await Collection.Find(filter).ToListAsync(ct);
+    }
 }

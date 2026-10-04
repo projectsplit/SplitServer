@@ -311,4 +311,13 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .Distinct()
             .ToList();
     }
+
+    public async Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct)
+    {
+        var filter = FilterBuilder.In(x => x.Id, ids);
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete transfers");
+    }
 }
