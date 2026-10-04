@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services;
@@ -26,11 +27,9 @@ public class SearchByGroupNameQueryHandler : IRequestHandler<SearchByGroupNameQu
             return Result.Failure<GetGroupsResponse>("Page size must be greater than 0");
         }
 
-        var nextDetails = Next.Parse<NextGroupPageDetails>(query.Next);
-
         var skip = Next.Parse<SkipNext>(query.Next)?.Skip ?? 0;
         var groups = query.Keyword is null || query.Keyword.Length < 2
-            ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, nextDetails?.Created, ct)
+            ? await _groupsRepository.GetByUserId(query.UserId, null, query.PageSize, Next.Parse<NextGroupPageDetails>(query.Next)?.Created, ct)
             : await _groupsRepository.SearchByGroupName(query.UserId, query.Keyword, skip, query.PageSize, ct);
 
         var allMemberUserIds = groups.SelectMany(g => g.Members.Select(m => m.UserId)).Distinct().ToList();
@@ -58,8 +57,15 @@ public class SearchByGroupNameQueryHandler : IRequestHandler<SearchByGroupNameQu
                 Created = x.Created,
                 Updated = x.Updated
             }).ToList(),
-            Next = Next.Create(groups, query.PageSize, _ => new SkipNext { Skip = skip + query.PageSize })
+            Next = GetNext(query, groups, skip)
         };
+    }
+
+    private static string? GetNext(SearchByGroupNameQuery query, List<Group> groups, int skip)
+    {
+        return query.Keyword is null || query.Keyword.Length < 2
+            ? Next.Create(groups, query.PageSize, x => new NextGroupPageDetails { Created = x.Last().Created })
+            : Next.Create(groups, query.PageSize, _ => new SkipNext { Skip = skip + query.PageSize });
     }
 }
 
