@@ -11,8 +11,9 @@ namespace SplitServer.Commands;
 /// Deletes an account and everything that belongs to it alone.
 ///
 /// The line drawn here is between what is the person's and what they shared. Their own records go:
-/// the account, its sessions, preferences, budgets, labels, notifications, personal expenses, and
-/// any group nobody else with an account is in. What they shared stays for as long as someone else
+/// the account, its sessions, preferences, budgets, labels, notifications, personal expenses, group
+/// expenses that involve nobody but them, and any group nobody else with an account is in. What
+/// they shared stays for as long as someone else
 /// can still see it, because it is that person's record too — a group keeps its ledger with the
 /// departed member turned into a guest, as if they had left, and an expense split directly with
 /// someone stays on that person's side, where it shows a deleted user.
@@ -228,6 +229,23 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
     private async Task<Result> LeaveGroup(Group group, User user, CancellationToken ct)
     {
         var member = group.Members.First(x => x.UserId == user.Id);
+
+        // Before asking whether the member appears in the ledger, because these are about to stop
+        // counting: someone whose only entries were their own is removed outright, with no guest
+        // left behind to stand for expenses that no longer exist.
+        var ownExpenseIds = GroupDeparture.ExpenseIdsConcerningOnly(
+            await _expensesRepository.GetGroupExpensesByGroupId(group.Id, ct),
+            member.Id);
+
+        if (ownExpenseIds.Count > 0)
+        {
+            var deleteOwnResult = await _expensesRepository.DeleteByIds(ownExpenseIds, ct);
+
+            if (deleteOwnResult.IsFailure)
+            {
+                return deleteOwnResult;
+            }
+        }
 
         var memberHasActivity =
             await _expensesRepository.ExistsInAnyExpense(group.Id, member.Id, ct) ||

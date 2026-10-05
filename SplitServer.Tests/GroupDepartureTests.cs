@@ -25,6 +25,46 @@ public class GroupDepartureTests
             Labels = [],
         };
 
+    private static GroupExpense Expense(string id, string[] payers, string[] sharers) =>
+        new()
+        {
+            Id = id,
+            Created = Now,
+            Updated = Now,
+            Occurred = Now,
+            GroupId = "group",
+            CreatorId = payers.FirstOrDefault() ?? "member-owner",
+            Amount = sharers.Length,
+            Description = "test",
+            Currency = "EUR",
+            Location = null,
+            Labels = [],
+            Payments = payers.Select(x => new GroupPayment { MemberId = x, Amount = 1 }).ToList(),
+            Shares = sharers.Select(x => new GroupShare { MemberId = x, Amount = 1 }).ToList(),
+        };
+
+    [Fact]
+    public void An_expense_the_member_paid_for_themselves_alone_goes_with_them()
+    {
+        var expenses = new[]
+        {
+            Expense("own", ["member-leaving"], ["member-leaving"]),
+            Expense("paid-for-others", ["member-leaving"], ["member-leaving", "member-owner"]),
+            Expense("paid-by-others", ["member-owner"], ["member-leaving"]),
+            Expense("someone-elses", ["member-owner"], ["member-owner"]),
+        };
+
+        Assert.Equal(["own"], GroupDeparture.ExpenseIdsConcerningOnly(expenses, "member-leaving"));
+    }
+
+    [Fact]
+    public void An_expense_with_nobody_in_it_is_not_mistaken_for_the_members_own()
+    {
+        var expenses = new[] { Expense("empty", [], []) };
+
+        Assert.Empty(GroupDeparture.ExpenseIdsConcerningOnly(expenses, "member-leaving"));
+    }
+
     [Fact]
     public void A_member_the_ledger_mentions_becomes_a_guest_with_the_same_id()
     {
