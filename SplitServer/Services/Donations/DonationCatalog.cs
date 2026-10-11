@@ -30,6 +30,10 @@ public class DonationCatalog
         Products = settings.Value.ResolveProducts();
         NominalCurrency = settings.Value.NominalCurrency;
         CustomAmountMaxMinor = Math.Max(0, settings.Value.CustomAmountMax) * 100L;
+        // Monthly typed amounts exist only alongside one-off ones.
+        CustomMonthlyAmountMaxMinor = CustomAmountMaxMinor > 0
+            ? Math.Max(0, settings.Value.CustomMonthlyAmountMax) * 100L
+            : 0;
         CustomAmountStepMinor = Math.Max(1, settings.Value.CustomAmountStepMinor);
 
         _byProductId = Products.ToDictionary(x => x.ProductId, StringComparer.Ordinal);
@@ -39,8 +43,11 @@ public class DonationCatalog
 
     public string NominalCurrency { get; }
 
-    /// <summary>Largest typed amount on offer, in minor units. Zero when "Other amount" is off.</summary>
+    /// <summary>Largest typed one-off amount, in minor units. Zero when "Other amount" is off.</summary>
     public long CustomAmountMaxMinor { get; }
+
+    /// <summary>Largest typed monthly amount, in minor units. Zero when monthly is not offered.</summary>
+    public long CustomMonthlyAmountMaxMinor { get; }
 
     /// <summary>Gap between typed amounts, and the smallest one, in minor units.</summary>
     public int CustomAmountStepMinor { get; }
@@ -76,7 +83,7 @@ public class DonationCatalog
             digits[0] == '0' ||
             !digits.All(char.IsAsciiDigit) ||
             !long.TryParse(digits, out var amountMinor) ||
-            amountMinor > CustomAmountMaxMinor ||
+            amountMinor > (kind == DonationKind.Monthly ? CustomMonthlyAmountMaxMinor : CustomAmountMaxMinor) ||
             amountMinor % CustomAmountStepMinor != 0)
         {
             return null;

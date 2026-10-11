@@ -43,14 +43,17 @@ public class DonationProductResponse
 }
 
 /// <summary>
-/// The "Other amount" family: one product per amount from <see cref="StepMinor"/> to
-/// <see cref="MaxMinor"/> in steps of <see cref="StepMinor"/>, named by appending the amount in minor
-/// units to a prefix (1750 for 17.50). The client builds the id for whatever was typed and asks Play
+/// The "Other amount" family: one product per amount from <see cref="StepMinor"/> up to
+/// <see cref="MaxMinor"/> (one-off) or <see cref="MonthlyMaxMinor"/> (monthly) in steps of
+/// <see cref="StepMinor"/>, named by appending the amount in minor units to a prefix (1700 for 17). The client builds the id for whatever was typed and asks Play
 /// for that one product, rather than being sent hundreds of ids up front.
 /// </summary>
 public class CustomAmountResponse
 {
     public required long MaxMinor { get; init; }
+
+    /// <summary>Zero when typed amounts can only be one-off.</summary>
+    public required long MonthlyMaxMinor { get; init; }
 
     public required int StepMinor { get; init; }
 

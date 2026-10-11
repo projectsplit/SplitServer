@@ -52,20 +52,27 @@ public class DonationsSettings : ISettings
     public string NominalCurrency { get; set; } = "usd";
 
     /// <summary>
-    /// Largest amount, in whole units, someone can type as "Other amount", one-off or monthly. Play
-    /// cannot charge an arbitrary figure, so every allowed amount is its own product in the Play
-    /// Console, named by the amount in minor units: <c>support_amount_1750</c> for a one-off of
-    /// 17.50 and <c>support_monthly_1750</c> (base plan <c>monthly</c>) for a monthly gift, each
-    /// meant to cost that much in the buyer's currency. Zero turns "Other amount" off.
+    /// Largest one-off amount, in whole units, someone can type as "Other amount". Play cannot
+    /// charge an arbitrary figure, so every allowed amount is its own product in the Play Console,
+    /// named by the amount in minor units: <c>support_amount_1700</c> for a one-off of 17 and
+    /// <c>support_monthly_1700</c> (base plan <c>monthly</c>) for 17 a month, each meant to cost
+    /// that much in the buyer's currency. Zero turns "Other amount" off altogether.
     /// </summary>
-    public int CustomAmountMax { get; set; } = 100;
+    public int CustomAmountMax { get; set; } = 200;
 
     /// <summary>
-    /// Gap between typed amounts, in minor units, and also the smallest one. 50 allows 0.50, 1.00,
-    /// 1.50 and so on. Every step is a product per kind, and Play caps an app at about 1,000
-    /// products, so this and <see cref="CustomAmountMax"/> together must stay well under that.
+    /// Largest monthly amount, in whole units. Lower than the one-off ceiling because a monthly
+    /// gift is a standing commitment, and every allowed amount is another subscription product.
+    /// Zero leaves "Other amount" one-off only.
     /// </summary>
-    public int CustomAmountStepMinor { get; set; } = 50;
+    public int CustomMonthlyAmountMax { get; set; } = 50;
+
+    /// <summary>
+    /// Gap between typed amounts, in minor units, and also the smallest one. 100 means whole
+    /// amounts; 50 would allow halves. Every step is a product per kind, and Play caps an app at
+    /// about 1,000 products: the defaults make 200 one-off and 50 monthly, 254 with the fixed tiers.
+    /// </summary>
+    public int CustomAmountStepMinor { get; set; } = 100;
 
     /// <summary>
     /// How long an account must exist before it is ever asked. Asking someone who has not yet got

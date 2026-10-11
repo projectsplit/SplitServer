@@ -90,6 +90,7 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
                 ? new CustomAmountResponse
                 {
                     MaxMinor = _catalog.CustomAmountMaxMinor,
+                    MonthlyMaxMinor = _catalog.CustomMonthlyAmountMaxMinor,
                     StepMinor = _catalog.CustomAmountStepMinor,
                     OneTimeProductPrefix = DonationCatalog.CustomOneTimePrefix,
                     MonthlyProductPrefix = DonationCatalog.CustomMonthlyPrefix,
