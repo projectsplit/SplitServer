@@ -86,6 +86,16 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
                         BasePlanId = x.BasePlanId,
                     })
                 .ToArray(),
+            CustomAmount = _catalog.CustomAmountMaxMinor > 0
+                ? new CustomAmountResponse
+                {
+                    MaxMinor = _catalog.CustomAmountMaxMinor,
+                    StepMinor = _catalog.CustomAmountStepMinor,
+                    OneTimeProductPrefix = DonationCatalog.CustomOneTimePrefix,
+                    MonthlyProductPrefix = DonationCatalog.CustomMonthlyPrefix,
+                    MonthlyBasePlanId = DonationCatalog.CustomMonthlyBasePlanId,
+                }
+                : null,
             HasDonated = state.LastDonatedAt is not null,
             HasActiveMonthly = state.HasActiveMonthly,
         };

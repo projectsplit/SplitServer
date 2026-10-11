@@ -15,7 +15,7 @@ public class DonationsSettings : ISettings
     [
         new() { ProductId = "support_small", Kind = DonationKind.OneTime, NominalAmountMinor = 500 },
         new() { ProductId = "support_medium", Kind = DonationKind.OneTime, NominalAmountMinor = 1200 },
-        new() { ProductId = "support_large", Kind = DonationKind.OneTime, NominalAmountMinor = 2500 },
+        new() { ProductId = "support_large", Kind = DonationKind.OneTime, NominalAmountMinor = 5000 },
         new() { ProductId = "support_monthly", Kind = DonationKind.Monthly, NominalAmountMinor = 300, BasePlanId = "monthly" },
     ];
 
@@ -50,6 +50,22 @@ public class DonationsSettings : ISettings
     /// localised price string Play returns on the device.
     /// </summary>
     public string NominalCurrency { get; set; } = "usd";
+
+    /// <summary>
+    /// Largest amount, in whole units, someone can type as "Other amount", one-off or monthly. Play
+    /// cannot charge an arbitrary figure, so every allowed amount is its own product in the Play
+    /// Console, named by the amount in minor units: <c>support_amount_1750</c> for a one-off of
+    /// 17.50 and <c>support_monthly_1750</c> (base plan <c>monthly</c>) for a monthly gift, each
+    /// meant to cost that much in the buyer's currency. Zero turns "Other amount" off.
+    /// </summary>
+    public int CustomAmountMax { get; set; } = 100;
+
+    /// <summary>
+    /// Gap between typed amounts, in minor units, and also the smallest one. 50 allows 0.50, 1.00,
+    /// 1.50 and so on. Every step is a product per kind, and Play caps an app at about 1,000
+    /// products, so this and <see cref="CustomAmountMax"/> together must stay well under that.
+    /// </summary>
+    public int CustomAmountStepMinor { get; set; } = 50;
 
     /// <summary>
     /// How long an account must exist before it is ever asked. Asking someone who has not yet got

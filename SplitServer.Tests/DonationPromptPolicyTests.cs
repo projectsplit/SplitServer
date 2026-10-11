@@ -236,6 +236,53 @@ public class DonationPromptPolicyTests
         Assert.Null(catalog.Find("some_other_product"));
     }
 
+    [Theory]
+    [InlineData("support_amount_50", DonationKind.OneTime, 50L)]
+    [InlineData("support_amount_1700", DonationKind.OneTime, 1700L)]
+    [InlineData("support_amount_1750", DonationKind.OneTime, 1750L)]
+    [InlineData("support_amount_10000", DonationKind.OneTime, 10000L)]
+    [InlineData("support_monthly_1750", DonationKind.Monthly, 1750L)]
+    public void Catalog_recognises_typed_amounts_in_range(string productId, DonationKind kind, long nominal)
+    {
+        var catalog = new DonationCatalog(Options.Create(new DonationsSettings { CustomAmountMax = 100 }));
+
+        var product = catalog.Find(productId);
+
+        Assert.NotNull(product);
+        Assert.Equal(kind, product.Kind);
+        Assert.Equal(nominal, product.NominalAmountMinor);
+        Assert.Equal(kind == DonationKind.Monthly ? "monthly" : null, product.BasePlanId);
+    }
+
+    /// <summary>
+    /// Only the exact id the client builds may match, so two spellings can never name one amount and
+    /// nothing outside the configured range slips into the ledger.
+    /// </summary>
+    [Theory]
+    [InlineData("support_amount_0")]
+    [InlineData("support_amount_10050")]
+    [InlineData("support_amount_1725")]
+    [InlineData("support_amount_25")]
+    [InlineData("support_amount_01700")]
+    [InlineData("support_amount_-5")]
+    [InlineData("support_amount_")]
+    [InlineData("support_amount_1.5")]
+    [InlineData("support_monthly_")]
+    public void Catalog_refuses_typed_amounts_outside_the_pattern(string productId)
+    {
+        var catalog = new DonationCatalog(Options.Create(new DonationsSettings { CustomAmountMax = 100 }));
+
+        Assert.Null(catalog.Find(productId));
+    }
+
+    [Fact]
+    public void Catalog_refuses_typed_amounts_when_switched_off()
+    {
+        var catalog = new DonationCatalog(Options.Create(new DonationsSettings { CustomAmountMax = 0 }));
+
+        Assert.Null(catalog.Find("support_amount_500"));
+    }
+
     [Fact]
     public void Cooldown_cannot_overflow_on_an_absurd_prompt_count()
     {
