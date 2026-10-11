@@ -9,8 +9,6 @@ namespace SplitServer.Commands;
 
 public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGroupExpenseCommand, Result<CreateExpenseResponse>>
 {
-    private const string NonGroupExpensesUrl = "/shared/nongroup/expenses";
-
     private readonly IExpensesRepository _expensesRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
@@ -94,7 +92,7 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 
-        await NotifyParticipants(command, ct);
+        await NotifyParticipants(command, newNonGroupExpense, ct);
 
         return new CreateExpenseResponse
         {
@@ -106,7 +104,10 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
     /// Tells everyone dragged into this expense that it happened. Delivery runs in the background,
     /// so a push outage can never fail an expense that is already written.
     /// </summary>
-    private async Task NotifyParticipants(CreateNonGroupExpenseCommand command, CancellationToken ct)
+    private async Task NotifyParticipants(
+        CreateNonGroupExpenseCommand command,
+        NonGroupExpense expense,
+        CancellationToken ct)
     {
         var recipientUserIds = command.Payments.Select(x => x.UserId)
             .Concat(command.Shares.Select(x => x.UserId))
@@ -127,7 +128,7 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
             recipientUserIds,
             "New expense",
             $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency}) with you",
-            NonGroupExpensesUrl,
+            ExpenseLinks.JumpTo(expense),
             ct);
     }
 }

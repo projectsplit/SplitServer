@@ -86,7 +86,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 
-        await NotifyInvolvedMembers(command, group, user.Username, ct);
+        await NotifyInvolvedMembers(command, newExpense, group, user.Username, ct);
 
         return new CreateExpenseResponse
         {
@@ -101,6 +101,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
     /// </summary>
     private async Task NotifyInvolvedMembers(
         CreateExpenseCommand command,
+        GroupExpense expense,
         Group group,
         string creatorUsername,
         CancellationToken ct)
@@ -114,7 +115,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
             recipientUserIds,
             group.Name,
             $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency})",
-            $"/shared/{command.GroupId}/expenses",
+            ExpenseLinks.JumpTo(expense),
             ct);
     }
 }
