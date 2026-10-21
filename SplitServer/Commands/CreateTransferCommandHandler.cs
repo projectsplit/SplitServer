@@ -37,6 +37,33 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
 
         var (user, group, memberId) = permissionResult.Value;
 
+        var transferIdResult = ClientIds.Resolve(command.TransferId);
+
+        if (transferIdResult.IsFailure)
+        {
+            return transferIdResult.ConvertFailure<CreateTransferResponse>();
+        }
+
+        var transferId = transferIdResult.Value;
+
+        // A resend of a transfer that is already in. It gets the answer the first send would have
+        // had, and the people on it are not told about it a second time.
+        if (command.TransferId is not null)
+        {
+            var isStoredResult =
+                await ClientIds.IsAlreadyStored<Transfer, GroupTransfer>(_transfersRepository, transferId, memberId, ct);
+
+            if (isStoredResult.IsFailure)
+            {
+                return isStoredResult.ConvertFailure<CreateTransferResponse>();
+            }
+
+            if (isStoredResult.Value)
+            {
+                return new CreateTransferResponse { TransferId = transferId };
+            }
+        }
+
         var transferValidationResult =
             _validationService.ValidateTransfer(group, command.SenderId, command.ReceiverId, command.Amount, command.Currency);
 
@@ -46,7 +73,6 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
         }
 
         var now = DateTime.UtcNow;
-        var transferId = Guid.NewGuid().ToString();
 
         var newTransfer = new GroupTransfer
         {
@@ -67,6 +93,19 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
 
         if (writeResult.IsFailure)
         {
+            // Two sends of one transfer can both get past the check above. The later insert then
+            // fails on the duplicate id, and the transfer it carries is already stored.
+            if (command.TransferId is not null)
+            {
+                var isStoredResult =
+                    await ClientIds.IsAlreadyStored<Transfer, GroupTransfer>(_transfersRepository, transferId, memberId, ct);
+
+                if (isStoredResult.IsSuccess && isStoredResult.Value)
+                {
+                    return new CreateTransferResponse { TransferId = transferId };
+                }
+            }
+
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
 

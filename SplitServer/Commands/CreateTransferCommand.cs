@@ -14,4 +14,7 @@ public class CreateTransferCommand : IRequest<Result<CreateTransferResponse>>
     public required DateTime? Occurred { get; init; }
     public required string SenderId { get; init; }
     public required string ReceiverId { get; init; }
+
+    /// <summary>The id the app picked for this transfer, if it picked one. See <see cref="Services.ClientIds"/>.</summary>
+    public string? TransferId { get; init; }
 }

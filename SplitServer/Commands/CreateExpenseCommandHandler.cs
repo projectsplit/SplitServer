@@ -40,6 +40,33 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
 
         var (user, group, memberId) = permissionResult.Value;
 
+        var expenseIdResult = ClientIds.Resolve(command.ExpenseId);
+
+        if (expenseIdResult.IsFailure)
+        {
+            return expenseIdResult.ConvertFailure<CreateExpenseResponse>();
+        }
+
+        var expenseId = expenseIdResult.Value;
+
+        if (command.ExpenseId is not null)
+        {
+            var isStoredResult =
+                await ClientIds.IsAlreadyStored<Expense, GroupExpense>(_expensesRepository, expenseId, memberId, ct);
+
+            if (isStoredResult.IsFailure)
+            {
+                return isStoredResult.ConvertFailure<CreateExpenseResponse>();
+            }
+
+            // A resend of an expense that is already in. It gets the answer the first send would
+            // have had, and the people on it are not told about it a second time.
+            if (isStoredResult.Value)
+            {
+                return new CreateExpenseResponse { ExpenseId = expenseId };
+            }
+        }
+
         var expenseValidationResult =
             _validationService.ValidateExpense(group, command.Payments, command.Shares, command.Amount, command.Currency);
 
@@ -58,8 +85,6 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
         {
             return addLabelsToGroupResult.ConvertFailure<CreateExpenseResponse>();
         }
-
-        var expenseId = Guid.NewGuid().ToString();
 
         var newExpense = new GroupExpense
         {
@@ -83,6 +108,19 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
 
         if (writeResult.IsFailure)
         {
+            // Two sends of one expense can both get past the check above. The later insert then
+            // fails on the duplicate id, and the expense it carries is already stored.
+            if (command.ExpenseId is not null)
+            {
+                var isStoredResult =
+                    await ClientIds.IsAlreadyStored<Expense, GroupExpense>(_expensesRepository, expenseId, memberId, ct);
+
+                if (isStoredResult.IsSuccess && isStoredResult.Value)
+                {
+                    return new CreateExpenseResponse { ExpenseId = expenseId };
+                }
+            }
+
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 

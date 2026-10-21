@@ -34,7 +34,7 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             return permissionResult;
         }
 
-        var (user, group, _) = permissionResult.Value;
+        var (user, group, memberId) = permissionResult.Value;
 
         foreach (var t in command.Transfers)
         {
@@ -46,16 +46,23 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             }
         }
 
+        var transferIdsResult = ClientIds.ResolveAll(command.Transfers.Select(x => x.TransferId));
+
+        if (transferIdsResult.IsFailure)
+        {
+            return transferIdsResult;
+        }
+
         var now = DateTime.UtcNow;
 
         var transfers = command.Transfers
-            .Select(x => new GroupTransfer
+            .Select((x, i) => new GroupTransfer
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = transferIdsResult.Value[i],
                 Created = now,
                 Updated = now,
                 GroupId = command.GroupId,
-                CreatorId = group.Members.Single(m => m.UserId == command.UserId).Id,
+                CreatorId = memberId,
                 SenderId = x.SenderId,
                 ReceiverId = x.ReceiverId,
                 Amount = x.Amount,
@@ -65,16 +72,20 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             })
             .ToList();
 
-        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+        var insertResult = await ClientIds.InsertMissing<Transfer, GroupTransfer>(_transfersRepository, transfers, memberId, ct);
 
-        if (writeResult.IsFailure)
+        if (insertResult.IsFailure)
         {
-            return writeResult;
+            return insertResult;
         }
 
-        await NotifyInvolvedMembers(command, group, user.Username, ct);
+        // A resend of a settle-up that is already in has nothing new to tell anyone.
+        if (insertResult.Value > 0)
+        {
+            await NotifyInvolvedMembers(command, group, user.Username, ct);
+        }
 
-        return writeResult;
+        return Result.Success();
     }
 
     /// <summary>

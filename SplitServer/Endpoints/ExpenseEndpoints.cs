@@ -39,6 +39,7 @@ public static class ExpenseEndpoints
         var command = new CreateExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             GroupId = request.GroupId,
             Amount = request.Amount,
             Currency = request.Currency,
@@ -64,6 +65,7 @@ public static class ExpenseEndpoints
         var command = new CreateNonGroupExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,
@@ -88,6 +90,7 @@ public static class ExpenseEndpoints
         var command = new CreatePersonalExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,

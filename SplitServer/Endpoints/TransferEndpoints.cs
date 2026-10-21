@@ -32,6 +32,7 @@ public static class TransferEndpoints
         var command = new CreateTransferCommand
         {
             UserId = httpContext.GetUserId(),
+            TransferId = request.TransferId,
             GroupId = request.GroupId,
             Amount = request.Amount,
             Currency = request.Currency,
@@ -55,6 +56,7 @@ public static class TransferEndpoints
         var command = new CreateNonGroupTransferCommand
         {
             UserId = httpContext.GetUserId(),
+            TransferId = request.TransferId,
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,

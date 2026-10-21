@@ -59,12 +59,19 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             return connectionResult;
         }
 
+        var transferIdsResult = ClientIds.ResolveAll(command.Transfers.Select(x => x.TransferId));
+
+        if (transferIdsResult.IsFailure)
+        {
+            return transferIdsResult;
+        }
+
         var now = DateTime.UtcNow;
 
         var transfers = command.Transfers
-            .Select(x => new NonGroupTransfer
+            .Select((x, i) => new NonGroupTransfer
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = transferIdsResult.Value[i],
                 Created = now,
                 Updated = now,
                 CreatorId = command.UserId,
@@ -77,16 +84,21 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             })
             .ToList();
 
-        var writeResult = await _transfersRepository.InsertMany(transfers, ct);
+        var insertResult =
+            await ClientIds.InsertMissing<Transfer, NonGroupTransfer>(_transfersRepository, transfers, command.UserId, ct);
 
-        if (writeResult.IsFailure)
+        if (insertResult.IsFailure)
         {
-            return writeResult;
+            return insertResult;
         }
 
-        await NotifyCounterparties(command, ct);
+        // A resend of a settle-up that is already in has nothing new to tell anyone.
+        if (insertResult.Value > 0)
+        {
+            await NotifyCounterparties(command, ct);
+        }
 
-        return writeResult;
+        return Result.Success();
     }
 
     /// <summary>
