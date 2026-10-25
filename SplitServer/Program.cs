@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using Microsoft.AspNetCore.Http.Json;
 using Serilog;
 using SplitServer.Configuration;
@@ -11,6 +11,7 @@ using SplitServer.Repositories.Implementations;
 using SplitServer.Services;
 using SplitServer.Services.Auth;
 using SplitServer.Services.CurrencyExchangeRate;
+using SplitServer.Services.Donations;
 using SplitServer.Services.Email;
 using SplitServer.Services.OpenExchangeRates;
 using SplitServer.Services.TimeZone;
@@ -29,6 +30,7 @@ builder.Services.AddTransient<HttpClientLoggingHandler>();
 builder.Services.Configure<JsonOptions>(options => { options.SerializerOptions.AllowTrailingCommas = true; });
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(Assembly.GetExecutingAssembly()));
 builder.Services.AddSingleton<AuthService>();
+builder.Services.AddSingleton<GoogleAccountService>();
 builder.Services.AddSingleton<ValidationService>();
 builder.Services.AddSingleton<PermissionService>();
 builder.Services.AddSingleton<LockService>();
@@ -44,6 +46,10 @@ builder.Services.AddSingleton<CurrencyExchangeRateService>();
 builder.Services.AddSingleton<ExceptionHandlerMiddleware>();
 builder.Services.AddSingleton<OpenExchangeRatesClient>();
 builder.Services.AddSingleton<TimeZoneService>();
+builder.Services.AddSingleton<DonationPromptPolicy>();
+builder.Services.AddSingleton<DonationCatalog>();
+builder.Services.AddSingleton<GooglePlayBillingService>();
+builder.Services.AddSingleton<DonationRecorder>();
 
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
@@ -63,6 +69,9 @@ builder.Services.AddSingleton<IEmailVerificationCodesRepository, EmailVerificati
 builder.Services.AddSingleton<IPushSubscriptionsRepository, PushSubscriptionsMongoDbRepository>();
 builder.Services.AddSingleton<INotificationsRepository, NotificationsMongoDbRepository>();
 builder.Services.AddSingleton<IUserConnectionsRepository, UserConnectionsMongoDbRepository>();
+builder.Services.AddSingleton<IDonationsRepository, DonationsMongoDbRepository>();
+builder.Services.AddSingleton<IDonationSubscriptionsRepository, DonationSubscriptionsMongoDbRepository>();
+builder.Services.AddSingleton<IDonationPromptStatesRepository, DonationPromptStatesMongoDbRepository>();
 
 builder.Services.AddHostedService<RecurringExpensesWorker>();
 
@@ -75,6 +84,8 @@ builder.Configure<JoinSettings>();
 builder.Configure<OpenExchangeRatesSettings>();
 builder.Configure<ErrorHandlingSettings>();
 builder.Configure<PushNotificationsSettings>();
+builder.Configure<GooglePlaySettings>();
+builder.Configure<DonationsSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
 var emailSettings = builder.Configure<EmailSettings>();
@@ -98,7 +109,11 @@ builder.Services.AddCors(
             policyBuilder =>
             {
                 policyBuilder
-                    .WithOrigins(authSettings.ClientUrl)
+                    // The Android app serves the same bundle from inside its own shell, where the
+                    // origin is fixed at https://localhost by Capacitor rather than being our domain.
+                    // Every request it makes is cross-origin, so without this the app gets nothing
+                    // past the preflight. It is not a wildcard: only the app's WebView is this origin.
+                    .WithOrigins(authSettings.ClientUrl, "https://localhost")
                     .AllowAnyHeader()
                     .AllowAnyMethod()
                     .AllowCredentials();

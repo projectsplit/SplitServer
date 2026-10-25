@@ -83,7 +83,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             return updateResult;
         }
 
-        await NotifyMembersWithChangedAmounts(command, group, groupExpense, user.Username, ct);
+        await NotifyMembersWithChangedAmounts(command, group, groupExpense, editedExpense, user.Username, ct);
 
         return updateResult;
     }
@@ -97,6 +97,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
         EditExpenseCommand command,
         Group group,
         GroupExpense originalExpense,
+        GroupExpense editedExpense,
         string editorUsername,
         CancellationToken ct)
     {
@@ -123,7 +124,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
             recipientUserIds,
             group.Name,
             $"{editorUsername} edited \"{command.Description}\" ({command.Amount} {command.Currency})",
-            $"/shared/{group.Id}/expenses",
+            ExpenseLinks.JumpTo(editedExpense),
             ct);
     }
 }

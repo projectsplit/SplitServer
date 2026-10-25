@@ -116,4 +116,15 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
         CancellationToken ct);
 
     Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct);
+
+    /// <summary>
+    /// How many expenses this person has entered, of any kind, giving up once <paramref name="limit"/>
+    /// have been found. Callers only ever want to know whether a threshold was crossed, and stopping
+    /// there keeps the count off the profile of someone with years of history.
+    /// </summary>
+    Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct);
+
+    Task<Result> DeletePersonalByCreatorId(string creatorId, CancellationToken ct);
+
+    Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct);
 }

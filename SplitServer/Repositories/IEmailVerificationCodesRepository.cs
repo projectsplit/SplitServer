@@ -14,4 +14,6 @@ public interface IEmailVerificationCodesRepository : IRepositoryBase<EmailVerifi
         string userId,
         EmailVerificationCodePurpose purpose,
         CancellationToken ct);
+
+    Task<Result> DeleteByUserId(string userId, CancellationToken ct);
 }

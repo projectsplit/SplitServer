@@ -108,6 +108,17 @@ public class InvitationsMongoDbRepository : MongoDbRepositoryBase<Invitation, In
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
     }
 
+    public async Task<Result> DeleteByUserId(string userId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Or(
+            FilterBuilder.Eq(x => x.SenderId, userId),
+            FilterBuilder.Eq(x => x.ReceiverId, userId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete invitations");
+    }
+
     public async Task<long> CountByReceiverIdAndMinCreated(string receiverId, DateTime minCreatedDate, CancellationToken ct)
     {
         var filter = FilterBuilder.And(

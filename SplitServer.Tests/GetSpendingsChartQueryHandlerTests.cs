@@ -632,6 +632,13 @@ file class FakeExpensesRepository : IExpensesRepository
         return Task.FromResult(InWindow(matches, startDate, endDate).ToList());
     }
 
+    /// <summary>
+    /// Only the donation prompt asks this, and nothing in these tests goes near it. Answering zero
+    /// rather than throwing keeps the fake usable if the handler ever grows a call to it.
+    /// </summary>
+    public Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct) =>
+        Task.FromResult(0L);
+
     private static IEnumerable<T> InWindow<T>(IEnumerable<T> expenses, DateTime? startDate, DateTime? endDate)
         where T : Expense
     {
@@ -655,6 +662,8 @@ file class FakeExpensesRepository : IExpensesRepository
     public Task<List<Expense>> SearchPersonalByUserId(string userId, List<string> memberIds, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? labels, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<SplitServer.Models.NonGroupExpense>> SearchNonGroup(string userId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? participantIds, string[]? payerIds, string[]? labelIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeletePersonalByCreatorId(string creatorId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Maybe<Expense>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<IList<Expense>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Insert(Expense entity, CancellationToken ct) => throw new NotSupportedException();

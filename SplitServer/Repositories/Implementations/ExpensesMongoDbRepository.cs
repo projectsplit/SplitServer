@@ -601,4 +601,36 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
 
         return payerIds.Concat(participantIds).Distinct().ToList();
     }
+
+    public async Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.CreatorId, creatorId);
+
+        return await Collection.CountDocumentsAsync(
+            filter,
+            new CountOptions { Limit = limit },
+            ct);
+    }
+
+    public async Task<Result> DeletePersonalByCreatorId(string creatorId, CancellationToken ct)
+    {
+        // The discriminator is what keeps this to the personal ledger. CreatorId alone would also
+        // match every non-group expense this person entered, including the ones other people are in.
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq("_t", "personal"),
+            FilterBuilder.Eq(x => x.CreatorId, creatorId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete personal expenses");
+    }
+
+    public async Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct)
+    {
+        var filter = FilterBuilder.In(x => x.Id, ids);
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete expenses");
+    }
 }

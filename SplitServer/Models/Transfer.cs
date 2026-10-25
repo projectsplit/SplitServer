@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Models;
 
-public abstract record Transfer : EntityBase
+public abstract record Transfer : EntityBase, IHasCreator
 {
     public required string CreatorId { get; init; }
     public required string SenderId { get; init; }

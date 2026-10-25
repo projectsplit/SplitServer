@@ -26,6 +26,31 @@ public class CreatePersonalExpenseCommandHandler : IRequestHandler<CreatePersona
 
     public async Task<Result<CreateExpenseResponse>> Handle(CreatePersonalExpenseCommand command, CancellationToken ct)
     {
+        var expenseIdResult = ClientIds.Resolve(command.ExpenseId);
+
+        if (expenseIdResult.IsFailure)
+        {
+            return expenseIdResult.ConvertFailure<CreateExpenseResponse>();
+        }
+
+        var expenseId = expenseIdResult.Value;
+
+        if (command.ExpenseId is not null)
+        {
+            var isStoredResult =
+                await ClientIds.IsAlreadyStored<Expense, PersonalExpense>(_expensesRepository, expenseId, command.UserId, ct);
+
+            if (isStoredResult.IsFailure)
+            {
+                return isStoredResult.ConvertFailure<CreateExpenseResponse>();
+            }
+
+            if (isStoredResult.Value)
+            {
+                return new CreateExpenseResponse { ExpenseId = expenseId };
+            }
+        }
+
         var expenseValidationResult = _validationService.ValidatePersonalExpense(
             command.Amount,
             command.Currency);
@@ -43,8 +68,6 @@ public class CreatePersonalExpenseCommandHandler : IRequestHandler<CreatePersona
         {
             return addLabelsToGroupResult.ConvertFailure<CreateExpenseResponse>();
         }
-
-        var expenseId = Guid.NewGuid().ToString();
 
         var personalExpense = new PersonalExpense
         {
@@ -65,6 +88,19 @@ public class CreatePersonalExpenseCommandHandler : IRequestHandler<CreatePersona
 
         if (writeResult.IsFailure)
         {
+            // Two sends of one expense can both get past the check above. The later insert then
+            // fails on the duplicate id, and the expense it carries is already stored.
+            if (command.ExpenseId is not null)
+            {
+                var isStoredResult =
+                    await ClientIds.IsAlreadyStored<Expense, PersonalExpense>(_expensesRepository, expenseId, command.UserId, ct);
+
+                if (isStoredResult.IsSuccess && isStoredResult.Value)
+                {
+                    return new CreateExpenseResponse { ExpenseId = expenseId };
+                }
+            }
+
             return writeResult.ConvertFailure<CreateExpenseResponse>();
         }
 

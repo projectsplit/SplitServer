@@ -101,4 +101,15 @@ public class UserConnectionsMongoDbRepository : MongoDbRepositoryBase<UserConnec
 
         return await Collection.Find(filter).CountDocumentsAsync(ct);
     }
+
+    public async Task<Result> DeleteByUserId(string userId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Or(
+            FilterBuilder.Eq(x => x.SenderId, userId),
+            FilterBuilder.Eq(x => x.ReceiverId, userId));
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete connections");
+    }
 }

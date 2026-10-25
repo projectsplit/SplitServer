@@ -13,4 +13,7 @@ public class CreateNonGroupTransferCommand : IRequest<Result<CreateTransferRespo
     public required DateTime? Occurred { get; init; }
     public required string SenderId { get; init; }
     public required string ReceiverId { get; init; }
+
+    /// <summary>The id the app picked for this transfer, if it picked one. See <see cref="Services.ClientIds"/>.</summary>
+    public string? TransferId { get; init; }
 }

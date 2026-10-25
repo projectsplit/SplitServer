@@ -24,5 +24,7 @@ public interface IRecurringExpensesRepository : IRepositoryBase<RecurringExpense
 
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
+    Task<Result> DeleteByUserId(string userId, CancellationToken ct);
+
     Task EnsureIndexes(CancellationToken ct);
 }

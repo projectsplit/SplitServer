@@ -21,4 +21,7 @@ public class CreateExpenseCommand : IRequest<Result<CreateExpenseResponse>>
 
     /// <summary>Set only when a recurring template is materializing an occurrence.</summary>
     public string? RecurringExpenseId { get; init; }
+
+    /// <summary>The id the app picked for this expense, if it picked one. See <see cref="Services.ClientIds"/>.</summary>
+    public string? ExpenseId { get; init; }
 }

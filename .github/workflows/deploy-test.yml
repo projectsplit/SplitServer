@@ -50,6 +50,10 @@ jobs:
               -v $(pwd)/appsettings.Test.json:/app/appsettings.Test.json \
               -e ASPNETCORE_URLS="http://0.0.0.0:${{ env.APP_PORT }}" \
               -e ASPNETCORE_ENVIRONMENT=Test \
+              -e GooglePlay__Enabled="true" \
+              -e GooglePlay__PackageName="com.buqs" \
+              -e GooglePlay__ServiceAccountJson="${{ secrets.PLAY_SERVICE_ACCOUNT_BASE64 }}" \
+              -e GooglePlay__NotificationSecret="${{ secrets.PLAY_NOTIFICATION_SECRET }}" \
               --restart always \
               ${{ env.DOCKER_REPO }}:$DOCKER_TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi || true

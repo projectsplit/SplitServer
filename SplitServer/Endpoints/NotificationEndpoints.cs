@@ -53,6 +53,7 @@ public static class NotificationEndpoints
         {
             UserId = httpContext.GetUserId(),
             Endpoint = request.Endpoint,
+            Kind = request.Kind,
             P256dh = request.P256dh,
             Auth = request.Auth
         };

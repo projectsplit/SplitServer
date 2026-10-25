@@ -33,6 +33,33 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
 
     public async Task<Result<CreateTransferResponse>> Handle(CreateNonGroupTransferCommand command, CancellationToken ct)
     {
+        var transferIdResult = ClientIds.Resolve(command.TransferId);
+
+        if (transferIdResult.IsFailure)
+        {
+            return transferIdResult.ConvertFailure<CreateTransferResponse>();
+        }
+
+        var transferId = transferIdResult.Value;
+
+        // Ahead of validation: a resend of a transfer that is already in has to succeed even if the
+        // two sides have since stopped being connected.
+        if (command.TransferId is not null)
+        {
+            var isStoredResult =
+                await ClientIds.IsAlreadyStored<Transfer, NonGroupTransfer>(_transfersRepository, transferId, command.UserId, ct);
+
+            if (isStoredResult.IsFailure)
+            {
+                return isStoredResult.ConvertFailure<CreateTransferResponse>();
+            }
+
+            if (isStoredResult.Value)
+            {
+                return new CreateTransferResponse { TransferId = transferId };
+            }
+        }
+
         var transferValidationResult =
             _validationService.ValidateNonGroupTransfer(
                 command.SenderId,
@@ -57,7 +84,6 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
         }
 
         var now = DateTime.UtcNow;
-        var transferId = Guid.NewGuid().ToString();
 
         var newTransfer = new NonGroupTransfer
         {
@@ -77,6 +103,19 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
 
         if (writeResult.IsFailure)
         {
+            // Two sends of one transfer can both get past the check above. The later insert then
+            // fails on the duplicate id, and the transfer it carries is already stored.
+            if (command.TransferId is not null)
+            {
+                var isStoredResult =
+                    await ClientIds.IsAlreadyStored<Transfer, NonGroupTransfer>(_transfersRepository, transferId, command.UserId, ct);
+
+                if (isStoredResult.IsSuccess && isStoredResult.Value)
+                {
+                    return new CreateTransferResponse { TransferId = transferId };
+                }
+            }
+
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
 

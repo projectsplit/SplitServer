@@ -1,6 +1,6 @@
 ﻿namespace SplitServer.Models;
 
-public abstract record Expense : EntityBase
+public abstract record Expense : EntityBase, IHasCreator
 {
     public required DateTime Occurred { get; init; }
     public required string CreatorId { get; init; }

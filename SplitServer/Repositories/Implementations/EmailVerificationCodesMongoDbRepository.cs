@@ -49,4 +49,13 @@ public class EmailVerificationCodesMongoDbRepository
             ? Result.Success()
             : Result.Failure("Failed to invalidate active codes");
     }
+
+    public async Task<Result> DeleteByUserId(string userId, CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.UserId, userId);
+
+        var result = await Collection.DeleteManyAsync(filter, ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Failed to delete verification codes");
+    }
 }

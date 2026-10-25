@@ -2,6 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using SplitServer.Commands;
 using SplitServer.Extensions;
+using SplitServer.Models;
 using SplitServer.Queries;
 using SplitServer.Requests;
 using SplitServer.Responses;
@@ -26,6 +27,7 @@ public static class ExpenseEndpoints
         app.MapPost("/delete-non-group", DeleteNonGroupExpenseHandler);
         app.MapPost("/delete-personal", DeletePersonalExpenseHandler);
         app.MapGet("/user-totals", GetUserTotalsHandler);
+        app.MapGet("/export", GetExpensesForExportHandler);
     }
 
     private static async Task<IResult> CreateExpenseHandler(
@@ -37,6 +39,7 @@ public static class ExpenseEndpoints
         var command = new CreateExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             GroupId = request.GroupId,
             Amount = request.Amount,
             Currency = request.Currency,
@@ -62,6 +65,7 @@ public static class ExpenseEndpoints
         var command = new CreateNonGroupExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,
@@ -86,6 +90,7 @@ public static class ExpenseEndpoints
         var command = new CreatePersonalExpenseCommand
         {
             UserId = httpContext.GetUserId(),
+            ExpenseId = request.ExpenseId,
             Amount = request.Amount,
             Currency = request.Currency,
             Description = request.Description,
@@ -371,6 +376,29 @@ public static class ExpenseEndpoints
         var result = await mediator.Send(command, ct);
 
         return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    private static async Task<IResult> GetExpensesForExportHandler(
+        HttpContext httpContext,
+        IMediator mediator,
+        DateTime startDate,
+        DateTime endDate,
+        int scope,
+        string[]? targetGroupIds,
+        CancellationToken ct)
+    {
+        var query = new GetExpensesForExportQuery
+        {
+            UserId = httpContext.GetUserId(),
+            StartDate = startDate,
+            EndDate = endDate,
+            Scope = (BudgetScope)scope,
+            TargetGroupIds = targetGroupIds?.ToList() ?? []
+        };
+
+        var result = await mediator.Send(query, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok(result.Value);
     }
 
     private static async Task<IResult> GetUserTotalsHandler(

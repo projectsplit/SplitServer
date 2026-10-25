@@ -14,4 +14,7 @@ public interface IUserConnectionsRepository : IRepositoryBase<UserConnection>
     Task<List<UserConnection>> GetPendingByReceiverId(string receiverId, int pageSize, DateTime maxCreatedDate, CancellationToken ct);
 
     Task<long> CountPendingByReceiverIdAndMinCreated(string receiverId, DateTime minCreatedDate, CancellationToken ct);
+
+    /// <summary>Every connection this person is one side of, pending or accepted.</summary>
+    Task<Result> DeleteByUserId(string userId, CancellationToken ct);
 }

@@ -8,8 +8,6 @@ namespace SplitServer.Commands;
 
 public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExpenseCommand, Result>
 {
-    private const string NonGroupExpensesUrl = "/shared/nongroup/expenses";
-
     private readonly IExpensesRepository _expensesRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly PermissionService _permissionService;
@@ -101,7 +99,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
             return updateResult;
         }
 
-        await NotifyUsersWithChangedAmounts(command, nonGroupExpense, ct);
+        await NotifyUsersWithChangedAmounts(command, nonGroupExpense, editedExpense, ct);
 
         return updateResult;
     }
@@ -114,6 +112,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
     private async Task NotifyUsersWithChangedAmounts(
         EditNonGroupExpenseCommand command,
         NonGroupExpense originalExpense,
+        NonGroupExpense editedExpense,
         CancellationToken ct)
     {
         var before = AmountChanges.Snapshot(
@@ -148,7 +147,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
             recipientUserIds,
             "Expense edited",
             $"{editorUsername} edited \"{command.Description}\" ({command.Amount} {command.Currency})",
-            NonGroupExpensesUrl,
+            ExpenseLinks.JumpTo(editedExpense),
             ct);
     }
 }
