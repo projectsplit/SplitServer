@@ -58,6 +58,8 @@ jobs:
               -e GooglePlay__PackageName="com.buqs" \
               -e GooglePlay__ServiceAccountJson="${{ secrets.PLAY_SERVICE_ACCOUNT_BASE64 }}" \
               -e GooglePlay__NotificationSecret="${{ secrets.PLAY_NOTIFICATION_SECRET }}" \
+              -e Email__Enabled="${{ secrets.RESEND_API_KEY != '' }}" \
+              -e Email__Password="${{ secrets.RESEND_API_KEY }}" \
               --restart always \
               ${{ env.DOCKER_REPO }}:$DOCKER_TAG
             docker images ${{ env.DOCKER_REPO }} --format '{{.Repository}}:{{.Tag}}' | grep -v -F -x -f <(docker ps -q | xargs -n 1 docker inspect --format '{{.Config.Image}}') | xargs -r docker rmi || true
