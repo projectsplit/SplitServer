@@ -19,6 +19,7 @@ public static class AuthEndpoints
         app.MapPost("/username/forgot", ForgotUsernameHandler);
         app.MapPost("/account/email", SetAccountEmailHandler).RequireAuthorization();
         app.MapPost("/account/email/verify", VerifyAccountEmailHandler).RequireAuthorization();
+        app.MapPost("/account/password", ChangePasswordHandler).RequireAuthorization();
         app.MapPost("/external/google/token", GoogleTokenHandler);
         app.MapPost("/external/google/id-token", GoogleIdTokenHandler);
         app.MapPost("/refresh", RefreshHandler);
@@ -249,6 +250,39 @@ public static class AuthEndpoints
         {
             UserId = userId,
             Code = request.Code,
+        };
+
+        var result = await mediator.Send(command, ct);
+
+        return result.IsFailure ? Results.BadRequest(result.Error) : Results.Ok();
+    }
+
+    /// <summary>
+    /// Every call is a guess at the current password, so attempts are rationed per user the way
+    /// the email endpoints are; otherwise a stolen access token could be used to try passwords
+    /// until one opens the way to setting a new one.
+    /// </summary>
+    private static async Task<IResult> ChangePasswordHandler(
+        ChangePasswordRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        EmailThrottleService throttleService,
+        CancellationToken ct)
+    {
+        var ip = GetClientIp(httpContext);
+        var userId = httpContext.GetUserId();
+
+        if (!throttleService.TryConsume("change-password", ip, userId))
+        {
+            return Results.BadRequest("Too many attempts. Please try again later.");
+        }
+
+        var command = new ChangePasswordCommand
+        {
+            UserId = userId,
+            SessionId = httpContext.GetSessionId(),
+            CurrentPassword = request.CurrentPassword,
+            NewPassword = request.NewPassword,
         };
 
         var result = await mediator.Send(command, ct);

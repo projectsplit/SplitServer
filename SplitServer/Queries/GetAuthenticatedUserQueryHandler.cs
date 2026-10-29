@@ -77,6 +77,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             Username = user.Username,
             Email = user.Email,
             EmailVerified = user.EmailVerified,
+            HasPassword = user.HashedPassword is not null,
             HasNewerNotifications = invitationsCount > 0 || activityCount > 0 || connectionRequestsCount > 0,
             Currency = currency,
             TimeZone = timeZone,

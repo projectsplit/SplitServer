@@ -11,6 +11,7 @@ public class ValidationService
     public const int UsernameMinLength = 4;
     public const int UsernameMaxLength = 16;
     public const int EmailMaxLength = 254;
+    public const int PasswordMinLength = 10;
 
     private static readonly System.Text.RegularExpressions.Regex EmailRegex = new(
         @"^[^\s@]+@[^\s@]+\.[^\s@]+$",
@@ -67,6 +68,16 @@ public class ValidationService
         if (!EmailRegex.IsMatch(email))
         {
             return Result.Failure("Email is not a valid email address");
+        }
+
+        return Result.Success();
+    }
+
+    public Result ValidatePassword(string password)
+    {
+        if (string.IsNullOrEmpty(password) || password.Length < PasswordMinLength)
+        {
+            return Result.Failure($"Password must be at least {PasswordMinLength} characters long");
         }
 
         return Result.Success();
