@@ -116,6 +116,34 @@ public class ValidationServiceTests
         Assert.True(result.IsSuccess);
     }
 
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("short")]
+    [InlineData("123456789")]
+    public void ValidatePassword_ShouldReturnFailure_WhenPasswordIsTooShort(string? password)
+    {
+        var validationService = new ValidationService();
+
+        var result = validationService.ValidatePassword(password!);
+
+        Assert.True(result.IsFailure);
+
+        _testOutputHelper.WriteLine(result.Error);
+    }
+
+    [Theory]
+    [InlineData("1234567890")]
+    [InlineData("correct horse battery staple")]
+    public void ValidatePassword_ShouldReturnSuccess_WhenPasswordIsLongEnough(string password)
+    {
+        var validationService = new ValidationService();
+
+        var result = validationService.ValidatePassword(password);
+
+        Assert.True(result.IsSuccess);
+    }
+
     [Fact]
     public void ValidateNonGroupExpense_ShouldReturnFailure_WhenUserIsNeitherPayerNorParticipant()
     {
