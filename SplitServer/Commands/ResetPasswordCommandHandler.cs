@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using SplitServer.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 using SplitServer.Services.Email;
 
 namespace SplitServer.Commands;
@@ -15,17 +16,20 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
     private readonly IEmailVerificationCodesRepository _codesRepository;
     private readonly ISessionsRepository _sessionsRepository;
     private readonly EmailTokenService _tokenService;
+    private readonly ValidationService _validationService;
 
     public ResetPasswordCommandHandler(
         IUsersRepository usersRepository,
         IEmailVerificationCodesRepository codesRepository,
         ISessionsRepository sessionsRepository,
-        EmailTokenService tokenService)
+        EmailTokenService tokenService,
+        ValidationService validationService)
     {
         _usersRepository = usersRepository;
         _codesRepository = codesRepository;
         _sessionsRepository = sessionsRepository;
         _tokenService = tokenService;
+        _validationService = validationService;
     }
 
     public async Task<Result> Handle(ResetPasswordCommand command, CancellationToken ct)
@@ -33,6 +37,15 @@ public class ResetPasswordCommandHandler : IRequestHandler<ResetPasswordCommand,
         if (string.IsNullOrWhiteSpace(command.Token) || string.IsNullOrWhiteSpace(command.NewPassword))
         {
             return Result.Failure(InvalidOrExpiredError);
+        }
+
+        // The same minimum as signing up and changing a password, so a reset cannot set a weaker
+        // password than either of them would accept.
+        var passwordValidationResult = _validationService.ValidatePassword(command.NewPassword);
+
+        if (passwordValidationResult.IsFailure)
+        {
+            return passwordValidationResult;
         }
 
         var tokenHash = _tokenService.Hash(command.Token);

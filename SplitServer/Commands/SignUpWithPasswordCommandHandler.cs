@@ -59,6 +59,13 @@ public class SignUpWithPasswordCommandHandler : IRequestHandler<SignUpWithPasswo
             return Result.Failure<AuthenticationResponse>(emailValidationResult.Error);
         }
 
+        var passwordValidationResult = _validationService.ValidatePassword(command.Password);
+
+        if (passwordValidationResult.IsFailure)
+        {
+            return Result.Failure<AuthenticationResponse>(passwordValidationResult.Error);
+        }
+
         // Only a verified email is owned by an account. An address nobody has proven ownership of
         // stays up for grabs, so it cannot be used to block someone from signing up.
         var verifiedOwnerMaybe = await _usersRepository.GetVerifiedByEmail(command.Email, ct);
