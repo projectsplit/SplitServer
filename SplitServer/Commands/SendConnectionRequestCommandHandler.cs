@@ -8,20 +8,25 @@ namespace SplitServer.Commands;
 
 public class SendConnectionRequestCommandHandler : IRequestHandler<SendConnectionRequestCommand, Result>
 {
+    private const string NonGroupExpensesUrl = "/shared/nongroup/expenses";
+
     private readonly IUsersRepository _usersRepository;
     private readonly IUserConnectionsRepository _userConnectionsRepository;
     private readonly ConnectionService _connectionService;
+    private readonly NotificationService _notificationService;
     private readonly PushNotificationService _pushNotificationService;
 
     public SendConnectionRequestCommandHandler(
         IUsersRepository usersRepository,
         IUserConnectionsRepository userConnectionsRepository,
         ConnectionService connectionService,
+        NotificationService notificationService,
         PushNotificationService pushNotificationService)
     {
         _usersRepository = usersRepository;
         _userConnectionsRepository = userConnectionsRepository;
         _connectionService = connectionService;
+        _notificationService = notificationService;
         _pushNotificationService = pushNotificationService;
     }
 
@@ -82,10 +87,14 @@ public class SendConnectionRequestCommandHandler : IRequestHandler<SendConnectio
                 return updateResult;
             }
 
-            _pushNotificationService.NotifyInBackground(
+            // Their pending request is gone now, just as if this user had pressed accept, so they get
+            // the same lasting record of the answer rather than a push that leaves nothing behind.
+            await _notificationService.Notify(
                 [existingConnection.SenderId],
                 "Connection accepted",
-                $"{senderUsername} accepted your request. You can now split expenses together.");
+                $"{senderUsername} accepted your request. You can now split expenses together.",
+                NonGroupExpensesUrl,
+                ct);
 
             return Result.Success();
         }
