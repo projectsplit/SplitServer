@@ -48,6 +48,9 @@ public interface IExpensesRepository : IRepositoryBase<Expense>
 
     Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct);
 
+    /// <summary>Every expense of the group naming this member id anywhere: as payer, as participant or as creator.</summary>
+    Task<List<GroupExpense>> GetGroupExpensesInvolving(string groupId, string memberId, CancellationToken ct);
+
     Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct);
 
     Task<bool> UserLabelInUse(string labelText, CancellationToken ct);

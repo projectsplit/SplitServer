@@ -226,6 +226,7 @@ file class FakeGroupsRepository : IGroupsRepository
 
     public Task<List<Group>> GetByUserId(string userId, bool? isArchived, int pageSize, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct) => throw new NotSupportedException();
+    public Task<CSharpFunctionalExtensions.Result<bool>> UpdateIfUnchanged(Group entity, DateTime expectedUpdated, CancellationToken ct) => throw new NotSupportedException();
     public Task<Maybe<Group>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<IList<Group>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Insert(Group entity, CancellationToken ct) => throw new NotSupportedException();
@@ -248,6 +249,7 @@ file class FakeExpensesRepository : IExpensesRepository
     public Task<Result> ClearRecurringExpenseId(string recurringExpenseId, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<SplitServer.Models.GroupExpense>> GetGroupExpensesByMemberIds(List<string> memberIds, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) => throw new NotSupportedException();
     public Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupExpense>> GetGroupExpensesInvolving(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
     public Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct) => throw new NotSupportedException();
     public Task<bool> UserLabelInUse(string labelText, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<SplitServer.Models.GroupExpense>> Search(string groupId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? participantIds, string[]? payerIds, string[]? labelIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
@@ -278,6 +280,7 @@ file class FakeTransfersRepository : ITransfersRepository
     public Task<Result> DeleteByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<GroupTransfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct) => throw new NotSupportedException();
     public Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupTransfer>> GetGroupTransfersInvolving(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<GroupTransfer>> Search(string groupId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? receiverIds, string[]? senderIds, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<NonGroupTransfer>> SearchNonGroup(string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? receiverIds, string[]? senderIds, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();

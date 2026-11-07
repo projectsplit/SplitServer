@@ -1,5 +1,6 @@
 using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
@@ -254,7 +255,7 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
         var remainingGroup = GroupDeparture.WithoutMember(group, member, user.Username, memberHasActivity, DateTime.UtcNow);
 
         return remainingGroup is not null
-            ? await _groupsRepository.Update(remainingGroup, ct)
+            ? await _groupsRepository.UpdateIfUnchangedOrFail(remainingGroup, group.Updated, ct)
             : await DeleteGroup(group.Id, ct);
     }
 

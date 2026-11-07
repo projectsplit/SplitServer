@@ -22,6 +22,9 @@ public interface IRecurringExpensesRepository : IRepositoryBase<RecurringExpense
     /// </summary>
     Task<Result<bool>> UpdateIfUnchanged(RecurringExpense entity, DateTime expectedUpdated, CancellationToken ct);
 
+    /// <summary>Every template of the group naming this member id as payer or participant.</summary>
+    Task<List<GroupRecurringExpense>> GetGroupTemplatesInvolving(string groupId, string memberId, CancellationToken ct);
+
     Task<Result> DeleteByGroupId(string groupId, CancellationToken ct);
 
     Task<Result> DeleteByUserId(string userId, CancellationToken ct);

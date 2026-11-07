@@ -30,9 +30,23 @@ public class SendInvitationCommandHandler : IRequestHandler<SendInvitationComman
 
         var (_, group, _) = permissionResult.Value;
 
-        if (group.Members.Any(x => x.UserId == command.ReceiverId))
+        if (command.ReceiverId == command.UserId)
+        {
+            return Result.Failure("You cannot invite yourself");
+        }
+
+        // Someone already in the group can still be invited onto a guest's slot: accepting merges
+        // the guest into them (see GuestMerge). Without a guest there is nothing to invite them to.
+        if (command.GuestId is null && group.Members.Any(x => x.UserId == command.ReceiverId))
         {
             return Result.Failure("User is already a group member");
+        }
+
+        var existingInvitationMaybe = await _invitationsRepository.GetByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
+
+        if (existingInvitationMaybe.HasValue && GuestMerge.IsUnfinished(existingInvitationMaybe.Value, group))
+        {
+            return Result.Failure(GuestMerge.UnfinishedError);
         }
 
         if (command.GuestId is not null)

@@ -24,6 +24,9 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
 
     Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct);
 
+    /// <summary>Every transfer of the group naming this member id anywhere: as sender, as receiver or as creator.</summary>
+    Task<List<GroupTransfer>> GetGroupTransfersInvolving(string groupId, string memberId, CancellationToken ct);
+
     Task<List<GroupTransfer>> Search(
         string groupId,
         string? searchTerm,

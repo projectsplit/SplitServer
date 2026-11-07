@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Repositories;
 using SplitServer.Services;
 
@@ -45,6 +46,6 @@ public class EditGroupCurrencyCommandHandler : IRequestHandler<EditGroupCurrency
             Updated = DateTime.UtcNow
         };
 
-        return await _groupsRepository.Update(updatedGroup, ct);
+        return await _groupsRepository.UpdateIfUnchangedOrFail(updatedGroup, group.Updated, ct);
     }
 }
