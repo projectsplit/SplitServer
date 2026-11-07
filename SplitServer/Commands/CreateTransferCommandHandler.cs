@@ -109,7 +109,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
 
-        await NotifyInvolvedMembers(command, group, user.Username, ct);
+        await NotifyInvolvedMembers(command, group, newTransfer, user.Username, ct);
 
         return new CreateTransferResponse
         {
@@ -125,6 +125,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
     private async Task NotifyInvolvedMembers(
         CreateTransferCommand command,
         Group group,
+        GroupTransfer transfer,
         string creatorUsername,
         CancellationToken ct)
     {
@@ -137,7 +138,7 @@ public class CreateTransferCommandHandler : IRequestHandler<CreateTransferComman
             recipientUserIds,
             group.Name,
             $"{creatorUsername} recorded a transfer of {command.Amount} {command.Currency}",
-            $"/shared/{command.GroupId}/transfers",
+            TransferLinks.JumpTo(transfer),
             ct);
     }
 }

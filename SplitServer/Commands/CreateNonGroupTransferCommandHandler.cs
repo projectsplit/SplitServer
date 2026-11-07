@@ -9,8 +9,6 @@ namespace SplitServer.Commands;
 
 public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGroupTransferCommand, Result<CreateTransferResponse>>
 {
-    private const string NonGroupTransfersUrl = "/shared/nongroup/transfers";
-
     private readonly ITransfersRepository _transfersRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
@@ -119,7 +117,7 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
             return writeResult.ConvertFailure<CreateTransferResponse>();
         }
 
-        await NotifyCounterparty(command, ct);
+        await NotifyCounterparty(command, newTransfer, ct);
 
         return new CreateTransferResponse
         {
@@ -131,7 +129,7 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
     /// Notifies the other side of the transfer. The creator is always one of the two parties here,
     /// and recording your own transfer is not news, so only the counterparty is told.
     /// </summary>
-    private async Task NotifyCounterparty(CreateNonGroupTransferCommand command, CancellationToken ct)
+    private async Task NotifyCounterparty(CreateNonGroupTransferCommand command, NonGroupTransfer transfer, CancellationToken ct)
     {
         string[] parties = [command.SenderId, command.ReceiverId];
 
@@ -153,7 +151,7 @@ public class CreateNonGroupTransferCommandHandler : IRequestHandler<CreateNonGro
             recipientUserIds,
             "New transfer",
             $"{creatorUsername} recorded a transfer of {command.Amount} {command.Currency} with you",
-            NonGroupTransfersUrl,
+            TransferLinks.JumpTo(transfer),
             ct);
     }
 }

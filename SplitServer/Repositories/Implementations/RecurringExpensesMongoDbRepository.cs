@@ -49,6 +49,23 @@ public class RecurringExpensesMongoDbRepository :
         return documents.Select(Mapper.ToEntity).ToList();
     }
 
+    public async Task<List<GroupRecurringExpense>> GetGroupTemplatesInvolving(string groupId, string memberId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<GroupRecurringExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.Or(
+                filterBuilder.Eq("Shares.MemberId", memberId),
+                filterBuilder.Eq("Payments.MemberId", memberId)));
+
+        var documents = await _groupRecurringExpensesCollection
+            .Find(filter)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (GroupRecurringExpense)Mapper.ToEntity(d)).ToList();
+    }
+
     public async Task<Result<bool>> UpdateIfUnchanged(RecurringExpense entity, DateTime expectedUpdated, CancellationToken ct)
     {
         // The stamp compared here always comes from a document read back out of Mongo, so both

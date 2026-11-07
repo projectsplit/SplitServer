@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Repositories;
 using SplitServer.Services;
 
@@ -42,12 +43,13 @@ public class RemoveGroupLabelCommandHandler : IRequestHandler<RemoveGroupLabelCo
             return Result.Failure("Label is in use and cannot be deleted");
         }
 
-        return await _groupsRepository.Update(
+        return await _groupsRepository.UpdateIfUnchangedOrFail(
             group with
             {
                 Labels = group.Labels.Where(x => x.Id != command.LabelId).ToList(),
                 Updated = DateTime.UtcNow
             },
+            group.Updated,
             ct);
     }
 }

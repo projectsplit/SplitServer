@@ -47,14 +47,14 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
             return Result.Failure<GroupTransfersResponse>("User must be a group member");
         }
 
-        var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
-
-        var transfers = await _transfersRepository.GetByGroupId(
-            query.GroupId,
+        var page = await TransactionPages.Load<GroupTransfer>(
             query.PageSize,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            ct);
+            Next.Parse<NextTransferPageDetails>(query.Next),
+            Next.Parse<NextTransferPageDetails>(query.Previous),
+            (limit, occurred, created, direction, inclusive) =>
+                _transfersRepository.GetByGroupId(query.GroupId, limit, occurred, created, direction, inclusive, ct));
+
+        var transfers = page.Items;
 
         return new GroupTransfersResponse
         {
@@ -74,19 +74,11 @@ public class GetGroupTransfersQueryHandler : IRequestHandler<GetGroupTransfersQu
                     SenderId = x.SenderId,
                 })
                 .ToList(),
-            Next = GetNext(query, transfers)
+            Next = page.HasMoreOlder ? CreateToken(transfers.Last()) : null,
+            Previous = page.HasMoreNewer ? CreateToken(transfers.First()) : null
         };
     }
 
-    private static string? GetNext(GetGroupTransfersQuery query, List<GroupTransfer> transfers)
-    {
-        return Next.Create(
-            transfers,
-            query.PageSize,
-            x => new NextTransferPageDetails
-            {
-                Created = x.Last().Created,
-                Occurred = x.Last().Occurred
-            });
-    }
+    private static string CreateToken(Transfer transfer) =>
+        Next.Encode(new NextTransferPageDetails { Created = transfer.Created, Occurred = transfer.Occurred });
 }

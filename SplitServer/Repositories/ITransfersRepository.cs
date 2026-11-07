@@ -1,17 +1,27 @@
 ﻿using CSharpFunctionalExtensions;
 using SplitServer.Models;
+using SplitServer.Queries.Models;
 
 namespace SplitServer.Repositories;
 
 public interface ITransfersRepository : IRepositoryBase<Transfer>
 {
-    Task<List<GroupTransfer>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct);
+    Task<List<GroupTransfer>> GetByGroupId(
+        string groupId,
+        int pageSize,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
+        CancellationToken ct);
 
     Task<List<NonGroupTransfer>> GetByUserId(
         string userId,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct);
 
     Task<List<GroupTransfer>> GetAllByGroupId(string groupId, CancellationToken ct);
@@ -23,6 +33,9 @@ public interface ITransfersRepository : IRepositoryBase<Transfer>
     Task<List<GroupTransfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct);
 
     Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct);
+
+    /// <summary>Every transfer of the group naming this member id anywhere: as sender, as receiver or as creator.</summary>
+    Task<List<GroupTransfer>> GetGroupTransfersInvolving(string groupId, string memberId, CancellationToken ct);
 
     Task<List<GroupTransfer>> Search(
         string groupId,

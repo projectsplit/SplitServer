@@ -152,7 +152,7 @@ public class CreateExpenseCommandHandler : IRequestHandler<CreateExpenseCommand,
         await _notificationService.Notify(
             recipientUserIds,
             group.Name,
-            $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency})",
+            $"{creatorUsername} added {ExpenseNotifications.Describe(command.Description, command.Amount, command.Currency)}",
             ExpenseLinks.JumpTo(expense),
             ct);
     }

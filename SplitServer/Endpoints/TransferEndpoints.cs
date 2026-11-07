@@ -145,6 +145,7 @@ public static class TransferEndpoints
         string groupId,
         int pageSize,
         string? next,
+        string? previous,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
@@ -176,7 +177,8 @@ public static class TransferEndpoints
                 UserId = httpContext.GetUserId(),
                 GroupId = groupId,
                 PageSize = pageSize,
-                Next = next
+                Next = next,
+                Previous = previous
             };
 
         var result = await mediator.Send(query, ct);
@@ -189,6 +191,7 @@ public static class TransferEndpoints
         IMediator mediator,
         int pageSize,
         string? next,
+        string? previous,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
@@ -218,7 +221,8 @@ public static class TransferEndpoints
             {
                 UserId = httpContext.GetUserId(),
                 PageSize = pageSize,
-                Next = next
+                Next = next,
+                Previous = previous
             };
 
         var result = await mediator.Send(query, ct);

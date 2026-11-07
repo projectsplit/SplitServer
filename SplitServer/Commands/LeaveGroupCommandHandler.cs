@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
@@ -59,7 +60,7 @@ public class LeaveGroupCommandHandler : IRequestHandler<LeaveGroupCommand, Resul
             ? GroupWithReplacedMember(group, memberToRemove, user, now)
             : GroupWithRemovedMember(group, memberToRemove, now);
 
-        var groupUpdateResult = await _groupsRepository.Update(editedGroup, ct);
+        var groupUpdateResult = await _groupsRepository.UpdateIfUnchangedOrFail(editedGroup, group.Updated, ct);
 
         if (groupUpdateResult.IsFailure)
         {

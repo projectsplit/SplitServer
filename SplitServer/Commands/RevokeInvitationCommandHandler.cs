@@ -27,6 +27,15 @@ public class RevokeInvitationCommandHandler : IRequestHandler<RevokeInvitationCo
             return permissionResult;
         }
 
+        var (_, group, _) = permissionResult.Value;
+
+        var invitationMaybe = await _invitationsRepository.GetByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
+
+        if (invitationMaybe.HasValue && GuestMerge.IsUnfinished(invitationMaybe.Value, group))
+        {
+            return Result.Failure(GuestMerge.UnfinishedError);
+        }
+
         return await _invitationsRepository.DeleteByGroupIdAndReceiverId(command.ReceiverId, command.GroupId, ct);
     }
 }

@@ -249,6 +249,24 @@ public class ExpensesMongoDbRepository : MongoDbRepositoryBase<Expense, ExpenseM
         return await _groupExpensesCollection.Find(filter).AnyAsync(ct);
     }
 
+    public async Task<List<GroupExpense>> GetGroupExpensesInvolving(string groupId, string memberId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.Or(
+                filterBuilder.Eq("Shares.MemberId", memberId),
+                filterBuilder.Eq("Payments.MemberId", memberId),
+                filterBuilder.Eq(x => x.CreatorId, memberId)));
+
+        var documents = await _groupExpensesCollection
+            .Find(filter)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (GroupExpense)Mapper.ToEntity(d)).ToList();
+    }
+
     public async Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct)
     {
         var filterBuilder = Builders<GroupExpenseMongoDbDocument>.Filter;

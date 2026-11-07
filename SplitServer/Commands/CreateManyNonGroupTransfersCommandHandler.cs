@@ -8,8 +8,6 @@ namespace SplitServer.Commands;
 
 public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateManyNonGroupTransfersCommand, Result>
 {
-    private const string NonGroupTransfersUrl = "/shared/nongroup/transfers";
-
     private readonly ITransfersRepository _transfersRepository;
     private readonly IUsersRepository _usersRepository;
     private readonly ValidationService _validationService;
@@ -95,7 +93,7 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
         // A resend of a settle-up that is already in has nothing new to tell anyone.
         if (insertResult.Value > 0)
         {
-            await NotifyCounterparties(command, ct);
+            await NotifyCounterparties(command, transfers, ct);
         }
 
         return Result.Success();
@@ -104,9 +102,12 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
     /// <summary>
     /// One message per counterparty for the whole batch, not one per transfer, so settling up
     /// cannot turn into a burst of notifications. The creator is dropped even though they are a
-    /// party to every transfer here.
+    /// party to every transfer here. The link opens the list on the first transfer of the batch.
     /// </summary>
-    private async Task NotifyCounterparties(CreateManyNonGroupTransfersCommand command, CancellationToken ct)
+    private async Task NotifyCounterparties(
+        CreateManyNonGroupTransfersCommand command,
+        List<NonGroupTransfer> transfers,
+        CancellationToken ct)
     {
         var recipientUserIds = command.Transfers
             .SelectMany(x => new[] { x.SenderId, x.ReceiverId })
@@ -131,7 +132,7 @@ public class CreateManyNonGroupTransfersCommandHandler : IRequestHandler<CreateM
             transferCount == 1
                 ? $"{creatorUsername} recorded a transfer with you"
                 : $"{creatorUsername} recorded {transferCount} transfers with you",
-            NonGroupTransfersUrl,
+            TransferLinks.JumpTo(transfers[0]),
             ct);
     }
 }

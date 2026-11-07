@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
@@ -50,7 +51,7 @@ public class AddGuestCommandHandler : IRequestHandler<AddGuestCommand, Result<Gu
             Updated = now
         };
 
-        var updateResult = await _groupsRepository.Update(updatedGroup, ct);
+        var updateResult = await _groupsRepository.UpdateIfUnchangedOrFail(updatedGroup, group.Updated, ct);
 
         if (updateResult.IsFailure)
         {

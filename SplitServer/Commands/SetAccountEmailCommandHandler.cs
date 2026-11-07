@@ -10,6 +10,8 @@ namespace SplitServer.Commands;
 
 public class SetAccountEmailCommandHandler : IRequestHandler<SetAccountEmailCommand, Result>
 {
+    public const string AlreadyVerifiedError = "This email is already verified";
+
     private const int VerificationCodeTtlMinutes = 10;
 
     private readonly IUsersRepository _usersRepository;
@@ -53,6 +55,15 @@ public class SetAccountEmailCommandHandler : IRequestHandler<SetAccountEmailComm
         var isSameAsCurrent = user.Email is not null &&
                               string.Equals(user.Email, command.Email, StringComparison.InvariantCultureIgnoreCase);
 
+        // A proven address has nothing left to verify, so no code is mailed for it. The email
+        // dialog could resubmit it unchanged, and Google Play's test devices, signed in as the
+        // review account, did. Stopping here also means the update below never clears a verified
+        // user's claim on their own address.
+        if (isSameAsCurrent && user.EmailVerified)
+        {
+            return Result.Failure(AlreadyVerifiedError);
+        }
+
         if (!isSameAsCurrent)
         {
             var emailOwnerMaybe = await _usersRepository.GetVerifiedByEmail(command.Email, ct);
@@ -65,14 +76,11 @@ public class SetAccountEmailCommandHandler : IRequestHandler<SetAccountEmailComm
 
         var now = DateTime.UtcNow;
 
-        // Only a genuine change makes the address unproven again. This same command backs the
-        // "resend code" button, and clearing the flag there would drop an already-verified user's
-        // claim on their own address, letting another account holding it unverified take it.
         var updateResult = await _usersRepository.Update(
             user with
             {
                 Email = command.Email,
-                EmailVerified = isSameAsCurrent && user.EmailVerified,
+                EmailVerified = false,
                 Updated = now,
             },
             ct);

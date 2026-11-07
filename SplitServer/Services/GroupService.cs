@@ -23,6 +23,20 @@ public class GroupService
         return currencies.SelectMany(c => GetDebtsForCurrency(c, expenses, transfers)).ToList();
     }
 
+    /// <summary>
+    /// What one member owes (positive) or is owed (negative) in each currency, before any working
+    /// out of who should pay whom. Currencies they are square in are left out.
+    /// </summary>
+    public static Dictionary<string, decimal> GetBalance(string memberId, List<GroupExpense> expenses, List<GroupTransfer> transfers)
+    {
+        var currencies = expenses.Select(x => x.Currency).Concat(transfers.Select(x => x.Currency)).Distinct().ToList();
+
+        return currencies
+            .Select(c => (Currency: c, Amount: GetBalancesForCurrency(c, expenses, transfers).GetValueOrDefault(memberId)))
+            .Where(x => x.Amount != 0)
+            .ToDictionary(x => x.Currency, x => x.Amount);
+    }
+
     public static Dictionary<string, Dictionary<string, decimal>> GetTotalSpent(Group group, List<GroupExpense> expenses)
     {
         var totalSpentByMember = new Dictionary<string, Dictionary<string, decimal>>();
@@ -75,7 +89,7 @@ public class GroupService
         return totalSentByMember;
     }
 
-    private static List<Debt> GetDebtsForCurrency(string currency, List<GroupExpense> expenses, List<GroupTransfer> transfers)
+    private static Dictionary<string, decimal> GetBalancesForCurrency(string currency, List<GroupExpense> expenses, List<GroupTransfer> transfers)
     {
         var balances = new Dictionary<string, decimal>();
 
@@ -98,7 +112,14 @@ public class GroupService
             balances[transfer.SenderId] = balances.GetValueOrDefault(transfer.SenderId) - transfer.Amount;
         }
 
-        balances = balances.Where(x => x.Value != 0).ToDictionary(x => x.Key, x => x.Value);
+        return balances;
+    }
+
+    private static List<Debt> GetDebtsForCurrency(string currency, List<GroupExpense> expenses, List<GroupTransfer> transfers)
+    {
+        var balances = GetBalancesForCurrency(currency, expenses, transfers)
+            .Where(x => x.Value != 0)
+            .ToDictionary(x => x.Key, x => x.Value);
 
         var debts = new List<Debt>();
 
@@ -157,16 +178,43 @@ public class GroupService
 
     public async Task<Result> AddLabelsToGroupIfMissing(Group group, List<Label> labels, DateTime now, CancellationToken ct)
     {
-        var labelsNotInGroup = labels.Where(x => !group.Labels.Select(xx => xx.Id).Contains(x.Id)).ToList();
-
-        if (labelsNotInGroup.Count <= 0)
+        // Labels are only ever added here, so a write that lost to a concurrent one is simply redone
+        // against the fresh copy: whatever that other write did, it did not take these away.
+        for (var attempt = 0; attempt < 3; attempt++)
         {
-            return Result.Success();
+            var labelsNotInGroup = labels.Where(x => !group.Labels.Select(xx => xx.Id).Contains(x.Id)).ToList();
+
+            if (labelsNotInGroup.Count <= 0)
+            {
+                return Result.Success();
+            }
+
+            var updateResult = await _groupsRepository.UpdateIfUnchanged(
+                group with { Labels = group.Labels.Concat(labelsNotInGroup).DistinctBy(x => x.Id).ToList(), Updated = now },
+                group.Updated,
+                ct);
+
+            if (updateResult.IsFailure)
+            {
+                return Result.Failure(updateResult.Error);
+            }
+
+            if (updateResult.Value)
+            {
+                return Result.Success();
+            }
+
+            var freshGroupMaybe = await _groupsRepository.GetById(group.Id, ct);
+
+            if (freshGroupMaybe.HasNoValue)
+            {
+                return Result.Failure($"Group with id {group.Id} was not found");
+            }
+
+            group = freshGroupMaybe.Value;
         }
 
-        return await _groupsRepository.Update(
-            group with { Labels = group.Labels.Concat(labelsNotInGroup).DistinctBy(x => x.Id).ToList(), Updated = now },
-            ct);
+        return Result.Failure(GroupsRepositoryExtensions.ChangedMeanwhileError);
     }
 
     public static List<GroupExpense> CalculateFilteredExpensesList(GetGroupDebtsQuery query, List<GroupExpense> expenses, string userTimeZoneId)
