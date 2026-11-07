@@ -165,7 +165,7 @@ public class CreateNonGroupExpenseCommandHandler : IRequestHandler<CreateNonGrou
         await _notificationService.Notify(
             recipientUserIds,
             "New expense",
-            $"{creatorUsername} added \"{command.Description}\" ({command.Amount} {command.Currency}) with you",
+            $"{creatorUsername} added {ExpenseNotifications.Describe(command.Description, command.Amount, command.Currency)} with you",
             ExpenseLinks.JumpTo(expense),
             ct);
     }

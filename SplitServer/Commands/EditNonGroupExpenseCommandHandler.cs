@@ -146,7 +146,7 @@ public class EditNonGroupExpenseCommandHandler : IRequestHandler<EditNonGroupExp
         await _notificationService.Notify(
             recipientUserIds,
             "Expense edited",
-            $"{editorUsername} edited \"{command.Description}\" ({command.Amount} {command.Currency})",
+            $"{editorUsername} edited {ExpenseNotifications.Describe(command.Description, command.Amount, command.Currency)}",
             ExpenseLinks.JumpTo(editedExpense),
             ct);
     }

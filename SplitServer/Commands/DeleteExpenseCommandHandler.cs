@@ -80,7 +80,7 @@ public class DeleteExpenseCommandHandler : IRequestHandler<DeleteExpenseCommand,
         await _notificationService.Notify(
             recipientUserIds,
             group.Name,
-            $"{userMaybe.Value.Username} deleted \"{groupExpense.Description}\" ({groupExpense.Amount} {groupExpense.Currency})",
+            $"{userMaybe.Value.Username} deleted {ExpenseNotifications.Describe(groupExpense.Description, groupExpense.Amount, groupExpense.Currency)}",
             $"/shared/{group.Id}/expenses",
             ct);
 

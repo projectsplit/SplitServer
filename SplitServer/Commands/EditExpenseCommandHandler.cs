@@ -123,7 +123,7 @@ public class EditExpenseCommandHandler : IRequestHandler<EditExpenseCommand, Res
         await _notificationService.Notify(
             recipientUserIds,
             group.Name,
-            $"{editorUsername} edited \"{command.Description}\" ({command.Amount} {command.Currency})",
+            $"{editorUsername} edited {ExpenseNotifications.Describe(command.Description, command.Amount, command.Currency)}",
             ExpenseLinks.JumpTo(editedExpense),
             ct);
     }
