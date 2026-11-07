@@ -450,8 +450,8 @@ file class FakeTransfersRepository : ITransfersRepository
     public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Update(Transfer updatedEntity, CancellationToken ct) => throw new NotSupportedException();
 
-    public Task<List<GroupTransfer>> GetByGroupId(string groupId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
-    public Task<List<NonGroupTransfer>> GetByUserId(string userId, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<GroupTransfer>> GetByGroupId(string groupId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<NonGroupTransfer>> GetByUserId(string userId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<GroupTransfer>> GetAllByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
     public Task<List<NonGroupTransfer>> GetAllByUserId(string userId, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> DeleteByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();

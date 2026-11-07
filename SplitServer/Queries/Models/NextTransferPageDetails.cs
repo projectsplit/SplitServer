@@ -1,7 +1,8 @@
 ﻿namespace SplitServer.Queries.Models;
 
-public class NextTransferPageDetails
+public class NextTransferPageDetails : IPageCursor
 {
     public required DateTime Created { get; init; }
     public required DateTime Occurred { get; init; }
+    public bool IsJumpTo { get; init; }
 }

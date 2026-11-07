@@ -162,6 +162,7 @@ public static class ExpenseEndpoints
         string groupId,
         int pageSize,
         string? next,
+        string? previous,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
@@ -196,7 +197,8 @@ public static class ExpenseEndpoints
                 UserId = httpContext.GetUserId(),
                 GroupId = groupId,
                 PageSize = pageSize,
-                Next = next
+                Next = next,
+                Previous = previous
             };
 
         var result = await mediator.Send(query, ct);
@@ -209,6 +211,7 @@ public static class ExpenseEndpoints
         IMediator mediator,
         int pageSize,
         string? next,
+        string? previous,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
@@ -241,7 +244,8 @@ public static class ExpenseEndpoints
             {
                 UserId = httpContext.GetUserId(),
                 PageSize = pageSize,
-                Next = next
+                Next = next,
+                Previous = previous
             };
 
         var result = await mediator.Send(query, ct);
@@ -254,6 +258,7 @@ public static class ExpenseEndpoints
         IMediator mediator,
         int pageSize,
         string? next,
+        string? previous,
         DateTime? before,
         DateTime? after,
         string? searchTerm,
@@ -280,7 +285,8 @@ public static class ExpenseEndpoints
             {
                 UserId = httpContext.GetUserId(),
                 PageSize = pageSize,
-                Next = next
+                Next = next,
+                Previous = previous
             };
 
         var result = await mediator.Send(query, ct);

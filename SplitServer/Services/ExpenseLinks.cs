@@ -41,7 +41,7 @@ public static class ExpenseLinks
     /// What the driver writes and reads back: UTC, the way DateTime.ToUniversalTime converts it,
     /// cut down to whole milliseconds since the epoch.
     /// </summary>
-    private static DateTime AsStored(DateTime value)
+    internal static DateTime AsStored(DateTime value)
     {
         var milliseconds = (value.ToUniversalTime() - DateTime.UnixEpoch).Ticks / TimeSpan.TicksPerMillisecond;
 

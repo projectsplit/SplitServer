@@ -49,72 +49,14 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
 
         var groupLabels = group.Labels.ToDictionary(x => x.Id);
 
-        var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
+        var page = await TransactionPages.Load<GroupExpense>(
+            query.PageSize,
+            Next.Parse<NextExpensePageDetails>(query.Next),
+            Next.Parse<NextExpensePageDetails>(query.Previous),
+            (limit, occurred, created, direction, inclusive) =>
+                _expensesRepository.GetByGroupId(query.GroupId, limit, occurred, created, direction, inclusive, ct));
 
-        List<GroupExpense> expenses;
-        var hasMoreNewer = false;
-        var hasMoreOlder = false;
-
-        if (nextDetails?.IsJumpTo == true)
-        {
-            var newerTargetCount = query.PageSize / 2;
-            var newerItems = await _expensesRepository.GetByGroupId(
-                query.GroupId,
-                newerTargetCount + 1,
-                nextDetails.Occurred,
-                nextDetails.Created,
-                PaginationDirection.Newer,
-                true,
-                ct);
-
-            if (newerItems.Count > newerTargetCount)
-            {
-                hasMoreNewer = true;
-                newerItems.RemoveAt(
-                    0); // Remove the extra "newer" item (first in Asc, but first in list after Reverse? No, Repo reverses it already)
-                // Wait, Repo reverses it at the end: newest-first.
-                // Extra item for Newer (Gt) is the most recent one. In a newest-first list, it's index 0.
-            }
-
-            var olderNeeded = query.PageSize - newerItems.Count;
-            var olderItems = await _expensesRepository.GetByGroupId(
-                query.GroupId,
-                olderNeeded + 1,
-                nextDetails.Occurred,
-                nextDetails.Created,
-                PaginationDirection.Older,
-                false,
-                ct);
-
-            if (olderItems.Count > olderNeeded)
-            {
-                hasMoreOlder = true;
-                olderItems.RemoveAt(olderItems.Count - 1); // Remove the extra "older" item (last in Desc)
-            }
-
-            expenses = newerItems.Concat(olderItems).ToList();
-        }
-        else
-        {
-            expenses = await _expensesRepository.GetByGroupId(
-                query.GroupId,
-                query.PageSize + 1,
-                nextDetails?.Occurred,
-                nextDetails?.Created,
-                PaginationDirection.Older,
-                false,
-                ct);
-
-            if (expenses.Count > query.PageSize)
-            {
-                hasMoreOlder = true;
-                expenses.RemoveAt(expenses.Count - 1);
-            }
-
-            // If we are not JumpingTo, and we have a next token, we assume there is a "previous" page (where we came from).
-            // This is a simplification, but works for most infinite scroll UIs.
-            hasMoreNewer = query.Next != null;
-        }
+        var expenses = page.Items;
 
         return new GroupExpensesResponse
         {
@@ -138,8 +80,8 @@ public class GetGroupExpensesQueryHandler : IRequestHandler<GetGroupExpensesQuer
                     RecurringExpenseId = x.RecurringExpenseId,
                 })
                 .ToList(),
-            Next = hasMoreOlder ? CreateToken(expenses.Last(), false) : null,
-            Previous = hasMoreNewer ? CreateToken(expenses.First(), false) : null
+            Next = page.HasMoreOlder ? CreateToken(expenses.Last(), false) : null,
+            Previous = page.HasMoreNewer ? CreateToken(expenses.First(), false) : null
         };
     }
 

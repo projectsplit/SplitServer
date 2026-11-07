@@ -9,4 +9,7 @@ public class GetPersonalExpensesQuery : IRequest<Result<PersonalExpensesResponse
     public required string UserId { get; init; }
     public required int PageSize { get; init; }
     public required string? Next { get; init; }
+
+    /// <summary>The top of the list the app already has, asking for the items just newer than it.</summary>
+    public string? Previous { get; init; }
 }
