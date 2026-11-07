@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Repositories;
 using SplitServer.Services;
 
@@ -60,7 +61,7 @@ public class RemoveGroupGuestCommandHandler : IRequestHandler<RemoveGroupGuestCo
             Updated = DateTime.UtcNow
         };
 
-        var updateGroupResult = await _groupsRepository.Update(editedGroup, ct);
+        var updateGroupResult = await _groupsRepository.UpdateIfUnchangedOrFail(editedGroup, group.Updated, ct);
 
         if (updateGroupResult.IsFailure)
         {

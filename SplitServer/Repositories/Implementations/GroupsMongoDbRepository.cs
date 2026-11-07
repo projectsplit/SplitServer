@@ -1,4 +1,5 @@
-﻿using MongoDB.Driver;
+﻿using CSharpFunctionalExtensions;
+using MongoDB.Driver;
 using MongoDB.Driver.Search;
 using SplitServer.Models;
 using SplitServer.Repositories.Mappers;
@@ -67,5 +68,24 @@ public class GroupsMongoDbRepository : MongoDbRepositoryBase<Group, Group>, IGro
         return await Collection
             .Aggregate(pipelineDefinition, cancellationToken: ct)
             .ToListAsync(ct);
+    }
+
+    public async Task<Result<bool>> UpdateIfUnchanged(Group entity, DateTime expectedUpdated, CancellationToken ct)
+    {
+        // The stamp compared here always comes from a document read back out of Mongo, so both
+        // sides carry BSON's millisecond precision and equality is exact.
+        var filter = FilterBuilder.And(
+            FilterBuilder.Eq(x => x.Id, entity.Id),
+            FilterBuilder.Eq(x => x.Updated, expectedUpdated));
+
+        var result = await Collection.ReplaceOneAsync(
+            filter,
+            Mapper.ToDocument(entity),
+            new ReplaceOptions { IsUpsert = false },
+            ct);
+
+        return result.IsAcknowledged
+            ? Result.Success(result.MatchedCount > 0)
+            : Result.Failure<bool>("Update failed");
     }
 }

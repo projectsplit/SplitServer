@@ -1,4 +1,5 @@
-﻿using SplitServer.Models;
+﻿using CSharpFunctionalExtensions;
+using SplitServer.Models;
 
 namespace SplitServer.Repositories;
 
@@ -14,5 +15,13 @@ public interface IGroupsRepository : IRepositoryBase<Group>
     Task<List<Group>> GetAllByUserId(string userId, CancellationToken ct);
 
     Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct);
-    
+
+    /// <summary>
+    /// Replaces the group only if nobody has written to it since it was read, identified by the
+    /// Updated stamp on the copy that was read. False means a concurrent write got there first. A
+    /// group is one document holding its members, guests and labels together, so a plain replace
+    /// from a stale copy silently undoes whatever landed in between — a member who joined, a guest
+    /// who was replaced — and every handler that rewrites a group goes through this instead.
+    /// </summary>
+    Task<Result<bool>> UpdateIfUnchanged(Group entity, DateTime expectedUpdated, CancellationToken ct);
 }

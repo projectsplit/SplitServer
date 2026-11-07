@@ -197,6 +197,24 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
         return await _groupTransfersCollection.Find(filter).AnyAsync(ct);
     }
 
+    public async Task<List<GroupTransfer>> GetGroupTransfersInvolving(string groupId, string memberId, CancellationToken ct)
+    {
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            filterBuilder.Or(
+                filterBuilder.Eq(x => x.ReceiverId, memberId),
+                filterBuilder.Eq(x => x.SenderId, memberId),
+                filterBuilder.Eq(x => x.CreatorId, memberId)));
+
+        var documents = await _groupTransfersCollection
+            .Find(filter)
+            .ToListAsync(ct);
+
+        return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
+    }
+
     public async Task<List<GroupTransfer>> Search(
         string groupId,
         string? searchTerm,

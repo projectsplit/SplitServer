@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Extensions;
 using SplitServer.Models;
 using SplitServer.Repositories;
 
@@ -80,7 +81,7 @@ public class JoinWithCodeCommandHandler : IRequestHandler<JoinWithCodeCommand, R
             Updated = now
         };
 
-        var updateGroupResult = await _groupsRepository.Update(updatedGroup, ct);
+        var updateGroupResult = await _groupsRepository.UpdateIfUnchangedOrFail(updatedGroup, group.Updated, ct);
 
         if (updateGroupResult.IsFailure)
         {
