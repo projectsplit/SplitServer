@@ -1,5 +1,6 @@
 ﻿using CSharpFunctionalExtensions;
 using MediatR;
+using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
 
@@ -86,7 +87,9 @@ public class EditTransferCommandHandler : IRequestHandler<EditTransferCommand, R
             recipientUserIds,
             group.Name,
             $"{user.Username} edited a transfer of {command.Amount} {command.Currency}",
-            $"/shared/{group.Id}/transfers",
+            editedTransfer is GroupTransfer groupTransfer
+                ? TransferLinks.JumpTo(groupTransfer)
+                : $"/shared/{group.Id}/transfers",
             ct);
 
         return updateResult;

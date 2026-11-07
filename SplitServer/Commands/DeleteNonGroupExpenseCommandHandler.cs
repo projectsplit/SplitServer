@@ -52,7 +52,7 @@ public class DeleteNonGroupExpenseCommandHandler : IRequestHandler<DeleteNonGrou
         await _notificationService.Notify(
             recipientUserIds,
             "Expense deleted",
-            $"{user.Username} deleted \"{nonGroupExpense.Description}\" ({nonGroupExpense.Amount} {nonGroupExpense.Currency})",
+            $"{user.Username} deleted {ExpenseNotifications.Describe(nonGroupExpense.Description, nonGroupExpense.Amount, nonGroupExpense.Currency)}",
             NonGroupExpensesUrl,
             ct);
 

@@ -20,6 +20,13 @@ public static class Next
         return Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
     }
 
+    public static string Encode<TNext>(TNext details) where TNext : class
+    {
+        var jsonString = JsonSerializer.Serialize(details);
+
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonString));
+    }
+
     public static TNext? Parse<TNext>(string? next) where TNext : class
     {
         if (string.IsNullOrEmpty(next))

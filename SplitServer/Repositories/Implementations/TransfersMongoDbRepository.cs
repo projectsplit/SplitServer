@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using SplitServer.Models;
+using SplitServer.Queries.Models;
 using SplitServer.Repositories.Implementations.Models;
 using SplitServer.Repositories.Mappers;
 
@@ -26,35 +27,80 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
             .GetCollection<NonGroupTransferMongoDbDocument>(Collection.CollectionNamespace.CollectionName);
     }
 
-    public async Task<List<GroupTransfer>> GetByGroupId(
-        string groupId,
-        int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
-        CancellationToken ct)
+    /// <summary>
+    /// The items on one side of a position in a list ordered newest first, nearest first counted
+    /// from it, and always handed back newest first. The same reading the expense lists use.
+    /// </summary>
+    private static FilterDefinition<TDocument> BuildPaginationFilter<TDocument>(
+        FilterDefinitionBuilder<TDocument> filterBuilder,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive) where TDocument : TransferMongoDbDocument
     {
-        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
-        var sortBuilder = Builders<GroupTransferMongoDbDocument>.Sort;
+        if (occurred is null || created is null)
+        {
+            return filterBuilder.Empty;
+        }
 
-        var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? filterBuilder.Or(
-                filterBuilder.Lt(x => x.Occurred, maxOccurred),
-                filterBuilder.And(
-                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    filterBuilder.Lt(x => x.Created, maxCreated)))
-            : filterBuilder.Empty;
+        var occurredFilter = direction == PaginationDirection.Newer
+            ? filterBuilder.Gt(x => x.Occurred, occurred)
+            : filterBuilder.Lt(x => x.Occurred, occurred);
 
-        var filter = filterBuilder.And(
-            filterBuilder.Eq(x => x.GroupId, groupId),
-            paginationFilter);
+        var createdFilter = direction == PaginationDirection.Newer
+            ? inclusive ? filterBuilder.Gte(x => x.Created, created) : filterBuilder.Gt(x => x.Created, created)
+            : inclusive ? filterBuilder.Lte(x => x.Created, created) : filterBuilder.Lt(x => x.Created, created);
 
-        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
+        return filterBuilder.Or(
+            occurredFilter,
+            filterBuilder.And(
+                filterBuilder.Eq(x => x.Occurred, occurred),
+                createdFilter));
+    }
 
-        var documents = await _groupTransfersCollection
+    private static async Task<List<TDocument>> FindPage<TDocument>(
+        IMongoCollection<TDocument> collection,
+        FilterDefinition<TDocument> filter,
+        int pageSize,
+        PaginationDirection direction,
+        CancellationToken ct) where TDocument : TransferMongoDbDocument
+    {
+        var sortBuilder = Builders<TDocument>.Sort;
+
+        var sort = direction == PaginationDirection.Older
+            ? sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created)
+            : sortBuilder.Ascending(x => x.Occurred).Ascending(x => x.Created);
+
+        var documents = await collection
             .Find(filter)
             .Sort(sort)
             .Limit(pageSize)
             .ToListAsync(ct);
+
+        if (direction == PaginationDirection.Newer)
+        {
+            documents.Reverse();
+        }
+
+        return documents;
+    }
+
+    public async Task<List<GroupTransfer>> GetByGroupId(
+        string groupId,
+        int pageSize,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
+        CancellationToken ct)
+    {
+        var filterBuilder = Builders<GroupTransferMongoDbDocument>.Filter;
+
+        var filter = filterBuilder.And(
+            filterBuilder.Eq(x => x.GroupId, groupId),
+            BuildPaginationFilter(filterBuilder, occurred, created, direction, inclusive));
+
+        var documents = await FindPage(_groupTransfersCollection, filter, pageSize, direction, ct);
 
         return documents.Select(d => (GroupTransfer)Mapper.ToEntity(d)).ToList();
     }
@@ -62,35 +108,22 @@ public class TransfersMongoDbRepository : MongoDbRepositoryBase<Transfer, Transf
     public async Task<List<NonGroupTransfer>> GetByUserId(
         string userId,
         int pageSize,
-        DateTime? maxOccurred,
-        DateTime? maxCreated,
+        DateTime? occurred,
+        DateTime? created,
+        PaginationDirection direction,
+        bool inclusive,
         CancellationToken ct)
     {
         var filterBuilder = Builders<NonGroupTransferMongoDbDocument>.Filter;
-        var sortBuilder = Builders<NonGroupTransferMongoDbDocument>.Sort;
-
-        var paginationFilter = maxOccurred is not null && maxCreated is not null
-            ? filterBuilder.Or(
-                filterBuilder.Lt(x => x.Occurred, maxOccurred),
-                filterBuilder.And(
-                    filterBuilder.Eq(x => x.Occurred, maxOccurred),
-                    filterBuilder.Lt(x => x.Created, maxCreated)))
-            : filterBuilder.Empty;
 
         var filter = filterBuilder.And(
             filterBuilder.Or(
                 filterBuilder.Eq(x => x.SenderId, userId),
                 filterBuilder.Eq(x => x.ReceiverId, userId)
             ),
-            paginationFilter);
+            BuildPaginationFilter(filterBuilder, occurred, created, direction, inclusive));
 
-        var sort = sortBuilder.Descending(x => x.Occurred).Descending(x => x.Created);
-
-        var documents = await _nonGroupTransfersCollection
-            .Find(filter)
-            .Sort(sort)
-            .Limit(pageSize)
-            .ToListAsync(ct);
+        var documents = await FindPage(_nonGroupTransfersCollection, filter, pageSize, direction, ct);
 
         return documents.Select(d => (NonGroupTransfer)Mapper.ToEntity(d)).ToList();
     }

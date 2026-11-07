@@ -39,75 +39,14 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         var userGroups = await _groupsRepository.GetAllByUserId(query.UserId, ct);
         var memberIds = userGroups.SelectMany(g => g.Members.Where(m => m.UserId == query.UserId).Select(m => m.Id)).ToList();
 
-        var nextDetails = Next.Parse<NextExpensePageDetails>(query.Next);
+        var page = await TransactionPages.Load<Expense>(
+            query.PageSize,
+            Next.Parse<NextExpensePageDetails>(query.Next),
+            Next.Parse<NextExpensePageDetails>(query.Previous),
+            (limit, occurred, created, direction, inclusive) =>
+                _expensesRepository.GetPersonalByUserId(query.UserId, memberIds, limit, occurred, created, direction, inclusive, ct));
 
-        List<Expense> expenses;
-        var hasMoreOlder = false;
-        bool hasMoreNewer;
-
-        if (nextDetails?.IsJumpTo == true)
-        {
-            // Centre the page on the target rather than starting at it, so the expense the user was
-            // sent to has context around it. Same split the group and non-group lists use.
-            var newerTargetCount = query.PageSize / 2;
-
-            var newerItems = await _expensesRepository.GetPersonalByUserId(
-                query.UserId,
-                memberIds,
-                newerTargetCount + 1,
-                nextDetails.Occurred,
-                nextDetails.Created,
-                PaginationDirection.Newer,
-                true,
-                ct);
-
-            hasMoreNewer = newerItems.Count > newerTargetCount;
-
-            if (hasMoreNewer)
-            {
-                newerItems.RemoveAt(0);
-            }
-
-            var olderNeeded = query.PageSize - newerItems.Count;
-
-            var olderItems = await _expensesRepository.GetPersonalByUserId(
-                query.UserId,
-                memberIds,
-                olderNeeded + 1,
-                nextDetails.Occurred,
-                nextDetails.Created,
-                PaginationDirection.Older,
-                false,
-                ct);
-
-            if (olderItems.Count > olderNeeded)
-            {
-                hasMoreOlder = true;
-                olderItems.RemoveAt(olderItems.Count - 1);
-            }
-
-            expenses = newerItems.Concat(olderItems).ToList();
-        }
-        else
-        {
-            expenses = await _expensesRepository.GetPersonalByUserId(
-                query.UserId,
-                memberIds,
-                query.PageSize + 1,
-                nextDetails?.Occurred,
-                nextDetails?.Created,
-                PaginationDirection.Older,
-                false,
-                ct);
-
-            if (expenses.Count > query.PageSize)
-            {
-                hasMoreOlder = true;
-                expenses.RemoveAt(expenses.Count - 1);
-            }
-
-            hasMoreNewer = query.Next != null;
-        }
+        var expenses = page.Items;
 
         var userLabels = await _userLabelsRepository.GetByUserId(query.UserId, ct);
 
@@ -120,11 +59,10 @@ public class GetPersonalExpensesQueryHandler : IRequestHandler<GetPersonalExpens
         return new PersonalExpensesResponse
         {
             Expenses = responseItems,
-            // A page can come back empty — a jump token whose expense has since been deleted, or a
-            // next token landing on the end of the list — and there is then no expense to build a
-            // cursor from.
-            Next = hasMoreOlder && expenses.Count > 0 ? CreateToken(expenses.Last(), false) : null,
-            Previous = hasMoreNewer && expenses.Count > 0 ? CreateToken(expenses.First(), false) : null
+            // An empty page — a jump token whose expense has since been deleted, or a next token
+            // landing on the end of the list — never reports more either way (see TransactionPages).
+            Next = page.HasMoreOlder ? CreateToken(expenses.Last(), false) : null,
+            Previous = page.HasMoreNewer ? CreateToken(expenses.First(), false) : null
         };
     }
 

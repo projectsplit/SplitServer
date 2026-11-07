@@ -82,7 +82,7 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
         // A resend of a settle-up that is already in has nothing new to tell anyone.
         if (insertResult.Value > 0)
         {
-            await NotifyInvolvedMembers(command, group, user.Username, ct);
+            await NotifyInvolvedMembers(command, group, transfers, user.Username, ct);
         }
 
         return Result.Success();
@@ -92,11 +92,13 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
     /// Settling up writes a batch of transfers at once. Each involved member is told once about the
     /// batch rather than once per transfer, so a settle-up cannot turn into a burst of
     /// notifications. That means the text stays deliberately generic: a single message goes to
-    /// everyone, and quoting one transfer's amount would be wrong for most of them.
+    /// everyone, and quoting one transfer's amount would be wrong for most of them. The link opens
+    /// the list on the first transfer of the batch; the rest share its date and sit beside it.
     /// </summary>
     private async Task NotifyInvolvedMembers(
         CreateManyTransfersCommand command,
         Group group,
+        List<GroupTransfer> transfers,
         string creatorUsername,
         CancellationToken ct)
     {
@@ -113,7 +115,7 @@ public class CreateManyTransfersCommandHandler : IRequestHandler<CreateManyTrans
             transferCount == 1
                 ? $"{creatorUsername} recorded a transfer"
                 : $"{creatorUsername} recorded {transferCount} transfers",
-            $"/shared/{command.GroupId}/transfers",
+            TransferLinks.JumpTo(transfers[0]),
             ct);
     }
 }

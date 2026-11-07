@@ -30,14 +30,14 @@ public class GetNonGroupTransfersQueryHandler : IRequestHandler<GetNonGroupTrans
             return Result.Failure<NonGroupTransfersResponse>($"User with id {query.UserId} was not found");
         }
 
-        var nextDetails = Next.Parse<NextTransferPageDetails>(query.Next);
-
-        var transfers = await _transfersRepository.GetByUserId(
-            query.UserId,
+        var page = await TransactionPages.Load<NonGroupTransfer>(
             query.PageSize,
-            nextDetails?.Occurred,
-            nextDetails?.Created,
-            ct);
+            Next.Parse<NextTransferPageDetails>(query.Next),
+            Next.Parse<NextTransferPageDetails>(query.Previous),
+            (limit, occurred, created, direction, inclusive) =>
+                _transfersRepository.GetByUserId(query.UserId, limit, occurred, created, direction, inclusive, ct));
+
+        var transfers = page.Items;
 
         return new NonGroupTransfersResponse
         {
@@ -56,19 +56,11 @@ public class GetNonGroupTransfersQueryHandler : IRequestHandler<GetNonGroupTrans
                     SenderId = x.SenderId,
                 })
                 .ToList(),
-            Next = GetNext(query, transfers)
+            Next = page.HasMoreOlder ? CreateToken(transfers.Last()) : null,
+            Previous = page.HasMoreNewer ? CreateToken(transfers.First()) : null
         };
     }
 
-    private static string? GetNext(GetNonGroupTransfersQuery query, List<NonGroupTransfer> transfers)
-    {
-        return Next.Create(
-            transfers,
-            query.PageSize,
-            x => new NextTransferPageDetails
-            {
-                Created = x.Last().Created,
-                Occurred = x.Last().Occurred
-            });
-    }
+    private static string CreateToken(Transfer transfer) =>
+        Next.Encode(new NextTransferPageDetails { Created = transfer.Created, Occurred = transfer.Occurred });
 }
