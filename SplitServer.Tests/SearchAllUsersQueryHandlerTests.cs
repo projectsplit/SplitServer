@@ -1,7 +1,9 @@
 using CSharpFunctionalExtensions;
 using SplitServer.Models;
 using SplitServer.Queries;
+using SplitServer.Queries.Models;
 using SplitServer.Repositories;
+using SplitServer.Services;
 
 namespace SplitServer.Tests;
 
@@ -105,7 +107,31 @@ public class SearchAllUsersQueryHandlerTests
         Assert.Equal(["user-1", "user-10"], page.Users.Select(x => x.UserId));
     }
 
-    private static SearchAllUsersQueryHandler BuildHandler(int userCount, string[] connectedUserIds)
+    /// <summary>
+    /// The picker files people under Connections by what the statuses endpoint says, and that counts
+    /// a shared group or splits together before as connected, not only an accepted request. Listing
+    /// just the accepted ones first left the rest pages down, out of the Connections section until
+    /// the person scrolled far enough to load them.
+    /// </summary>
+    [Fact]
+    public async Task Group_mates_and_people_split_with_before_count_as_connections()
+    {
+        var handler = BuildHandler(
+            userCount: 10,
+            connectedUserIds: ["user-7"],
+            groupMateUserIds: ["user-9"],
+            splitWithUserIds: ["user-4"]);
+
+        var page = await Page(handler, pageSize: 5);
+
+        Assert.Equal(["user-4", "user-7", "user-9", CurrentUserId, "user-1"], page.Users.Select(x => x.UserId));
+    }
+
+    private static SearchAllUsersQueryHandler BuildHandler(
+        int userCount,
+        string[] connectedUserIds,
+        string[]? groupMateUserIds = null,
+        string[]? splitWithUserIds = null)
     {
         var users = Enumerable
             .Range(1, userCount)
@@ -135,9 +161,16 @@ public class SearchAllUsersQueryHandlerTests
             Updated = DateTime.UnixEpoch
         };
 
+        var usersRepository = new FakeUsersRepository([me, .. users]);
+
         return new SearchAllUsersQueryHandler(
-            new FakeUsersRepository([me, .. users]),
-            new FakeUserConnectionsRepository(connectedUserIds));
+            usersRepository,
+            new ConnectionService(
+                new FakeUserConnectionsRepository(connectedUserIds),
+                usersRepository,
+                new FakeGroupsRepository(CurrentUserId, groupMateUserIds ?? []),
+                new FakeExpensesRepository(splitWithUserIds ?? []),
+                new FakeTransfersRepository()));
     }
 
     private static async Task<SplitServer.Responses.SearchAllUsersResponse> Page(
@@ -258,4 +291,109 @@ file class FakeUserConnectionsRepository : IUserConnectionsRepository
     public Task<Result> Upsert(UserConnection entity, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Update(UserConnection updatedEntity, CancellationToken ct) => throw new NotSupportedException();
+}
+
+file class FakeGroupsRepository : IGroupsRepository
+{
+    private readonly List<Group> _groups;
+
+    /// <summary>One group of the current user's with these users in it, or none when there are none.</summary>
+    public FakeGroupsRepository(string currentUserId, string[] memberUserIds) =>
+        _groups = memberUserIds.Length == 0
+            ? []
+            :
+            [
+                new Group
+                {
+                    Id = "group-1",
+                    Created = DateTime.UnixEpoch,
+                    Updated = DateTime.UnixEpoch,
+                    OwnerId = currentUserId,
+                    Name = "Flat",
+                    Currency = "EUR",
+                    IsArchived = false,
+                    Members =
+                    [
+                        .. new[] { currentUserId }
+                            .Concat(memberUserIds)
+                            .Select((userId, i) => new Member { Id = $"member-{i}", UserId = userId, Joined = DateTime.UnixEpoch })
+                    ],
+                    Guests = [],
+                    Labels = []
+                }
+            ];
+
+    public Task<List<Group>> GetAllByUserId(string userId, CancellationToken ct) => Task.FromResult(_groups);
+
+    public Task<List<Group>> GetByUserId(string userId, bool? isArchived, int pageSize, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<Group>> SearchByGroupName(string userId, string keyword, int skip, int pageSize, CancellationToken ct) => throw new NotSupportedException();
+    public Task<CSharpFunctionalExtensions.Result<bool>> UpdateIfUnchanged(Group entity, DateTime expectedUpdated, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Maybe<Group>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IList<Group>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Insert(Group entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> InsertMany(IEnumerable<Group> entities, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Upsert(Group entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Update(Group updatedEntity, CancellationToken ct) => throw new NotSupportedException();
+}
+
+file class FakeExpensesRepository : IExpensesRepository
+{
+    private readonly List<string> _nonGroupUserIds;
+
+    public FakeExpensesRepository(string[] nonGroupUserIds) => _nonGroupUserIds = [.. nonGroupUserIds];
+
+    public Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct) => Task.FromResult(_nonGroupUserIds);
+
+    public Task<List<SplitServer.Models.GroupExpense>> GetByGroupId(string groupId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupExpense>> GetGroupExpensesByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.NonGroupExpense>> GetNonGroupExpensesByUserId(string userId, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<List<Expense>> GetPersonalExpensesByUserId(string userId, List<string> memberIds, CancellationToken ct, DateTime? startDate = null, DateTime? endDate = null) => throw new NotSupportedException();
+    public Task<Dictionary<string, int>> GetLabelCounts(string groupId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> ClearRecurringExpenseId(string recurringExpenseId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupExpense>> GetGroupExpensesByMemberIds(List<string> memberIds, DateTime? startDate = null, DateTime? endDate = null, CancellationToken ct = default) => throw new NotSupportedException();
+    public Task<bool> ExistsInAnyExpense(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupExpense>> GetGroupExpensesInvolving(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<bool> LabelIsInUse(string groupId, string labelId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<bool> UserLabelInUse(string labelText, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupExpense>> Search(string groupId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? participantIds, string[]? payerIds, string[]? labelIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.NonGroupExpense>> GetNonGroupByUserId(string userId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<Expense>> GetPersonalByUserId(string userId, List<string> memberIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<Expense>> SearchPersonalByUserId(string userId, List<string> memberIds, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? labels, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.NonGroupExpense>> SearchNonGroup(string userId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? participantIds, string[]? payerIds, string[]? labelIds, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<long> CountByCreatorId(string creatorId, int limit, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeletePersonalByCreatorId(string creatorId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Maybe<Expense>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IList<Expense>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Insert(Expense entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> InsertMany(IEnumerable<Expense> entities, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Upsert(Expense entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Update(Expense updatedEntity, CancellationToken ct) => throw new NotSupportedException();
+}
+
+file class FakeTransfersRepository : ITransfersRepository
+{
+    public Task<List<string>> GetNonGroupUserIdsByUserId(string userId, CancellationToken ct) => Task.FromResult(new List<string>());
+
+    public Task<List<GroupTransfer>> GetByGroupId(string groupId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<NonGroupTransfer>> GetByUserId(string userId, int pageSize, DateTime? occurred, DateTime? created, PaginationDirection direction, bool inclusive, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<GroupTransfer>> GetAllByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<NonGroupTransfer>> GetAllByUserId(string userId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByGroupId(string groupId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<GroupTransfer>> GetAllByMemberIds(List<string> memberIds, CancellationToken ct) => throw new NotSupportedException();
+    public Task<bool> ExistsInAnyTransfer(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<SplitServer.Models.GroupTransfer>> GetGroupTransfersInvolving(string groupId, string memberId, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<GroupTransfer>> Search(string groupId, string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? receiverIds, string[]? senderIds, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<NonGroupTransfer>> SearchNonGroup(string? searchTerm, DateTime? minTime, DateTime? maxTime, string[]? receiverIds, string[]? senderIds, int pageSize, DateTime? maxOccurred, DateTime? maxCreated, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> DeleteByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Maybe<Transfer>> GetById(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<IList<Transfer>> GetByIds(IList<string> ids, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Insert(Transfer entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> InsertMany(IEnumerable<Transfer> entities, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Upsert(Transfer entity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> Update(Transfer updatedEntity, CancellationToken ct) => throw new NotSupportedException();
 }

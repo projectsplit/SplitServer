@@ -10,14 +10,14 @@ namespace SplitServer.Queries;
 public class SearchAllUsersQueryHandler : IRequestHandler<SearchAllUsersQuery, Result<SearchAllUsersResponse>>
 {
     private readonly IUsersRepository _usersRepository;
-    private readonly IUserConnectionsRepository _userConnectionsRepository;
+    private readonly ConnectionService _connectionService;
 
     public SearchAllUsersQueryHandler(
         IUsersRepository usersRepository,
-        IUserConnectionsRepository userConnectionsRepository)
+        ConnectionService connectionService)
     {
         _usersRepository = usersRepository;
-        _userConnectionsRepository = userConnectionsRepository;
+        _connectionService = connectionService;
     }
 
     public async Task<Result<SearchAllUsersResponse>> Handle(SearchAllUsersQuery query, CancellationToken ct)
@@ -31,7 +31,11 @@ public class SearchAllUsersQueryHandler : IRequestHandler<SearchAllUsersQuery, R
 
         var position = Next.Parse<SearchPosition>(query.Next) ?? new SearchPosition();
 
-        var connectedUserIds = await _userConnectionsRepository.GetAcceptedUserIds(query.UserId, ct);
+        // Connected the way the statuses endpoint means it, which the picker sorts its sections by:
+        // an accepted request, a shared group, or splits together before. Putting only accepted
+        // requests first left people known from a group to turn up pages down the list, where the
+        // picker's Connections section never showed them until they were scrolled to.
+        var connectedUserIds = (await _connectionService.GetConnectedUserIds(query.UserId, ct)).ToList();
 
         // People already connected to fill the page first, and whatever room is left over goes to
         // everyone else. Topping the page up here rather than letting the connections run out on a
