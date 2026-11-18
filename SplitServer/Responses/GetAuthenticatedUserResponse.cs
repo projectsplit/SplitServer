@@ -20,4 +20,11 @@ public class GetAuthenticatedUserResponse
     public required bool? ShowBudgetInfo { get; init; }
     public required string? RecentContextId { get; init; }
     public required bool PushNotificationsEnabled { get; init; }
+
+    /// <summary>
+    /// What access this account has to the Plus features. Always present. Sent with the user rather
+    /// than fetched on its own because the app decides what to show or lock from it on every screen,
+    /// and this is the one response it already has before it draws anything.
+    /// </summary>
+    public required PlusAccessResponse Plus { get; init; }
 }

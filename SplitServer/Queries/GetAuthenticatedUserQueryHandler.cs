@@ -2,6 +2,7 @@
 using MediatR;
 using SplitServer.Repositories;
 using SplitServer.Responses;
+using SplitServer.Services.Plus;
 using SplitServer.Services.TimeZone;
 
 namespace SplitServer.Queries;
@@ -15,6 +16,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
     private readonly INotificationsRepository _notificationsRepository;
     private readonly IUserConnectionsRepository _userConnectionsRepository;
     private readonly TimeZoneService _timeZoneService;
+    private readonly PlusAccessService _plusAccessService;
 
     public GetAuthenticatedUserQueryHandler(
         IUsersRepository usersRepository,
@@ -23,7 +25,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         IInvitationsRepository invitationsRepository,
         INotificationsRepository notificationsRepository,
         IUserConnectionsRepository userConnectionsRepository,
-        TimeZoneService timeZoneService)
+        TimeZoneService timeZoneService,
+        PlusAccessService plusAccessService)
     {
         _usersRepository = usersRepository;
         _userActivityRepository = userActivityRepository;
@@ -32,6 +35,7 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         _notificationsRepository = notificationsRepository;
         _userConnectionsRepository = userConnectionsRepository;
         _timeZoneService = timeZoneService;
+        _plusAccessService = plusAccessService;
     }
 
     public async Task<Result<GetAuthenticatedUserResponse>> Handle(GetAuthenticatedUserQuery query, CancellationToken ct)
@@ -71,6 +75,13 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
         var pushNotificationsEnabled =
             userPreferencesMaybe.HasValue && userPreferencesMaybe.Value.PushNotificationsEnabled == true;
 
+        // Worked out from the user document already in hand and from terms the service keeps in
+        // memory, so on this path — which every screen and every poll takes — it costs no query.
+        // Checked against the clock rather than trusted for being there: no Plus for a mark whose
+        // period ran out before anything came back to remove it.
+        var now = DateTime.UtcNow;
+        var plusAccess = await _plusAccessService.For(user, now, ct);
+
         return new GetAuthenticatedUserResponse
         {
             UserId = user.Id,
@@ -84,7 +95,8 @@ public class GetAuthenticatedUserQueryHandler : IRequestHandler<GetAuthenticated
             TimeZoneCoordinates = _timeZoneService.CreateCoordinatesFromTimeZone(timeZone).GetValueOrDefault(DefaultValues.Coordinates),
             RecentContextId = recentContextId,
             ShowBudgetInfo = showBudgetInfo,
-            PushNotificationsEnabled = pushNotificationsEnabled
+            PushNotificationsEnabled = pushNotificationsEnabled,
+            Plus = PlusAccessResponse.From(plusAccess, now),
         };
     }
 }

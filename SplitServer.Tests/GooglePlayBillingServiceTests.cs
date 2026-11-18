@@ -94,4 +94,39 @@ public class GooglePlayBillingServiceTests
     {
         Assert.False(CreateService(serviceAccountJson: "{ not really json }").IsConfigured);
     }
+
+    /// <summary>
+    /// The amount lookup is the one call that is allowed to fail quietly, and with no credentials it
+    /// must do exactly that rather than throw into a recording that has otherwise succeeded.
+    /// </summary>
+    [Fact]
+    public async Task Has_no_order_total_to_give_when_Play_is_not_configured()
+    {
+        var total = await CreateService(enabled: false).TryGetOrderTotal("GPA.1234-5678", CancellationToken.None);
+
+        Assert.Null(total);
+    }
+
+    /// <summary>
+    /// Google writes money as whole units plus billionths, and leaves either half off the wire when
+    /// it is zero. Reading a missing half as a missing amount would lose every round price.
+    /// </summary>
+    [Theory]
+    [InlineData(19L, 990_000_000, "19.99")]
+    [InlineData(5L, null, "5")]
+    [InlineData(null, 990_000_000, "0.99")]
+    [InlineData(2950L, 0, "2950")]
+    [InlineData(0L, 0, "0")]
+    [InlineData(4L, 490_000_000, "4.49")]
+    [InlineData(1L, 1, "1.000000001")]
+    public void Reads_an_amount_from_units_and_nanos(long? units, int? nanos, string expected)
+    {
+        Assert.Equal(decimal.Parse(expected, System.Globalization.CultureInfo.InvariantCulture), PlayMoney.ToAmount(units, nanos));
+    }
+
+    [Fact]
+    public void Has_no_amount_when_Play_sent_neither_half()
+    {
+        Assert.Null(PlayMoney.ToAmount(null, null));
+    }
 }

@@ -54,6 +54,7 @@ jobs:
               -e GooglePlay__PackageName="com.buqs" \
               -e GooglePlay__ServiceAccountJson="${{ secrets.PLAY_SERVICE_ACCOUNT_BASE64 }}" \
               -e GooglePlay__NotificationSecret="${{ secrets.PLAY_NOTIFICATION_SECRET }}" \
+              -e Plus__Enabled="true" \
               -e Email__Enabled="${{ secrets.RESEND_API_KEY != '' }}" \
               -e Email__Password="${{ secrets.RESEND_API_KEY }}" \
               --restart always \

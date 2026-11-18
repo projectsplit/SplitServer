@@ -5,6 +5,7 @@ using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Services;
 using SplitServer.Services.Donations;
+using SplitServer.Services.Plus;
 
 namespace SplitServer.Commands;
 
@@ -43,6 +44,7 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
     private readonly IUserConnectionsRepository _userConnectionsRepository;
     private readonly IDonationSubscriptionsRepository _donationSubscriptionsRepository;
     private readonly IDonationPromptStatesRepository _donationPromptStatesRepository;
+    private readonly IPlusSubscriptionsRepository _plusSubscriptionsRepository;
     private readonly GooglePlayBillingService _play;
 
     public DeleteAccountCommandHandler(
@@ -64,6 +66,7 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
         IUserConnectionsRepository userConnectionsRepository,
         IDonationSubscriptionsRepository donationSubscriptionsRepository,
         IDonationPromptStatesRepository donationPromptStatesRepository,
+        IPlusSubscriptionsRepository plusSubscriptionsRepository,
         GooglePlayBillingService play)
     {
         _usersRepository = usersRepository;
@@ -84,6 +87,7 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
         _userConnectionsRepository = userConnectionsRepository;
         _donationSubscriptionsRepository = donationSubscriptionsRepository;
         _donationPromptStatesRepository = donationPromptStatesRepository;
+        _plusSubscriptionsRepository = plusSubscriptionsRepository;
         _play = play;
     }
 
@@ -98,13 +102,20 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
 
         var user = userMaybe.Value;
 
-        // First, because it is the only step that can refuse, and refusing with half the account
-        // already gone would be the worst of both.
+        // First, because these are the only steps that can refuse, and refusing with half the
+        // account already gone would be the worst of both.
         var stopGiftsResult = await StopMonthlyGifts(user.Id, ct);
 
         if (stopGiftsResult.IsFailure)
         {
             return stopGiftsResult;
+        }
+
+        var stopPlusResult = await StopPlusSubscriptions(user.Id, ct);
+
+        if (stopPlusResult.IsFailure)
+        {
+            return stopPlusResult;
         }
 
         var groups = await _groupsRepository.GetAllByUserId(user.Id, ct);
@@ -192,6 +203,47 @@ public class DeleteAccountCommandHandler : IRequestHandler<DeleteAccountCommand,
             {
                 return Result.Failure(
                     "Your monthly contribution could not be cancelled. Please cancel it in Google Play, then try again.");
+            }
+        }
+
+        return Result.Success();
+    }
+
+    /// <summary>
+    /// Stops Buqs Plus renewing before the account it belongs to disappears, for the same reason a
+    /// monthly gift is stopped: Play would otherwise go on charging for a subscription to an account
+    /// that no longer exists, with nothing left here to notice.
+    ///
+    /// Renewal is turned off rather than the subscription revoked, so nothing is refunded and
+    /// nothing is taken again. The rows are kept, as the donation ones are: they record what Google
+    /// said about a purchase, and they name nobody once the account they point at is gone. The
+    /// worker goes on following each to its end and then leaves it alone.
+    /// </summary>
+    private async Task<Result> StopPlusSubscriptions(string userId, CancellationToken ct)
+    {
+        var subscriptions = await _plusSubscriptionsRepository.GetByUserId(userId, ct);
+
+        // A row already in a finished state has nothing left to stop, and asking Play about a token
+        // that old is the one lookup here that can fail for no reason that matters.
+        foreach (var subscription in subscriptions.Where(x => !PlusEntitlement.HasEnded(x.State)))
+        {
+            // Asked afresh rather than read off the row, as for a monthly gift: someone who has
+            // just cancelled in Google Play must not be told to do it again because ours has not
+            // caught up.
+            var purchaseResult = await _play.GetSubscriptionPurchase(subscription.Id, ct);
+
+            // A token Play does not recognise cannot be charged either.
+            if (purchaseResult.IsFailure || purchaseResult.Value.HasEnded)
+            {
+                continue;
+            }
+
+            var cancelResult = await _play.CancelSubscription(subscription.Id, ct);
+
+            if (cancelResult.IsFailure)
+            {
+                return Result.Failure(
+                    "Your Buqs Plus subscription could not be cancelled. Please cancel it in Google Play, then try again.");
             }
         }
 

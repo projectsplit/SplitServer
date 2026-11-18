@@ -37,12 +37,26 @@ public record Donation : EntityBase
     /// <summary>
     /// What this tier is nominally worth, in <see cref="Currency"/>'s minor unit. Not what was
     /// charged: Play prices per country and never reports the amount back through the purchase API,
-    /// so the real figure lives in the Play Console against <see cref="OrderId"/>. This is here so
-    /// the ledger can be added up in one currency.
+    /// so the real figure is looked up separately, against <see cref="OrderId"/>, and kept in
+    /// <see cref="ChargedAmount"/>. This is here so the ledger can be added up in one currency, and
+    /// because it exists for every row whether or not that lookup worked.
     /// </summary>
     public required long AmountMinor { get; init; }
 
     public required string Currency { get; init; }
+
+    /// <summary>
+    /// What the buyer actually paid, tax included, in <see cref="ChargedCurrency"/>, as Play's order
+    /// reports it. Absent when the order could not be read — a row from before this was recorded, a
+    /// purchase still pending, or a lookup that failed — and never required, because a gift is
+    /// recorded whether or not its exact amount could be found out.
+    /// </summary>
+    [BsonIgnoreIfNull]
+    public decimal? ChargedAmount { get; init; }
+
+    /// <summary>ISO 4217 code of <see cref="ChargedAmount"/>, upper case: the currency of the buyer's Play country.</summary>
+    [BsonIgnoreIfNull]
+    public string? ChargedCurrency { get; init; }
 
     public required DonationKind Kind { get; init; }
 

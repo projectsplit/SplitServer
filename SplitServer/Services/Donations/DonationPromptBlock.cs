@@ -12,4 +12,5 @@ public enum DonationPromptBlock
     LifetimeLimitReached,
     WithinCooldown,
     NotEngagedEnough,
+    PlusMember,
 }
