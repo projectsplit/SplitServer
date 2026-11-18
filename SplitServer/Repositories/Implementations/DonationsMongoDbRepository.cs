@@ -40,4 +40,30 @@ public class DonationsMongoDbRepository :
 
         return donation ?? Maybe<Donation>.None;
     }
+
+    public async Task<Result> SetCharged(string id, decimal amount, string currency, CancellationToken ct)
+    {
+        var update = UpdateBuilder
+            .Set(x => x.ChargedAmount, amount)
+            .Set(x => x.ChargedCurrency, currency);
+
+        var result = await Collection.UpdateOneAsync(
+            FilterBuilder.Eq(x => x.Id, id),
+            update,
+            new UpdateOptions { IsUpsert = false },
+            ct);
+
+        return result.IsAcknowledged ? Result.Success() : Result.Failure("Setting the charged amount failed");
+    }
+
+    public async Task<List<string>> GetDonorUserIds(CancellationToken ct)
+    {
+        var filter = FilterBuilder.Eq(x => x.Status, DonationStatus.Succeeded);
+
+        var userIds = await (await Collection.DistinctAsync(x => x.UserId, filter, cancellationToken: ct))
+            .ToListAsync(ct);
+
+        // A row can be left without a user on paper, and there is nobody to summarise it onto.
+        return userIds.Where(x => !string.IsNullOrEmpty(x)).Select(x => x!).ToList();
+    }
 }

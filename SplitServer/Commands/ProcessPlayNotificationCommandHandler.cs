@@ -5,16 +5,19 @@ using MediatR;
 using Serilog;
 using SplitServer.Repositories;
 using SplitServer.Services.Donations;
+using SplitServer.Services.Plus;
 
 namespace SplitServer.Commands;
 
 /// <summary>
 /// Play telling us something changed. Renewals, cancellations, expiries and refunds all arrive here
 /// months after the purchase that started them, and this is the only thing that keeps a monthly
-/// gift's state true over time — the app is not running when a renewal is billed.
+/// gift's state true over time — the app is not running when a renewal is billed. Buqs Plus hears
+/// about the same events here first, with its worker as the fallback for any that never arrive.
 ///
 /// The body is never acted on directly. Every branch below reduces the notification to a purchase
-/// token, hands it to <see cref="DonationRecorder"/>, and that re-reads the purchase from Google.
+/// token, hands it to <see cref="DonationRecorder"/> or <see cref="PlusRecorder"/>, and that
+/// re-reads the purchase from Google.
 /// A forged notification therefore cannot invent, alter or cancel a donation; the worst it can do
 /// is make this server ask Google about a purchase, which is what the shared secret on the URL is
 /// there to stop.
@@ -31,15 +34,24 @@ public class ProcessPlayNotificationCommandHandler : IRequestHandler<ProcessPlay
     private readonly GooglePlayBillingService _play;
     private readonly DonationRecorder _recorder;
     private readonly IDonationsRepository _donationsRepository;
+    private readonly PlusCatalog _plusCatalog;
+    private readonly PlusRecorder _plusRecorder;
+    private readonly IPlusSubscriptionsRepository _plusSubscriptionsRepository;
 
     public ProcessPlayNotificationCommandHandler(
         GooglePlayBillingService play,
         DonationRecorder recorder,
-        IDonationsRepository donationsRepository)
+        IDonationsRepository donationsRepository,
+        PlusCatalog plusCatalog,
+        PlusRecorder plusRecorder,
+        IPlusSubscriptionsRepository plusSubscriptionsRepository)
     {
         _play = play;
         _recorder = recorder;
         _donationsRepository = donationsRepository;
+        _plusCatalog = plusCatalog;
+        _plusRecorder = plusRecorder;
+        _plusSubscriptionsRepository = plusSubscriptionsRepository;
     }
 
     public async Task<Result> Handle(ProcessPlayNotificationCommand command, CancellationToken ct)
@@ -78,9 +90,15 @@ public class ProcessPlayNotificationCommandHandler : IRequestHandler<ProcessPlay
             return Result.Success();
         }
 
-        if (notification.SubscriptionNotification is { PurchaseToken: { } subscriptionToken })
+        if (notification.SubscriptionNotification is { PurchaseToken: { } subscriptionToken } subscriptionNotification)
         {
-            return await _recorder.RecordSubscriptionPurchase(subscriptionToken, expectedUserId: null, ct);
+            // Two kinds of subscription are sold here, a monthly tip and Buqs Plus, and each has its
+            // own ledger. The product named in the body only chooses which recorder to hand the
+            // token to; whichever it is asks Google what the token is really for and refuses
+            // anything that is not its own, so a forged product id gets a forger nowhere.
+            return await IsPlusSubscription(subscriptionNotification.SubscriptionId, subscriptionToken, ct)
+                ? await _plusRecorder.Record(subscriptionToken, expectedUserId: null, ct)
+                : await _recorder.RecordSubscriptionPurchase(subscriptionToken, expectedUserId: null, ct);
         }
 
         if (notification.OneTimeProductNotification is { PurchaseToken: { } productToken, Sku: { } sku })
@@ -106,6 +124,15 @@ public class ProcessPlayNotificationCommandHandler : IRequestHandler<ProcessPlay
     /// </summary>
     private async Task<Result> HandleVoided(string purchaseToken, CancellationToken ct)
     {
+        // A voided notification names no product at all, so whose ledger the token belongs to has
+        // to come from our own rows. Plus is asked first: its row is keyed by the token, so this is
+        // a single lookup by id, and a refunded Plus subscription re-read from Google comes back
+        // no longer entitled, which is all that taking Plus away requires.
+        if ((await _plusSubscriptionsRepository.GetById(purchaseToken, ct)).HasValue)
+        {
+            return await _plusRecorder.Record(purchaseToken, expectedUserId: null, ct);
+        }
+
         // The notification does not name the product for a one-off, and the Play API cannot be
         // queried without one. Our own row is where that was written down at purchase time.
         var donationMaybe = await _donationsRepository.GetByPurchaseToken(purchaseToken, ct);
@@ -123,6 +150,16 @@ public class ProcessPlayNotificationCommandHandler : IRequestHandler<ProcessPlay
             ? await _recorder.RecordSubscriptionPurchase(purchaseToken, expectedUserId: null, ct)
             : await _recorder.RecordProductPurchase(donation.ProductId, purchaseToken, expectedUserId: null, ct);
     }
+
+    /// <summary>
+    /// Whether a subscription notification is about Buqs Plus rather than a monthly tip. The product
+    /// id settles it for anything bought under the current configuration; the row on file covers a
+    /// token recorded as Plus under a product id the configuration no longer names, and costs a
+    /// lookup only for notifications that were not obviously Plus to begin with.
+    /// </summary>
+    private async Task<bool> IsPlusSubscription(string? productId, string purchaseToken, CancellationToken ct) =>
+        _plusCatalog.IsPlusProduct(productId) ||
+        (await _plusSubscriptionsRepository.GetById(purchaseToken, ct)).HasValue;
 
     private static Result<PlayDeveloperNotification> Decode(string payload)
     {

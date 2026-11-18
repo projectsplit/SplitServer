@@ -19,6 +19,7 @@ public static class EndpointMappings
         app.MapGroup("/notifications").RequireAuthorization().MapNotificationEndpoints();
         app.MapGroup("/connections").RequireAuthorization().MapConnectionEndpoints();
         app.MapGroup("/donations").RequireAuthorization().MapDonationEndpoints();
+        app.MapGroup("/plus").RequireAuthorization().MapPlusEndpoints();
 
         // Anonymous by design: the caller is Google Cloud Pub/Sub relaying Play, not a signed-in
         // app. A shared secret on the URL stands in for a token, and every purchase named in a

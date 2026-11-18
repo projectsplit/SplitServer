@@ -69,6 +69,40 @@ public class DonationPromptPolicyTests
         Assert.Equal(DonationPromptBlock.HasActiveMonthly, block);
     }
 
+    /// <summary>
+    /// Someone paying for Buqs Plus is already paying for Buqs. Paired with a state that would
+    /// otherwise be asked, so this can only pass by honouring the membership itself.
+    /// </summary>
+    [Fact]
+    public void Never_asks_a_Plus_member()
+    {
+        var block = CreatePolicy().EvaluateWithoutEngagement(State(), OldAccount, Now, isPlusMember: true);
+
+        Assert.Equal(DonationPromptBlock.PlusMember, block);
+    }
+
+    /// <summary>
+    /// Plus is a reason not to ask for as long as it lasts, not a mark against the account. The
+    /// same person without it is asked on exactly the terms they would have been anyway.
+    /// </summary>
+    [Fact]
+    public void Asks_again_once_Plus_has_ended()
+    {
+        var policy = CreatePolicy();
+
+        Assert.Equal(DonationPromptBlock.PlusMember, policy.EvaluateWithoutEngagement(State(), OldAccount, Now, isPlusMember: true));
+        Assert.Equal(DonationPromptBlock.None, policy.EvaluateWithoutEngagement(State(), OldAccount, Now, isPlusMember: false));
+    }
+
+    /// <summary>"Don't ask again" stays the answer it was, whatever else is true of the account.</summary>
+    [Fact]
+    public void Opting_out_is_still_the_reason_given_for_a_Plus_member_who_opted_out()
+    {
+        var block = CreatePolicy().EvaluateWithoutEngagement(State(optedOut: true), OldAccount, Now, isPlusMember: true);
+
+        Assert.Equal(DonationPromptBlock.OptedOut, block);
+    }
+
     [Fact]
     public void Leaves_a_recent_donor_alone_for_a_year()
     {

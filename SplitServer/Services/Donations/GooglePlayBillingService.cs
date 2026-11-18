@@ -22,7 +22,7 @@ namespace SplitServer.Services.Donations;
 /// from <c>purchases.products.get</c> or <c>purchases.subscriptionsv2.get</c> is what the ledger is
 /// written from.
 /// </summary>
-public class GooglePlayBillingService
+public class GooglePlayBillingService : IPlaySubscriptions
 {
     /// <summary>Google's numbering for <c>ProductPurchase.purchaseState</c>.</summary>
     private const int ProductPurchased = 0;
@@ -60,6 +60,9 @@ public class GooglePlayBillingService
     /// for a developer withdrawing a product rather than a person leaving.
     /// </summary>
     private const string StopRenewals = "USER_REQUESTED_STOP_RENEWALS";
+
+    /// <summary>How long the optional lookup of an order's amount may take before it is given up on.</summary>
+    private static readonly TimeSpan OrderLookupTimeout = TimeSpan.FromSeconds(10);
 
     private readonly GooglePlaySettings _settings;
     private readonly AndroidPublisherService? _publisher;
@@ -167,19 +170,28 @@ public class GooglePlayBillingService
                 .Get(_settings.PackageName, purchaseToken)
                 .ExecuteAsync(ct);
 
-            // One line item per plan. Donations only ever sell a single plan at a time, so the first
-            // is the one, but it is read defensively because the field is a list on the wire.
+            // One line item per plan. Donations and Plus each sell a single plan at a time, so the
+            // first is the one, but it is read defensively because the field is a list on the wire.
             var lineItem = purchase.LineItems?.FirstOrDefault();
+
+            // Present only on a plan that renews. Play leaves it off a prepaid plan altogether.
+            var renewingPlan = lineItem?.AutoRenewingPlan;
 
             return new PlaySubscriptionPurchase
             {
                 ProductId = lineItem?.ProductId,
+                BasePlanId = lineItem?.OfferDetails?.BasePlanId,
                 State = purchase.SubscriptionState ?? string.Empty,
                 IsActive = ActiveSubscriptionStates.Contains(purchase.SubscriptionState ?? string.Empty),
                 HasEnded = EndedSubscriptionStates.Contains(purchase.SubscriptionState ?? string.Empty),
                 NeedsAcknowledgement = purchase.AcknowledgementState == "ACKNOWLEDGEMENT_STATE_PENDING",
                 UserId = purchase.ExternalAccountIdentifiers?.ObfuscatedExternalAccountId,
+                StartedAt = purchase.StartTimeDateTimeOffset?.UtcDateTime,
                 ExpiresAt = lineItem?.ExpiryTimeDateTimeOffset?.UtcDateTime,
+                // Absent rather than false once someone has turned renewal off, hence the comparison.
+                AutoRenewing = renewingPlan?.AutoRenewEnabled == true,
+                RenewalPrice = PlayMoney.ToAmount(renewingPlan?.RecurringPrice?.Units, renewingPlan?.RecurringPrice?.Nanos),
+                RenewalCurrency = renewingPlan?.RecurringPrice?.CurrencyCode,
                 LatestOrderId = lineItem?.LatestSuccessfulOrderId,
                 // Play issues a fresh token when a subscription is resubscribed or upgraded and
                 // points it back at the one it replaces. Following it is what stops one person's
@@ -319,6 +331,58 @@ public class GooglePlayBillingService
     }
 
     /// <summary>
+    /// What the buyer actually paid for an order, tax included, in their own currency. Null whenever
+    /// that cannot be found out, for any reason at all.
+    /// </summary>
+    /// <remarks>
+    /// The purchase lookups above say that money changed hands but never how much: Play prices per
+    /// country, and only the order carries the figure. It is wanted for the record and nothing
+    /// depends on it, so this is the one call here that swallows every failure — an outage, a
+    /// missing permission, an order Play has not finished writing — and answers null. Letting any of
+    /// those out would turn "could not look up the amount" into "could not record the payment",
+    /// which is a far worse thing to get wrong.
+    /// </remarks>
+    public async Task<PlayOrderTotal?> TryGetOrderTotal(string orderId, CancellationToken ct)
+    {
+        if (_publisher is null)
+        {
+            return null;
+        }
+
+        // Its own, short, deadline. The caller has usually finished everything that matters and is
+        // only waiting on this to answer the app, and a figure that is nice to have is not worth
+        // holding a request open for as long as Google's client would otherwise wait.
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        deadline.CancelAfter(OrderLookupTimeout);
+
+        try
+        {
+            var order = await _publisher.Orders
+                .Get(_settings.PackageName, orderId)
+                .ExecuteAsync(deadline.Token);
+
+            var amount = PlayMoney.ToAmount(order.Total?.Units, order.Total?.Nanos);
+
+            if (amount is null || string.IsNullOrWhiteSpace(order.Total?.CurrencyCode))
+            {
+                return null;
+            }
+
+            return new PlayOrderTotal
+            {
+                Amount = amount.Value,
+                Currency = order.Total.CurrencyCode.ToUpperInvariant(),
+            };
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            Log.Warning(ex, "Could not read what was paid for Google Play order {OrderId}", orderId);
+
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Whether Google's answer is one that will never change.
     ///
     /// The distinction decides whether a caller may give up. A token Play does not recognise is
@@ -408,6 +472,10 @@ public record PlaySubscriptionPurchase
 {
     public required string? ProductId { get; init; }
 
+    /// <summary>Which plan of the product was bought. A product can sell several, billed at different intervals.</summary>
+    public required string? BasePlanId { get; init; }
+
+    /// <summary>Play's own word for where the subscription stands, verbatim.</summary>
     public required string State { get; init; }
 
     public required bool IsActive { get; init; }
@@ -422,10 +490,57 @@ public record PlaySubscriptionPurchase
 
     public required string? UserId { get; init; }
 
+    /// <summary>When the subscription was first bought. Does not move on renewal.</summary>
+    public required DateTime? StartedAt { get; init; }
+
     public required DateTime? ExpiresAt { get; init; }
+
+    /// <summary>
+    /// False once the subscriber has turned renewal off, and for a plan that never renews. They
+    /// keep what they paid for until <see cref="ExpiresAt"/> either way.
+    /// </summary>
+    public required bool AutoRenewing { get; init; }
+
+    /// <summary>What the next renewal will cost, in <see cref="RenewalCurrency"/>. Absent on a plan that will not renew.</summary>
+    public required decimal? RenewalPrice { get; init; }
+
+    public required string? RenewalCurrency { get; init; }
 
     /// <summary>Play's order id for the most recent successful payment. Changes on every renewal.</summary>
     public required string? LatestOrderId { get; init; }
 
     public required string? LinkedPurchaseToken { get; init; }
+}
+
+/// <summary>What a buyer paid for one order, tax included, in the currency Play charged them in.</summary>
+public record PlayOrderTotal
+{
+    public required decimal Amount { get; init; }
+
+    /// <summary>ISO 4217, upper case.</summary>
+    public required string Currency { get; init; }
+}
+
+/// <summary>
+/// Google's way of writing money: whole units and billionths of a unit as two separate integers, so
+/// that no amount ever passes through a float. Every price and total Play reports arrives like this.
+/// </summary>
+public static class PlayMoney
+{
+    private const decimal NanosPerUnit = 1_000_000_000m;
+
+    /// <summary>
+    /// The amount as one decimal, or null when Play sent no amount at all. Either half may be left
+    /// off the wire when it is zero — 5.00 arrives with no nanos, 0.99 with no units — so a missing
+    /// half counts as zero rather than as a missing amount.
+    /// </summary>
+    public static decimal? ToAmount(long? units, int? nanos)
+    {
+        if (units is null && nanos is null)
+        {
+            return null;
+        }
+
+        return (units ?? 0) + (nanos ?? 0) / NanosPerUnit;
+    }
 }

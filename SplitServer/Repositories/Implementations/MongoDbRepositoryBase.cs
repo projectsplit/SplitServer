@@ -68,7 +68,7 @@ public class MongoDbRepositoryBase<TEntity, TDocument> : IRepositoryBase<TEntity
         return result.IsAcknowledged ? Result.Success() : Result.Failure("Delete failed");
     }
 
-    public async Task<Result> Update(TEntity entity, CancellationToken ct)
+    public virtual async Task<Result> Update(TEntity entity, CancellationToken ct)
     {
         var filter = FilterBuilder.Eq(x => x.Id, entity.Id);
 

@@ -26,19 +26,22 @@ public class DonationRecorder
     private readonly IDonationsRepository _donationsRepository;
     private readonly IDonationSubscriptionsRepository _donationSubscriptionsRepository;
     private readonly IDonationPromptStatesRepository _donationPromptStatesRepository;
+    private readonly DonationSummaries _summaries;
 
     public DonationRecorder(
         GooglePlayBillingService play,
         DonationCatalog catalog,
         IDonationsRepository donationsRepository,
         IDonationSubscriptionsRepository donationSubscriptionsRepository,
-        IDonationPromptStatesRepository donationPromptStatesRepository)
+        IDonationPromptStatesRepository donationPromptStatesRepository,
+        DonationSummaries summaries)
     {
         _play = play;
         _catalog = catalog;
         _donationsRepository = donationsRepository;
         _donationSubscriptionsRepository = donationSubscriptionsRepository;
         _donationPromptStatesRepository = donationPromptStatesRepository;
+        _summaries = summaries;
     }
 
     /// <summary>
@@ -101,6 +104,10 @@ public class DonationRecorder
             subscriptionId: null,
             ct);
 
+        // After every write to the ledger, whatever it said. A refund arrives here as a row turning
+        // failed, and recomputing is what takes its amount back out of the person's total.
+        await _summaries.Refresh(userId, ct);
+
         if (status != DonationStatus.Succeeded)
         {
             return Result.Success();
@@ -124,6 +131,8 @@ public class DonationRecorder
                     $"Recorded donation {purchaseToken} but could not consume it: {consumeResult.Error}");
             }
         }
+
+        await RecordChargedAmount(purchaseToken, ct);
 
         return Result.Success();
     }
@@ -198,12 +207,18 @@ public class DonationRecorder
             await DeactivateSubscription(linkedToken, now, ct);
         }
 
+        // The payment this pass writes a row for, if it writes one. Its real amount is looked up at
+        // the very end, once nothing else is waiting on Google.
+        string? paidOrderId = null;
+
         // One row per payment, keyed by the order id, which changes every month. Play only ever
         // names the latest, so a month whose notification was missed is simply never written —
         // acceptable for a ledger whose purpose is "has this person given", and the Play Console
         // remains the complete record.
         if (purchase.IsActive && purchase.LatestOrderId is { } orderId)
         {
+            paidOrderId = orderId;
+
             await UpsertDonation(
                 id: orderId,
                 userId: userId,
@@ -215,6 +230,8 @@ public class DonationRecorder
                 status: DonationStatus.Succeeded,
                 subscriptionId: purchaseToken,
                 ct);
+
+            await _summaries.Refresh(userId, ct);
 
             await MarkDonated(userId, hasActiveMonthly: true, ct);
         }
@@ -237,6 +254,11 @@ public class DonationRecorder
                 throw new InvalidOperationException(
                     $"Recorded subscription {purchaseToken} but could not acknowledge it: {acknowledgeResult.Error}");
             }
+        }
+
+        if (paidOrderId is not null)
+        {
+            await RecordChargedAmount(paidOrderId, ct);
         }
 
         return Result.Success();
@@ -266,34 +288,11 @@ public class DonationRecorder
     }
 
     /// <summary>
-    /// Decides who a purchase belongs to.
-    ///
-    /// Play's own account id wins, because it is what the app set when it launched the purchase and
-    /// came back through Google rather than through the caller. A caller claiming a purchase Play
-    /// attributes to someone else is refused outright: that is exactly the shape of stealing
-    /// somebody's gift by replaying their token.
+    /// Decides who a purchase belongs to. The rule itself is shared with Buqs Plus, so that the two
+    /// kinds of purchase can never come to disagree about it; see <see cref="PurchaseOwner"/>.
     /// </summary>
-    private static Result<string> ResolveUserId(string? playUserId, string? expectedUserId)
-    {
-        if (playUserId is null)
-        {
-            return expectedUserId is not null
-                ? expectedUserId
-                : Result.Failure<string>("Purchase has no account attached");
-        }
-
-        if (expectedUserId is not null && playUserId != expectedUserId)
-        {
-            Log.Warning(
-                "User {CallerId} tried to register a purchase Google Play attributes to {OwnerId}",
-                expectedUserId,
-                playUserId);
-
-            return Result.Failure<string>("Purchase belongs to another account");
-        }
-
-        return playUserId;
-    }
+    private static Result<string> ResolveUserId(string? playUserId, string? expectedUserId) =>
+        PurchaseOwner.Resolve(playUserId, expectedUserId);
 
     private async Task UpsertDonation(
         string id,
@@ -323,12 +322,68 @@ public class DonationRecorder
             Kind = kind,
             Status = status,
             SubscriptionId = subscriptionId,
+            // Carried over on a replay. What was paid is looked up once, after the row exists, and
+            // a later notification about the same payment must not blank it out again.
+            ChargedAmount = existingMaybe.HasValue ? existingMaybe.Value.ChargedAmount : null,
+            ChargedCurrency = existingMaybe.HasValue ? existingMaybe.Value.ChargedCurrency : null,
             // Preserved on a replay so the ledger keeps saying when the gift first arrived.
             Created = existingMaybe.HasValue ? existingMaybe.Value.Created : now,
             Updated = now,
         };
 
         EnsureWritten(await _donationsRepository.Upsert(donation, ct), "donation");
+    }
+
+    /// <summary>
+    /// Finds out what was actually paid for a gift and writes it onto the row, if that has not been
+    /// done already. Never fails the caller, whatever goes wrong.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately the last thing either recording path does. By now the gift is in the ledger and
+    /// Play has been told to keep the money, so nothing that matters is waiting on a second call to
+    /// Google — and if that call fails, the row simply keeps its nominal amount, and the next
+    /// notification about the same payment is another chance. A row that already has its amount is
+    /// never looked up again: what was paid for an order does not change.
+    /// </remarks>
+    private async Task RecordChargedAmount(string donationId, CancellationToken ct)
+    {
+        try
+        {
+            var donationMaybe = await _donationsRepository.GetById(donationId, ct);
+
+            if (donationMaybe.HasNoValue ||
+                donationMaybe.Value.Status != DonationStatus.Succeeded ||
+                donationMaybe.Value.ChargedAmount is not null ||
+                donationMaybe.Value.OrderId is not { } orderId)
+            {
+                return;
+            }
+
+            var total = await _play.TryGetOrderTotal(orderId, ct);
+
+            if (total is null)
+            {
+                return;
+            }
+
+            var writeResult = await _donationsRepository.SetCharged(donationId, total.Amount, total.Currency, ct);
+
+            if (writeResult.IsFailure)
+            {
+                Log.Warning("Could not write what was paid for donation {OrderId}: {Error}", orderId, writeResult.Error);
+
+                return;
+            }
+
+            if (donationMaybe.Value.UserId is { } userId)
+            {
+                await _summaries.Refresh(userId, ct);
+            }
+        }
+        catch (Exception ex) when (!ct.IsCancellationRequested)
+        {
+            Log.Warning(ex, "Could not record what was paid for a donation");
+        }
     }
 
     private async Task MarkDonated(string userId, bool hasActiveMonthly, CancellationToken ct)

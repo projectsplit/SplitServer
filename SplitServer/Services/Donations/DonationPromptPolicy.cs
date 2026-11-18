@@ -27,14 +27,27 @@ public class DonationPromptPolicy
     /// Every gate except the one that costs a query. Kept separate so the caller can run the cheap
     /// checks first and only reach for the expense count on the rare pass that gets that far.
     /// </summary>
+    /// <param name="isPlusMember">
+    /// Whether this person has Buqs Plus right now. Passed in rather than read off the state
+    /// because it lives on the user, which the caller already has in hand.
+    /// </param>
     public DonationPromptBlock EvaluateWithoutEngagement(
         DonationPromptState state,
         DateTime accountCreated,
-        DateTime now)
+        DateTime now,
+        bool isPlusMember = false)
     {
         if (state.OptedOut)
         {
             return DonationPromptBlock.OptedOut;
+        }
+
+        // Someone paying for Plus is already paying for Buqs. Asking them for a tip on top is the
+        // one ask here that could only ever read as ungrateful, so it is never made — for as long
+        // as they have Plus, however long it has been since anything else was asked of them.
+        if (isPlusMember)
+        {
+            return DonationPromptBlock.PlusMember;
         }
 
         // Someone already giving every month is the last person who should be asked for more.

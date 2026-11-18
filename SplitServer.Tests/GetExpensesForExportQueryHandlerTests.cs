@@ -537,6 +537,13 @@ file class FakeUsersRepository : IUsersRepository
     public Task<Result> Upsert(User entity, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Delete(string id, CancellationToken ct) => throw new NotSupportedException();
     public Task<Result> Update(User updatedEntity, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> SetPlus(string userId, UserPlus? plus, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> SetDonations(string userId, UserDonations? donations, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result> SetPlusForLife(string userId, DateTime? grantedAt, CancellationToken ct) => throw new NotSupportedException();
+    public Task<Result<long>> GrantPlusForLifeToAccountsCreatedBefore(DateTime cutOff, DateTime grantedAt, CancellationToken ct) => throw new NotSupportedException();
+    public Task<List<User>> GetTrialReminderCandidates(DateTime createdOnOrBefore, int belowStage, DateTime? createdOnOrAfter, int limit, CancellationToken ct) => throw new NotSupportedException();
+    public Task<bool> TryAdvanceTrialReminderStage(string userId, int toStage, CancellationToken ct) => throw new NotSupportedException();
+    public Task EnsureIndexes(CancellationToken ct) => throw new NotSupportedException();
 }
 
 file class FakeUserLabelsRepository : IUserLabelsRepository

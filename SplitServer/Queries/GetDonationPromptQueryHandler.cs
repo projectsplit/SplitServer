@@ -4,6 +4,7 @@ using SplitServer.Models;
 using SplitServer.Repositories;
 using SplitServer.Responses;
 using SplitServer.Services.Donations;
+using SplitServer.Services.Plus;
 
 namespace SplitServer.Queries;
 
@@ -46,8 +47,12 @@ public class GetDonationPromptQueryHandler : IRequestHandler<GetDonationPromptQu
         var stateMaybe = await _donationPromptStatesRepository.GetById(query.UserId, ct);
         var state = stateMaybe.GetValueOrDefault(() => DonationPromptState.CreateEmpty(query.UserId, now));
 
+        // Off the user document already read above, and against the clock: a Plus mark whose period
+        // has run out no longer shields anyone from being asked.
+        var isPlusMember = PlusEntitlement.IsEntitled(userMaybe.Value.Plus, now);
+
         var block = _play.IsConfigured
-            ? _policy.EvaluateWithoutEngagement(state, userMaybe.Value.Created, now)
+            ? _policy.EvaluateWithoutEngagement(state, userMaybe.Value.Created, now, isPlusMember)
             : DonationPromptBlock.NotConfigured;
 
         // The expense count is the one gate that costs a query, so it runs last and only for someone

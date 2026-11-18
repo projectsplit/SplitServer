@@ -14,6 +14,7 @@ using SplitServer.Services.CurrencyExchangeRate;
 using SplitServer.Services.Donations;
 using SplitServer.Services.Email;
 using SplitServer.Services.OpenExchangeRates;
+using SplitServer.Services.Plus;
 using SplitServer.Services.TimeZone;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -49,7 +50,13 @@ builder.Services.AddSingleton<TimeZoneService>();
 builder.Services.AddSingleton<DonationPromptPolicy>();
 builder.Services.AddSingleton<DonationCatalog>();
 builder.Services.AddSingleton<GooglePlayBillingService>();
+// The same instance behind a narrower face, for the code that only needs to ask about subscriptions.
+builder.Services.AddSingleton<IPlaySubscriptions>(services => services.GetRequiredService<GooglePlayBillingService>());
+builder.Services.AddSingleton<DonationSummaries>();
 builder.Services.AddSingleton<DonationRecorder>();
+builder.Services.AddSingleton<PlusCatalog>();
+builder.Services.AddSingleton<PlusRecorder>();
+builder.Services.AddSingleton<PlusAccessService>();
 
 builder.Services.AddSingleton<IMongoConnection, MongoConnection>();
 builder.Services.AddSingleton<IUsersRepository, UsersMongoDbRepository>();
@@ -72,8 +79,11 @@ builder.Services.AddSingleton<IUserConnectionsRepository, UserConnectionsMongoDb
 builder.Services.AddSingleton<IDonationsRepository, DonationsMongoDbRepository>();
 builder.Services.AddSingleton<IDonationSubscriptionsRepository, DonationSubscriptionsMongoDbRepository>();
 builder.Services.AddSingleton<IDonationPromptStatesRepository, DonationPromptStatesMongoDbRepository>();
+builder.Services.AddSingleton<IPlusSubscriptionsRepository, PlusSubscriptionsMongoDbRepository>();
+builder.Services.AddSingleton<IPlusStateRepository, PlusStateMongoDbRepository>();
 
 builder.Services.AddHostedService<RecurringExpensesWorker>();
+builder.Services.AddHostedService<PlusSubscriptionsWorker>();
 
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<EmailTokenService>();
@@ -86,6 +96,7 @@ builder.Configure<ErrorHandlingSettings>();
 builder.Configure<PushNotificationsSettings>();
 builder.Configure<GooglePlaySettings>();
 builder.Configure<DonationsSettings>();
+builder.Configure<PlusSettings>();
 var openTelemetrySettings = builder.Configure<OpenTelemetrySettings>();
 var authSettings = builder.Configure<AuthSettings>();
 var emailSettings = builder.Configure<EmailSettings>();
@@ -144,6 +155,10 @@ catch (Exception ex)
 {
     Log.Warning(ex, "Failed to ensure recurring expense indexes");
 }
+
+// Everything else a boot does to the database: more indexes, the grant of Plus for life, the
+// moment Plus went live, the donation summaries. Idempotent and never fatal, like the two above.
+await StartupUpkeep.Run(app.Services, CancellationToken.None);
 
 app.UseSerilogRequestLogging();
 app.UseCors();
